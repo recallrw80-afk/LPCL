@@ -410,28 +410,76 @@ ApplicationWindow {
                 }  // panForm
 
                 // ============================================================
-                // Tab 0: 启动 — child of borderForm, outside panForm
+                // Tab 0: 启动
+                // ============================================================
+                PageLaunch {
+                    anchors { left: parent.left; right: parent.right; top: panTitle.bottom; bottom: parent.bottom }
+                    visible: navTabs.currentIndex === 0
+                }
+
+                // ============================================================
+                // Tab 1: 下载
                 // ============================================================
                 RowLayout {
-                    anchors {
-                        left: parent.left; right: parent.right
-                        top: panTitle.bottom
-                        bottom: parent.bottom
-                    }
+                    anchors { left: parent.left; right: parent.right; top: panTitle.bottom; bottom: parent.bottom }
+                    visible: navTabs.currentIndex === 1
                     spacing: 0
                     Rectangle {
-                        Layout.preferredWidth: 300; Layout.fillHeight: true
-                        color: "#ff4444"
-                        Text {
-                            anchors.centerIn: parent; text: "启动-左"; font.pixelSize: 20; color: "white"
+                        Layout.preferredWidth: 300; Layout.fillHeight: true; color: Theme.sidebarBg
+                        Rectangle {
+                            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                            width: 4; opacity: 0.04
+                            gradient: Gradient { GradientStop { position: 0; color: "#000000" } GradientStop { position: 1; color: "#00000000" } }
                         }
+                        Text { anchors.centerIn: parent; text: "下载"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
                     }
                     Rectangle {
-                        Layout.fillWidth: true; Layout.fillHeight: true
-                        color: "#4444ff"
-                        Text {
-                            anchors.centerIn: parent; text: "启动-右"; font.pixelSize: 20; color: "white"
+                        Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
+                        Text { anchors.centerIn: parent; text: "下载页面"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
+                    }
+                }
+
+                // ============================================================
+                // Tab 2: 设置
+                // ============================================================
+                RowLayout {
+                    anchors { left: parent.left; right: parent.right; top: panTitle.bottom; bottom: parent.bottom }
+                    visible: navTabs.currentIndex === 2
+                    spacing: 0
+                    Rectangle {
+                        Layout.preferredWidth: 300; Layout.fillHeight: true; color: Theme.sidebarBg
+                        Rectangle {
+                            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                            width: 4; opacity: 0.04
+                            gradient: Gradient { GradientStop { position: 0; color: "#000000" } GradientStop { position: 1; color: "#00000000" } }
                         }
+                        Text { anchors.centerIn: parent; text: "设置"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
+                        Text { anchors.centerIn: parent; text: "设置页面"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
+                    }
+                }
+
+                // ============================================================
+                // Tab 3: 更多
+                // ============================================================
+                RowLayout {
+                    anchors { left: parent.left; right: parent.right; top: panTitle.bottom; bottom: parent.bottom }
+                    visible: navTabs.currentIndex === 3
+                    spacing: 0
+                    Rectangle {
+                        Layout.preferredWidth: 300; Layout.fillHeight: true; color: Theme.sidebarBg
+                        Rectangle {
+                            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                            width: 4; opacity: 0.04
+                            gradient: Gradient { GradientStop { position: 0; color: "#000000" } GradientStop { position: 1; color: "#00000000" } }
+                        }
+                        Text { anchors.centerIn: parent; text: "更多"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
+                        Text { anchors.centerIn: parent; text: "更多页面"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge }
                     }
                 }
             }  // borderForm
