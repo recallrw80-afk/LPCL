@@ -155,26 +155,60 @@ ApplicationWindow {
                         font.pixelSize: Theme.fontSizeLogo
                     }
 
-                    // ---- Close button (MyIconButton, White, X icon) ----
-                    MyIconButton {
+                    // ---- Close button ----
+                    Item {
                         id: btnTitleClose
                         anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
                         width: 28; height: 28
-                        theme: "White"
-                        logoScale: 0.72
-                        logo: "F1 M2,0 L0,2 8,10 0,18 2,20 10,12 18,20 20,18 12,10 20,2 18,0 10,8 2,0Z"
-                        onClicked: window.close()
+                        property bool hovered: false
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 24; height: 24; radius: 12
+                            color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                        }
+                        Image {
+                            anchors.centerIn: parent
+                            width: 20; height: 20
+                            source: "qrc:/assets/icons/close.svg"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: btnTitleClose.hovered = true
+                            onExited: btnTitleClose.hovered = false
+                            onClicked: window.close()
+                        }
                     }
 
-                    // ---- Minimize button (MyIconButton, White, - icon) ----
-                    MyIconButton {
+                    // ---- Minimize button ----
+                    Item {
                         id: btnTitleMin
                         anchors { right: btnTitleClose.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
                         width: 28; height: 28
-                        theme: "White"
-                        logoScale: 0.72
-                        logo: "F1 M3,11 h9 v2 h-9 v-2 Z"
-                        onClicked: window.showMinimized()
+                        property bool hovered: false
+
+                        Rectangle {
+                            anchors.centerIn: parent
+                            width: 24; height: 24; radius: 12
+                            color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
+                            Behavior on color { ColorAnimation { duration: 100 } }
+                        }
+                        Image {
+                            anchors.centerIn: parent
+                            width: 20; height: 20
+                            source: "qrc:/assets/icons/minimize.svg"
+                        }
+                        MouseArea {
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onEntered: btnTitleMin.hovered = true
+                            onExited: btnTitleMin.hovered = false
+                            onClicked: window.showMinimized()
+                        }
                     }
 
                     // ---- PanTitleMain (navigation tabs centered) ----
@@ -186,47 +220,40 @@ ApplicationWindow {
 
                         Repeater {
                             model: [
-                                { text: "启动", tag: 0, logo: "M52.1,164.5c-1.4,0-3.1-0.5-4.2-1.3c-2.6-1.7-4-4.2-4-7V43.8c0-2.9,1.6-5.8,4.1-7c1.2-0.8,2.7-1.2,4.1-1.2c1.5,0,2.9,0.4,4.2,1.2L153.1,93c0,0,0.1,0,0.1,0.1c2.6,1.7,4,4.2,4,7c0,3-1.7,5.8-4.2,7.1l-96.8,56.2C55.1,164,53.5,164.5,52.1,164.5z" },
-                                { text: "下载", tag: 1, logo: "M955 610h-59c-15 0-29 13-29 29v196c0 15-13 29-29 29h-649c-15 0-29-13-29-29v-196c0-15-13-29-29-29h-59c-15 0-29 13-29 29V905c0 43 35 78 78 78h787c43 0 78-35 78-78V640c0-15-13-29-29-29zM492 740c11 11 29 11 41 0l265-265c11-11 11-29 0-41l-41-41c-11-11-29-11-41 0l-110 110c-11 11-33 3-33-13V68C571 53 555 39 541 39h-59c-15 0-29 13-29 29v417c0 17-21 25-33 13l-110-110c-11-11-29-11-41 0L226 433c-11 11-11 29 0 41L492 740z" },
-                                { text: "联机", tag: 2, logo: "M512 817c-48.601 0-88-39.399-88-88s39.399-88 88-88 88 39.399 88 88-39.399 88-88 88zM237.671 565.74C308.335 474.58 397.369 429 504.774 429c118.433 0 214.225 55.421 287.377 166.264l-53.407 30.369c-13.84 7.87-31.362 4.367-41.114-8.219-50.291-64.911-114.577-97.367-192.856-97.367-86.851 0-156.835 40.318-209.95 120.953l-47.995-28.02c-15.263-8.91-20.412-28.507-11.502-43.77a32 32 0 0 1 2.344-3.47zM107.691 419.47C205.24 278.491 337.805 208 505.379 208c178.77 0 317.694 80.224 416.772 240.672l-56.54 31.73c-13.686 7.68-30.922 4.303-40.697-7.975C735.581 360.213 629.07 303.009 505.38 300.815 373.997 298.485 261.637 362.88 168.3 494l-50.116-28.505c-15.362-8.738-20.732-28.275-11.994-43.637a32 32 0 0 1 1.5-2.387z" },
-                                { text: "设置", tag: 3, logo: "M940.4 463.7L773.3 174.2c-17.3-30-49.2-48.4-83.8-48.4H340.2c-34.6 0-66.5 18.5-83.8 48.4L89.2 463.7c-17.3 30-17.3 66.9 0 96.8L256.4 850c17.3 30 49.2 48.4 83.8 48.4h349.2c34.6 0 66.5-18.5 83.8-48.4l167.2-289.5c17.3-29.9 17.3-66.8 0-96.8z" },
-                                { text: "更多", tag: 4, logo: "M364 0h-273C40 0 0 40 0 91v273C0 414 40 455 91 455h273C414 455 455 414 455 364V91C455 40 414 0 364 0zM341 341H113V113h227v227zM933 0h-273C609 0 568 40 568 91v273c0 50 40 91 91 91h273C983 455 1024 414 1024 364V91c0-50-40-90-90-90zM910 341h-227V113h227v227zM364 568h-273C40 568 0 609 0 659v273c0 50 40 91 91 91h273C414 1024 455 983 455 932v-273C455 609 414 568 364 568zM341 910H113v-227h227v227zM933 568h-273c-50 0-91 40-91 91v273c0 50 40 91 91 91h273c50 0 90-40 90-91v-273c0-50-40-90-90-90zM910 910h-227v-227h227v227z" }
+                                { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg" },
+                                { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg" },
+                                { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg" },
+                                { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg" },
+                                { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg" }
                             ]
 
                             Item {
-                                width: tabRow.implicitWidth + 16
+                                width: tabRow.implicitWidth + 24
                                 height: 27
                                 property bool hovered: false
 
                                 Rectangle {
                                     anchors.fill: parent
-                                    radius: 3
-                                    color: {
-                                        if (navTabs.currentIndex === modelData.tag) return "#33ffffff"
-                                        if (parent.hovered) return "#18ffffff"
-                                        return "transparent"
-                                    }
+                                    radius: 13
+                                    color: navTabs.currentIndex === modelData.tag ? "#ffffff" :
+                                           parent.hovered ? "#33ffffff" : "transparent"
                                     Behavior on color { ColorAnimation { duration: 100 } }
 
                                     Row {
                                         id: tabRow
                                         anchors.centerIn: parent
-                                        spacing: 2
+                                        spacing: 4
 
-                                        // SVG icon via MyIconButton (original WPF paths)
-                                        MyIconButton {
-                                            width: 18; height: 18
+                                        Image {
+                                            width: 14; height: 14
                                             anchors.verticalCenter: parent.verticalCenter
-                                            theme: navTabs.currentIndex === modelData.tag ? "White" : "Color"
-                                            viewBoxSize: 1024
-                                            logoScale: 0.7
-                                            logo: modelData.logo
-                                            enabled: false
+                                            source: modelData.icon
+                                            opacity: navTabs.currentIndex === modelData.tag ? 0.9 : 0.6
                                         }
 
                                         Text {
                                             text: modelData.text
-                                            color: "white"
+                                            color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
                                             font.family: Theme.fontFamily
                                             font.pixelSize: Theme.fontSize
                                             anchors.verticalCenter: parent.verticalCenter
@@ -255,16 +282,32 @@ ApplicationWindow {
                         opacity: pageStack.length > 0 ? 1 : 0
                         Behavior on opacity { NumberAnimation { duration: 200 } }
 
-                        MyIconButton {
+                        Item {
                             id: btnTitleInner
                             anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
                             width: 28; height: 28
-                            theme: "White"
-                            logoScale: 0.87
-                            viewBoxSize: 1200
-                            logo: "M1097 584 250 584 562 896C591 925 591 972 562 1001 533 1030 487 1030 458 1001L21 565C6 550-0 531 0 511L0 511 0 511C-0 492 6 472 21 457L458 21C487-7 533-7 562 21 591 50 591 97 562 126L250 438 1097 438C1137 438 1170 471 1170 511 1170 551 1137 584 1097 584L1097 584Z"
-                            onClicked: {
-                                if (pageStack.length > 0) pageStack.pop()
+                            property bool hovered: false
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 24; height: 24; radius: 12
+                                color: btnTitleInner.hovered ? "#33ffffff" : "transparent"
+                                Behavior on color { ColorAnimation { duration: 100 } }
+                            }
+                            Image {
+                                anchors.centerIn: parent
+                                width: 20; height: 20
+                                source: "qrc:/assets/icons/back.svg"
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: btnTitleInner.hovered = true
+                                onExited: btnTitleInner.hovered = false
+                                onClicked: {
+                                    if (pageStack.length > 0) pageStack.pop()
+                                }
                             }
                         }
 

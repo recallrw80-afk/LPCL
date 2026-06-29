@@ -64,6 +64,20 @@ qt_add_executable(LiunxPlainCraftLauncher
     ${CORE_HEADERS}
 )
 
+# Icon assets
+qt_add_resources(LiunxPlainCraftLauncher "assets"
+    PREFIX "/"
+    FILES
+        assets/icons/close.svg
+        assets/icons/minimize.svg
+        assets/icons/back.svg
+        assets/icons/nav_launch.svg
+        assets/icons/nav_download.svg
+        assets/icons/nav_link.svg
+        assets/icons/nav_settings.svg
+        assets/icons/nav_more.svg
+)
+
 target_include_directories(LiunxPlainCraftLauncher PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/src/core
