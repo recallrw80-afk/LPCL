@@ -64,15 +64,12 @@ Item {
         Behavior on color { ColorAnimation { duration: 100 } }
     }
 
-    // ---- SVG icon via QtQuick.Shapes ----
+    // ---- SVG icon via QtQuick.Shapes (renders as native vector geometry; window MSAA handles AA) ----
     Shape {
         id: iconShape
         anchors.centerIn: parent
         width: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
         height: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
-
-        layer.enabled: true
-        layer.samples: 4
 
         ShapePath {
             id: shapePath

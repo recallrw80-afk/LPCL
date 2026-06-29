@@ -4,6 +4,7 @@
 #include <QQmlContext>
 #include <QIcon>
 #include <QDir>
+#include <QSurfaceFormat>
 #include <QLoggingCategory>
 
 #include "src/core/settings.h"
@@ -17,6 +18,11 @@
 
 int main(int argc, char *argv[])
 {
+    // Enable multisample anti-aliasing for smooth rounded corners and shapes
+    QSurfaceFormat fmt;
+    fmt.setSamples(8);
+    QSurfaceFormat::setDefaultFormat(fmt);
+
     QGuiApplication app(argc, argv);
     app.setApplicationName("LPCL");
     app.setApplicationVersion("0.1");

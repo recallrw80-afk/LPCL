@@ -178,7 +178,7 @@ ApplicationWindow {
                                 ]
 
                                 Item {
-                                    width: tabRowContent.width + 28
+                                    width: tabRowContent.width + 20
                                     implicitWidth: width
                                     height: 27
                                     property bool hovered: false
@@ -202,10 +202,13 @@ ApplicationWindow {
                                                 width: 22; height: 22
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 source: modelData.icon
+                                                sourceSize: Qt.size(88, 88)
+                                                smooth: true
+                                                mipmap: true
                                                 visible: false
                                             }
                                             ColorOverlay {
-                                                width: 18; height: 18
+                                                width: 22; height: 22
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 source: tabIcon
                                                 color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
@@ -252,12 +255,19 @@ ApplicationWindow {
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
                             Image {
+                                id: imgMin
                                 anchors.centerIn: parent
-                                            
-                                            
-                                sourceSize: Qt.size(16, 16)
-                                width: 16; height: 16
+                                sourceSize: Qt.size(96, 96)
+                                width: 24; height: 24
                                 source: "qrc:/assets/icons/minimize.svg"
+                                smooth: true
+                                mipmap: true
+                                visible: false
+                            }
+                            ColorOverlay {
+                                anchors.fill: imgMin
+                                source: imgMin
+                                color: "#ffffff"
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -286,9 +296,18 @@ ApplicationWindow {
                                 anchors.centerIn: parent
                                             anchors.leftMargin: 6
                                             anchors.rightMargin: 6
-                                sourceSize: Qt.size(16, 16)
-                                width: 16; height: 16
+                                sourceSize: Qt.size(96, 96)
+                                width: 24; height: 24
+                                id: imgClose
                                 source: "qrc:/assets/icons/close.svg"
+                                smooth: true
+                                mipmap: true
+                                visible: false
+                            }
+                            ColorOverlay {
+                                anchors.fill: imgClose
+                                source: imgClose
+                                color: "#ffffff"
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -326,8 +345,18 @@ ApplicationWindow {
                                 anchors.centerIn: parent
                                             anchors.leftMargin: 6
                                             anchors.rightMargin: 6
-                                width: 20; height: 20
+                                sourceSize: Qt.size(96, 96)
+                                width: 24; height: 24
+                                id: imgBack
                                 source: "qrc:/assets/icons/back.svg"
+                                smooth: true
+                                mipmap: true
+                                visible: false
+                            }
+                            ColorOverlay {
+                                anchors.fill: imgBack
+                                source: imgBack
+                                color: "#ffffff"
                             }
                             MouseArea {
                                 anchors.fill: parent
