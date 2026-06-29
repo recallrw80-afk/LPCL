@@ -64,18 +64,11 @@ qt_add_executable(LiunxPlainCraftLauncher
     ${CORE_HEADERS}
 )
 
-# Icon assets
+# Icon assets — auto-collect all SVGs
+file(GLOB ICON_FILES assets/icons/*.svg)
 qt_add_resources(LiunxPlainCraftLauncher "assets"
     PREFIX "/"
-    FILES
-        assets/icons/close.svg
-        assets/icons/minimize.svg
-        assets/icons/back.svg
-        assets/icons/nav_launch.svg
-        assets/icons/nav_download.svg
-        assets/icons/nav_link.svg
-        assets/icons/nav_settings.svg
-        assets/icons/nav_more.svg
+    FILES ${ICON_FILES}
 )
 
 target_include_directories(LiunxPlainCraftLauncher PRIVATE

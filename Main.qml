@@ -173,7 +173,6 @@ ApplicationWindow {
                                 model: [
                                     { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg" },
                                     { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg" },
-                                    { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg" },
                                     { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg" },
                                     { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg" }
                                 ]
