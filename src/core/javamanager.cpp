@@ -7,7 +7,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QLoggingCategory>
-#include <QtConcurrent/QtConcurrent>
+#include <QThreadPool>
 
 static Q_LOGGING_CATEGORY(logJava, "pcl.java")
 
@@ -103,7 +103,7 @@ void JavaManager::scanSystemJava()
     emit scanningChanged();
     emit javaScanProgress("Scanning for Java...");
 
-    QtConcurrent::run([this]() {
+    QThreadPool::globalInstance()->start([this]() {
         QList<JavaEntry> found;
 
         // 1. Scan PATH environment variable

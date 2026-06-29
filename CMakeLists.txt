@@ -6,6 +6,11 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
+# 默认 Qt 安装路径（可通过 -DCMAKE_PREFIX_PATH=xxx 覆盖）
+if(NOT DEFINED CMAKE_PREFIX_PATH)
+    set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.8.3/gcc_64")
+endif()
+
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
 
 qt_standard_project_setup(REQUIRES 6.8)
@@ -74,6 +79,7 @@ target_link_libraries(appPCL_LIUNX
 
 qt_add_qml_module(appPCL_LIUNX
     URI PCL_LIUNX
+    VERSION 1.0
     QML_FILES
         Main.qml
         src/ui/pages/PageLaunchLeft.qml
