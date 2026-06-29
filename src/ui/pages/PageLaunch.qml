@@ -6,9 +6,11 @@ import "../components"
 import "../styles"
 
 // Launch tab — left sidebar + right content
-RowLayout {
-    anchors.fill: parent
-    spacing: 0
+Item {
+    Rectangle { anchors.fill: parent; color: "#ff0000"; opacity: 0.15 }  // DEBUG sizing
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
 
     // ========================================================================
     // Left sidebar — from PageLaunchLeft.qml
@@ -383,4 +385,5 @@ RowLayout {
             function onGameLog(line) { labLog.text += line + "\n" }
         }
     }
+}
 }

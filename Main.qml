@@ -43,15 +43,21 @@ ApplicationWindow {
         property real entranceSlide: 60
         property real entranceTilt: -4
         transform: [
-            Translate { y: panBack.entranceSlide },
-            Rotation { angle: panBack.entranceTilt; origin.x: panBack.width / 2; origin.y: panBack.height / 2 }
+            Translate {
+                y: panBack.entranceSlide
+            },
+            Rotation {
+                angle: panBack.entranceTilt; origin.x: panBack.width / 2; origin.y: panBack.height / 2
+            }
         ]
 
         // ---- 8 Resizer handles (exact match FormMain.xaml resizers) ----
         // Top edge
         MouseArea {
             id: resizerT
-            anchors { left: parent.left; right: parent.right; top: parent.top; leftMargin: 13; rightMargin: 13 }
+            anchors {
+                left: parent.left; right: parent.right; top: parent.top; leftMargin: 13; rightMargin: 13
+            }
             height: 8
             cursorShape: Qt.SizeVerCursor
             onPressed: (mouse) => window.startSystemResize(Qt.TopEdge)
@@ -59,7 +65,9 @@ ApplicationWindow {
         // Bottom edge
         MouseArea {
             id: resizerB
-            anchors { left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 13; rightMargin: 13 }
+            anchors {
+                left: parent.left; right: parent.right; bottom: parent.bottom; leftMargin: 13; rightMargin: 13
+            }
             height: 8
             cursorShape: Qt.SizeVerCursor
             onPressed: (mouse) => window.startSystemResize(Qt.BottomEdge)
@@ -67,7 +75,9 @@ ApplicationWindow {
         // Left edge
         MouseArea {
             id: resizerL
-            anchors { left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 13; bottomMargin: 13 }
+            anchors {
+                left: parent.left; top: parent.top; bottom: parent.bottom; topMargin: 13; bottomMargin: 13
+            }
             width: 8
             cursorShape: Qt.SizeHorCursor
             onPressed: (mouse) => window.startSystemResize(Qt.LeftEdge)
@@ -75,7 +85,9 @@ ApplicationWindow {
         // Right edge
         MouseArea {
             id: resizerR
-            anchors { right: parent.right; top: parent.top; bottom: parent.bottom; topMargin: 13; bottomMargin: 13 }
+            anchors {
+                right: parent.right; top: parent.top; bottom: parent.bottom; topMargin: 13; bottomMargin: 13
+            }
             width: 8
             cursorShape: Qt.SizeHorCursor
             onPressed: (mouse) => window.startSystemResize(Qt.RightEdge)
@@ -83,7 +95,9 @@ ApplicationWindow {
         // Top-left corner
         MouseArea {
             id: resizerLT
-            anchors { left: parent.left; top: parent.top }
+            anchors {
+                left: parent.left; top: parent.top
+            }
             width: 13; height: 13
             cursorShape: Qt.SizeFDiagCursor
             onPressed: (mouse) => window.startSystemResize(Qt.LeftEdge | Qt.TopEdge)
@@ -91,7 +105,9 @@ ApplicationWindow {
         // Top-right corner
         MouseArea {
             id: resizerRT
-            anchors { right: parent.right; top: parent.top }
+            anchors {
+                right: parent.right; top: parent.top
+            }
             width: 13; height: 13
             cursorShape: Qt.SizeBDiagCursor
             onPressed: (mouse) => window.startSystemResize(Qt.RightEdge | Qt.TopEdge)
@@ -99,7 +115,9 @@ ApplicationWindow {
         // Bottom-left corner
         MouseArea {
             id: resizerLB
-            anchors { left: parent.left; bottom: parent.bottom }
+            anchors {
+                left: parent.left; bottom: parent.bottom
+            }
             width: 13; height: 13
             cursorShape: Qt.SizeBDiagCursor
             onPressed: (mouse) => window.startSystemResize(Qt.LeftEdge | Qt.BottomEdge)
@@ -107,7 +125,9 @@ ApplicationWindow {
         // Bottom-right corner
         MouseArea {
             id: resizerRB
-            anchors { right: parent.right; bottom: parent.bottom }
+            anchors {
+                right: parent.right; bottom: parent.bottom
+            }
             width: 13; height: 13
             cursorShape: Qt.SizeFDiagCursor
             onPressed: (mouse) => window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
@@ -133,9 +153,15 @@ ApplicationWindow {
                 Rectangle {
                     anchors.fill: parent
                     gradient: Gradient {
-                        GradientStop { position: -0.1; color: Theme.colorBgLeft }
-                        GradientStop { position: 0.4; color: Theme.colorBgCenter }
-                        GradientStop { position: 1.1; color: Theme.colorBgRight }
+                        GradientStop {
+                            position: -0.1; color: Theme.colorBgLeft
+                        }
+                        GradientStop {
+                            position: 0.4; color: Theme.colorBgCenter
+                        }
+                        GradientStop {
+                            position: 1.1; color: Theme.colorBgRight
+                        }
                     }
                 }
 
@@ -144,7 +170,9 @@ ApplicationWindow {
                 // ============================================================
                 Rectangle {
                     id: panTitle
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    anchors {
+                        left: parent.left; right: parent.right; top: parent.top
+                    }
                     height: Theme.titleBarHeight
                     z: 10
                     color: Theme.color2
@@ -156,10 +184,10 @@ ApplicationWindow {
                     }
 
                     RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 13
-                            anchors.rightMargin: 8
-                            spacing: 0
+                        anchors.fill: parent
+                        anchors.leftMargin: 13
+                        anchors.rightMargin: 8
+                        spacing: 0
 
                         // LPCL logo
                         Text {
@@ -173,7 +201,9 @@ ApplicationWindow {
                         }
 
                         // Left spacer
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         // Navigation tabs
                         Row {
@@ -183,10 +213,10 @@ ApplicationWindow {
 
                             Repeater {
                                 model: [
-                                    { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg" },
-                                    { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg" },
-                                    { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg" },
-                                    { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg" }
+                                    {text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg"},
+                                    {text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg"},
+                                    {text: "设置", tag: 2, icon: "qrc:/assets/icons/nav_settings.svg"},
+                                    {text: "更多", tag: 3, icon: "qrc:/assets/icons/nav_more.svg"}
                                 ]
 
                                 Item {
@@ -199,8 +229,12 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         radius: tabRowContent.width
                                         color: navTabs.currentIndex === modelData.tag ? "#ffffff" :
-                                               parent.hovered ? "#33ffffff" : "transparent"
-                                        Behavior on color { ColorAnimation { duration: 100 } }
+                                            parent.hovered ? "#33ffffff" : "transparent"
+                                        Behavior on color {
+                                            ColorAnimation {
+                                                duration: 100
+                                            }
+                                        }
 
                                         Row {
                                             id: tabRowContent
@@ -250,7 +284,9 @@ ApplicationWindow {
                         }
 
                         // Right spacer
-                        Item { Layout.fillWidth: true }
+                        Item {
+                            Layout.fillWidth: true
+                        }
 
                         // Minimize button
                         Item {
@@ -261,8 +297,8 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                            
-                                            
+
+
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
@@ -299,15 +335,15 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                            anchors.leftMargin: 6
-                                            anchors.rightMargin: 6
+                                anchors.leftMargin: 6
+                                anchors.rightMargin: 6
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
                             Image {
                                 anchors.centerIn: parent
-                                            anchors.leftMargin: 6
-                                            anchors.rightMargin: 6
+                                anchors.leftMargin: 6
+                                anchors.rightMargin: 6
                                 sourceSize: Qt.size(96, 96)
                                 width: 24; height: 24
                                 id: imgClose
@@ -328,126 +364,137 @@ ApplicationWindow {
                                 onExited: btnTitleClose.hovered = false
                                 onClicked: window.close()
                             }
-                    }  // RowLayout
-                }
+                        }  // RowLayout
+                    }  // panTitle
+
+                    // ============================================================
+                    // PanHint — bottom-left hint overlay
+                    // ============================================================
+                    Item {
+                        id: panHint
+                        anchors {
+                            left: parent.left; bottom: parent.bottom; leftMargin: 20; bottomMargin: 20
+                        }
+                        // Hint messages appear here
+                    }
+
+                    // ============================================================
+                    // Bottom-right extra buttons
+                    // ============================================================
+                    Column {
+                        anchors {
+                            right: parent.right; bottom: parent.bottom; rightMargin: 15; bottomMargin: 15
+                        }
+                        spacing: 5
+
+                        // BtnExtraBack — Return to top
+                        MyIconButton {
+                            width: 28; height: 28
+                            theme: "Color"
+                            logoScale: 0.9
+                            iconSource: "qrc:/assets/icons/back_to_top.svg"
+                            visible: false  // Shown when scrolled down
+                        }
+                    }
+
+                    // ============================================================
+                    // PanMsg — message overlay (hidden by default)
+                    // ============================================================
+                    Rectangle {
+                        id: panMsg
+                        anchors.fill: parent
+                        color: "#00000000"
+                        visible: false
+                        z: 100
+                    }
+                }  // panForm
 
                 // ============================================================
-                // Content Area — one StackLayout, one file per tab
+                // Tab 0: 启动 — child of borderForm, outside panForm
                 // ============================================================
-                StackLayout {
+                RowLayout {
                     anchors {
-                        left: parent.left
-                        right: parent.right
+                        left: parent.left; right: parent.right
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    currentIndex: navTabs.currentIndex
-
-                    PageLaunch {}
-                    PageDownload {}
-                    Item { /* Link tab — not yet implemented */ }
-                    PageSettings {}
-                    PageMore {}
-                }
-
-                // ============================================================
-                // PanHint — bottom-left hint overlay
-                // ============================================================
-                Item {
-                    id: panHint
-                    anchors { left: parent.left; bottom: parent.bottom; leftMargin: 20; bottomMargin: 20 }
-                    // Hint messages appear here
-                }
-
-                // ============================================================
-                // Bottom-right extra buttons
-                // ============================================================
-                Column {
-                    anchors { right: parent.right; bottom: parent.bottom; rightMargin: 15; bottomMargin: 15 }
-                    spacing: 5
-
-                    // BtnExtraBack — Return to top
-                    MyIconButton {
-                        width: 28; height: 28
-                        theme: "Color"
-                        logoScale: 0.9
-                        iconSource: "qrc:/assets/icons/back_to_top.svg"
-                        visible: false  // Shown when scrolled down
+                    spacing: 0
+                    Rectangle {
+                        Layout.preferredWidth: 300; Layout.fillHeight: true
+                        color: "#ff4444"
+                        Text {
+                            anchors.centerIn: parent; text: "启动-左"; font.pixelSize: 20; color: "white"
+                        }
+                    }
+                    Rectangle {
+                        Layout.fillWidth: true; Layout.fillHeight: true
+                        color: "#4444ff"
+                        Text {
+                            anchors.centerIn: parent; text: "启动-右"; font.pixelSize: 20; color: "white"
+                        }
                     }
                 }
+            }  // borderForm
+        }  // panBack
 
-                // ============================================================
-                // PanMsg — message overlay (hidden by default)
-                // ============================================================
-                Rectangle {
-                    id: panMsg
-                    anchors.fill: parent
-                    color: "#00000000"
-                    visible: false
-                    z: 100
-                }
+        // ========================================================================
+        // Entrance animation (splash is a separate window in main.cpp — see FrmStart)
+        // Original FormMain_Loaded:
+        //   AaOpacity 250ms | AaDouble Y 60→0 600ms EaseOutBack | AaDouble Angle -4→0 500ms EaseOutBack
+        //   All beginTime=100, run in parallel
+        // ========================================================================
+        Timer {
+            id: entranceDelay
+            interval: 100  // matches original beginTime=100
+            repeat: false
+            onTriggered: {
+                slideUp.start()
+                tiltBack.start()
             }
         }
-    }
 
-    // ========================================================================
-    // Entrance animation (splash is a separate window in main.cpp — see FrmStart)
-    // Original FormMain_Loaded:
-    //   AaOpacity 250ms | AaDouble Y 60→0 600ms EaseOutBack | AaDouble Angle -4→0 500ms EaseOutBack
-    //   All beginTime=100, run in parallel
-    // ========================================================================
-    Timer {
-        id: entranceDelay
-        interval: 100  // matches original beginTime=100
-        repeat: false
-        onTriggered: {
-            slideUp.start()
-            tiltBack.start()
+        NumberAnimation {
+            id: fadeInAnim
+            target: window; property: "winOpacity"
+            to: 1.0
+            duration: 250
+            easing.type: Easing.OutCubic
+        }
+
+        NumberAnimation {
+            id: slideUp
+            target: panBack; property: "entranceSlide"
+            to: 0
+            duration: 600
+            easing.type: Easing.OutBack
+        }
+
+        NumberAnimation {
+            id: tiltBack
+            target: panBack; property: "entranceTilt"
+            to: 0
+            duration: 500
+            easing.type: Easing.OutBack
+        }
+
+        // ========================================================================
+        // Navigation
+        // ========================================================================
+        QtObject {
+            id: navTabs
+            property int currentIndex: 0
+        }
+
+        Component.onCompleted: {
+            // Entrance animation (splash closes concurrently from main.cpp)
+            //   Fade in: opacity 0 → 1.0, 250ms (original AaOpacity)
+            //   Slide up: Y 60 → 0, 600ms after 100ms delay (original AaDouble EaseOutBack)
+            fadeInAnim.start()
+            entranceDelay.start()
+
+            // Initialize — C++ singletons handle startup logic
+            JavaManager.scanSystemJava()
+            VersionManager.loadLocalVersions()
         }
     }
-
-    NumberAnimation {
-        id: fadeInAnim
-        target: window; property: "winOpacity"
-        to: 1.0
-        duration: 250
-        easing.type: Easing.OutCubic
-    }
-
-    NumberAnimation {
-        id: slideUp
-        target: panBack; property: "entranceSlide"
-        to: 0
-        duration: 600
-        easing.type: Easing.OutBack
-    }
-
-    NumberAnimation {
-        id: tiltBack
-        target: panBack; property: "entranceTilt"
-        to: 0
-        duration: 500
-        easing.type: Easing.OutBack
-    }
-
-    // ========================================================================
-    // Navigation
-    // ========================================================================
-    QtObject {
-        id: navTabs
-        property int currentIndex: 0
-    }
-
-    Component.onCompleted: {
-        // Entrance animation (splash closes concurrently from main.cpp)
-        //   Fade in: opacity 0 → 1.0, 250ms (original AaOpacity)
-        //   Slide up: Y 60 → 0, 600ms after 100ms delay (original AaDouble EaseOutBack)
-        fadeInAnim.start()
-        entranceDelay.start()
-
-        // Initialize — C++ singletons handle startup logic
-        JavaManager.scanSystemJava()
-        VersionManager.loadLocalVersions()
-    }
-}
 }

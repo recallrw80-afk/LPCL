@@ -4,9 +4,10 @@ import QtQuick.Layouts
 import "../styles"
 
 // More tab — left sidebar + right content
-RowLayout {
-    anchors.fill: parent
-    spacing: 0
+Item {
+    RowLayout {
+        anchors.fill: parent
+        spacing: 0
 
     Rectangle {
         Layout.preferredWidth: 300
@@ -41,4 +42,5 @@ RowLayout {
             font.pixelSize: Theme.fontSizeLarge
         }
     }
+}
 }
