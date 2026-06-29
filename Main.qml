@@ -167,33 +167,35 @@ ApplicationWindow {
                         Row {
                             Layout.alignment: Qt.AlignVCenter
                             height: 27
-                            spacing: 10
+                            spacing: 12
 
                             Repeater {
                                 model: [
-                                    { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg", w: 62 },
-                                    { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg", w: 62 },
-                                    { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg", w: 62 },
-                                    { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg", w: 62 },
-                                    { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg", w: 62 }
+                                    { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg" },
+                                    { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg" },
+                                    { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg" },
+                                    { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg" },
+                                    { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg" }
                                 ]
 
                                 Item {
-                                    width: modelData.w
+                                    width: tabRowContent.width + 28
+                                    implicitWidth: width
                                     height: 27
                                     property bool hovered: false
 
                                     Rectangle {
                                         anchors.fill: parent
-                                        radius: 13
+                                        radius: tabRowContent.width
                                         color: navTabs.currentIndex === modelData.tag ? "#ffffff" :
                                                parent.hovered ? "#33ffffff" : "transparent"
                                         Behavior on color { ColorAnimation { duration: 100 } }
 
                                         Row {
+                                            id: tabRowContent
                                             anchors.centerIn: parent
                                             height: 27
-                                            spacing: 4
+                                            spacing: 5
 
                                             // SVG icon from assets (external file, no inline code)
                                             Image {
@@ -245,11 +247,15 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
+                                            
+                                            
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
                             Image {
                                 anchors.centerIn: parent
+                                            
+                                            
                                 sourceSize: Qt.size(16, 16)
                                 width: 16; height: 16
                                 source: "qrc:/assets/icons/minimize.svg"
@@ -272,11 +278,15 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 6
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
                             Image {
                                 anchors.centerIn: parent
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 6
                                 sourceSize: Qt.size(16, 16)
                                 width: 16; height: 16
                                 source: "qrc:/assets/icons/close.svg"
@@ -307,12 +317,16 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 6
                                 width: 24; height: 24; radius: 12
                                 color: btnTitleInner.hovered ? "#33ffffff" : "transparent"
                                 Behavior on color { ColorAnimation { duration: 100 } }
                             }
                             Image {
                                 anchors.centerIn: parent
+                                            anchors.leftMargin: 6
+                                            anchors.rightMargin: 6
                                 width: 20; height: 20
                                 source: "qrc:/assets/icons/back.svg"
                             }
