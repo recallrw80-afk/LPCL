@@ -10,16 +10,16 @@ import "src/ui/styles"
 ApplicationWindow {
     id: window
 
-    // ---- Window sizing: 850:500 ratio, 60% of screen short side ----
+    // ---- Window sizing: 850:500 ratio, 40% of screen short side ----
     readonly property real baseRatio: 850 / 500  // 1.7
     readonly property real screenShort: Math.min(Screen.width, Screen.height)
-    readonly property real targetHeight: screenShort * 0.6
+    readonly property real targetHeight: screenShort * 0.4
     readonly property real targetWidth: targetHeight * baseRatio
 
     width: targetWidth
     height: targetHeight
-    minimumWidth: targetWidth
-    minimumHeight: targetHeight
+    minimumWidth: 850
+    minimumHeight: 500
     visible: true
     title: "Plain Craft Launcher  "
 
@@ -156,6 +156,7 @@ ApplicationWindow {
                             color: "white"
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeLogo
+                            font.bold: true
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: 6
                         }
@@ -167,7 +168,7 @@ ApplicationWindow {
                         Row {
                             Layout.alignment: Qt.AlignVCenter
                             height: 27
-                            spacing: 2
+                            spacing: 10
 
                             Repeater {
                                 model: [
@@ -195,21 +196,19 @@ ApplicationWindow {
                                             height: 27
                                             spacing: 4
 
-                                            Item {
-                                                width: 14; height: 27
-                                                Image {
-                                                    id: tabIcon
-                                                    anchors.centerIn: parent
-                                                    width: 14; height: 14
-                                                    source: modelData.icon
-                                                    visible: false
-                                                }
-                                                ColorOverlay {
-                                                    anchors.centerIn: parent
-                                                    width: 14; height: 14
-                                                    source: tabIcon
-                                                    color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
-                                                }
+                                            // SVG icon from assets (external file, no inline code)
+                                            Image {
+                                                id: tabIcon
+                                                width: 14; height: 14
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                source: modelData.icon
+                                                visible: false
+                                            }
+                                            ColorOverlay {
+                                                width: 14; height: 14
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                source: tabIcon
+                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
                                             }
 
                                             Text {
