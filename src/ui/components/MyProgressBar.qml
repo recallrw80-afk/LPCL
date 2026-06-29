@@ -1,34 +1,32 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import "../styles"
 
+// Original PCL progress bar: 4px height, gradient fill
 ProgressBar {
     id: control
-    property int barHeight: 6
-    property color fillColor: Theme.accent
-
     implicitWidth: 200
-    implicitHeight: barHeight
+    implicitHeight: Theme.progressBarHeight
+
+    property color fillColorStart: Theme.color4
+    property color fillColorEnd: Theme.color3
 
     background: Rectangle {
         implicitWidth: control.implicitWidth
-        implicitHeight: control.barHeight
-        radius: control.barHeight / 2
-        color: Theme.bgInput
+        implicitHeight: Theme.progressBarHeight
+        radius: 0
+        color: Qt.rgba(213/255, 230/255, 253/255, 0.6) // Color6 with 0.6 opacity
     }
 
     contentItem: Item {
-        implicitWidth: control.implicitWidth
-        implicitHeight: control.barHeight
-
         Rectangle {
             width: control.visualPosition * parent.width
             height: parent.height
-            radius: control.barHeight / 2
-            color: control.fillColor
-
-            Behavior on width {
-                NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+            gradient: Gradient {
+                GradientStop { position: 0.0; color: control.fillColorStart }
+                GradientStop { position: 1.0; color: control.fillColorEnd }
             }
+            Behavior on width { NumberAnimation { duration: 300 } }
         }
     }
 }

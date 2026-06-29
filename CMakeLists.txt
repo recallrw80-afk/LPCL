@@ -76,13 +76,16 @@ qt_add_qml_module(appPCL_LIUNX
     URI PCL_LIUNX
     QML_FILES
         Main.qml
-        src/ui/pages/LaunchPage.qml
+        src/ui/pages/PageLaunchLeft.qml
+        src/ui/pages/PageLaunchRight.qml
+        src/ui/pages/PageSelectLeft.qml
         src/ui/pages/LoginPage.qml
         src/ui/pages/SettingsPage.qml
         src/ui/components/MyButton.qml
         src/ui/components/MyComboBox.qml
         src/ui/components/MyProgressBar.qml
-        src/ui/components/MyTextField.qml
+        src/ui/components/MyTextBox.qml
+        src/ui/components/MyScrollBar.qml
         src/ui/styles/Theme.qml
 )
 

@@ -1,64 +1,110 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import QtQuick.Layouts
+import "../styles"
 
+// Exact replica of original MyComboBox (Controls/MyComboBox.vb)
 ComboBox {
     id: control
-    property int radius: Theme.radiusMd
-    property int fontSize: Theme.fontSizeMd
 
     implicitWidth: 180
-    implicitHeight: 36
+    implicitHeight: 28
 
-    delegate: ItemDelegate {
-        width: control.popup.width
-        contentItem: Text {
-            text: modelData
-            color: Theme.textPrimary
-            font.pixelSize: control.fontSize
-            elide: Text.ElideRight
-            verticalAlignment: Text.AlignVCenter
-        }
-        background: Rectangle {
-            color: hovered ? Theme.bgInput : "transparent"
-            radius: Theme.radiusSm
-        }
+    font.family: Theme.fontFamily
+    font.pixelSize: Theme.fontSize
+
+    // Dynamic border color (same logic as MyTextBox)
+    property color borderColor: {
+        if (!enabled) return Theme.gray5
+        if (down || popup.visible) return Theme.color3
+        if (hovered) return Theme.color4
+        return Theme.colorBg0
+    }
+    property color bgColor: {
+        if (!enabled) return Theme.gray6
+        if (down || popup.visible || hovered) return Theme.color7
+        return Theme.halfWhite
     }
 
     contentItem: Text {
         text: control.displayText
-        font.pixelSize: control.fontSize
-        color: Theme.textPrimary
+        font: control.font
+        color: control.enabled ? Theme.color1 : Theme.gray4
         verticalAlignment: Text.AlignVCenter
         elide: Text.ElideRight
-        leftPadding: Theme.spacingSm
+        leftPadding: 8.5
+        rightPadding: 21.5
+    }
+
+    // Chevron arrow indicator
+    indicator: Canvas {
+        x: control.width - width - 10
+        y: (control.availableHeight - height) / 2
+        width: 15
+        height: 10
+
+        rotation: control.popup.visible ? 180 : 0
+        Behavior on rotation { RotationAnimation { duration: 200; easing.type: Easing.OutCubic } }
+
+        onPaint: {
+            var ctx = getContext("2d")
+            ctx.clearRect(0, 0, width, height)
+            ctx.strokeStyle = control.borderColor
+            ctx.lineWidth = 1.5
+            ctx.beginPath()
+            ctx.moveTo(1, 1)
+            ctx.lineTo(7.5, 7.5)
+            ctx.lineTo(14, 1)
+            ctx.stroke()
+        }
     }
 
     background: Rectangle {
-        implicitWidth: control.implicitWidth
-        implicitHeight: control.implicitHeight
-        radius: control.radius
-        color: Theme.bgInput
-        border.color: control.activeFocus ? Theme.accent : Theme.border
+        radius: Theme.inputRadius
+        border.width: 1
+        border.color: control.borderColor
+        color: control.bgColor
+
+        Behavior on border.color { ColorAnimation { duration: control.down || control.popup.visible ? 10 : 100 } }
+        Behavior on color { ColorAnimation { duration: 100 } }
     }
 
     popup: Popup {
-        y: control.height + 4
+        y: control.height - 1.5
         width: control.width
-        implicitHeight: Math.min(contentItem.implicitHeight, 300)
-        padding: 4
+        implicitHeight: Math.min(contentItem.implicitHeight, 320)
+        padding: 0
+        topPadding: 1
+        bottomPadding: 1
 
         contentItem: ListView {
             clip: true
-            implicitHeight: contentHeight
+            implicitHeight: Math.min(contentHeight, 320)
             model: control.popup.visible ? control.delegateModel : null
+            currentIndex: control.highlightedIndex
             ScrollIndicator.vertical: ScrollIndicator {}
         }
 
         background: Rectangle {
-            radius: Theme.radiusMd
-            color: Theme.bgSecondary
-            border.color: Theme.border
+            radius: Theme.buttonRadius
+            border.width: 1
+            border.color: control.borderColor
+            color: Theme.pureWhite
+        }
+    }
+
+    delegate: ItemDelegate {
+        width: control.width
+        height: 30
+        contentItem: Text {
+            text: modelData
+            font: control.font
+            color: Theme.color1
+            elide: Text.ElideRight
+            verticalAlignment: Text.AlignVCenter
+            leftPadding: 8.5
+        }
+        background: Rectangle {
+            color: hovered ? Theme.color7 : "transparent"
         }
     }
 }
