@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import QtQuick.Shapes
+import Qt5Compat.GraphicalEffects
 import PCL.Core
 import "src/ui/components"
 import "src/ui/pages"
@@ -129,14 +129,13 @@ ApplicationWindow {
 
                 // ============================================================
                 // PanTitle (Height=48) — Title bar
+                // Layout: [LPCL] [---spacer---] [Tabs] [---spacer---] [─] [✕]
                 // ============================================================
                 Rectangle {
                     id: panTitle
                     anchors { left: parent.left; right: parent.right; top: parent.top }
                     height: Theme.titleBarHeight
                     z: 10
-
-                    // Global accent color (exact match original PCL)
                     color: Theme.color2
 
                     // ---- Drag window by title bar (native, no stutter) ----
@@ -145,136 +144,158 @@ ApplicationWindow {
                         onPressed: (mouse) => window.startSystemMove()
                     }
 
-                    // ---- PCL brand logo (ShapeTitleLogo) ----
-                    Text {
-                        id: labTitleLogo
-                        anchors { left: parent.left; leftMargin: 19; verticalCenter: parent.verticalCenter }
-                        text: "LPCL"
-                        color: "white"
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeLogo
-                    }
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 13
+                        anchors.rightMargin: 8
+                        spacing: 0
 
-                    // ---- Close button ----
-                    Item {
-                        id: btnTitleClose
-                        anchors { right: parent.right; rightMargin: 12; verticalCenter: parent.verticalCenter }
-                        width: 28; height: 28
-                        property bool hovered: false
-
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 24; height: 24; radius: 12
-                            color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
-                            Behavior on color { ColorAnimation { duration: 100 } }
+                        // LPCL logo
+                        Text {
+                            text: "LPCL"
+                            color: "white"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: Theme.fontSizeLogo
+                            Layout.alignment: Qt.AlignVCenter
+                            Layout.leftMargin: 6
                         }
-                        Image {
-                            anchors.centerIn: parent
-                            width: 20; height: 20
-                            source: "qrc:/assets/icons/close.svg"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: btnTitleClose.hovered = true
-                            onExited: btnTitleClose.hovered = false
-                            onClicked: window.close()
-                        }
-                    }
 
-                    // ---- Minimize button ----
-                    Item {
-                        id: btnTitleMin
-                        anchors { right: btnTitleClose.left; rightMargin: 4; verticalCenter: parent.verticalCenter }
-                        width: 28; height: 28
-                        property bool hovered: false
+                        // Left spacer
+                        Item { Layout.fillWidth: true }
 
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: 24; height: 24; radius: 12
-                            color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
-                            Behavior on color { ColorAnimation { duration: 100 } }
-                        }
-                        Image {
-                            anchors.centerIn: parent
-                            width: 20; height: 20
-                            source: "qrc:/assets/icons/minimize.svg"
-                        }
-                        MouseArea {
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onEntered: btnTitleMin.hovered = true
-                            onExited: btnTitleMin.hovered = false
-                            onClicked: window.showMinimized()
-                        }
-                    }
+                        // Navigation tabs
+                        Row {
+                            Layout.alignment: Qt.AlignVCenter
+                            height: 27
+                            spacing: 2
 
-                    // ---- PanTitleMain (navigation tabs centered) ----
-                    Row {
-                        id: panTitleSelect
-                        anchors.centerIn: parent
-                        height: 27
-                        spacing: 2
+                            Repeater {
+                                model: [
+                                    { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg", w: 62 },
+                                    { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg", w: 62 },
+                                    { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg", w: 62 },
+                                    { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg", w: 62 },
+                                    { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg", w: 62 }
+                                ]
 
-                        Repeater {
-                            model: [
-                                { text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg" },
-                                { text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg" },
-                                { text: "联机", tag: 2, icon: "qrc:/assets/icons/nav_link.svg" },
-                                { text: "设置", tag: 3, icon: "qrc:/assets/icons/nav_settings.svg" },
-                                { text: "更多", tag: 4, icon: "qrc:/assets/icons/nav_more.svg" }
-                            ]
+                                Item {
+                                    width: modelData.w
+                                    height: 27
+                                    property bool hovered: false
 
-                            Item {
-                                width: tabRow.implicitWidth + 24
-                                height: 27
-                                property bool hovered: false
+                                    Rectangle {
+                                        anchors.fill: parent
+                                        radius: 13
+                                        color: navTabs.currentIndex === modelData.tag ? "#ffffff" :
+                                               parent.hovered ? "#33ffffff" : "transparent"
+                                        Behavior on color { ColorAnimation { duration: 100 } }
 
-                                Rectangle {
-                                    anchors.fill: parent
-                                    radius: 13
-                                    color: navTabs.currentIndex === modelData.tag ? "#ffffff" :
-                                           parent.hovered ? "#33ffffff" : "transparent"
-                                    Behavior on color { ColorAnimation { duration: 100 } }
+                                        Item {
+                                            id: tabRow
+                                            anchors.centerIn: parent
+                                            width: tabRowContent.width
+                                            height: tabRowContent.height
 
-                                    Row {
-                                        id: tabRow
-                                        anchors.centerIn: parent
-                                        spacing: 4
+                                            Row {
+                                                id: tabRowContent
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                spacing: 4
 
-                                        Image {
-                                            width: 14; height: 14
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            source: modelData.icon
-                                            opacity: navTabs.currentIndex === modelData.tag ? 0.9 : 0.6
-                                        }
+                                                Image {
+                                                    id: tabIcon
+                                                    width: 14; height: 14
+                                                    source: modelData.icon
+                                                    visible: false
+                                                }
+                                                ColorOverlay {
+                                                    width: 14; height: 14
+                                                    source: tabIcon
+                                                    color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
+                                                }
 
-                                        Text {
-                                            text: modelData.text
-                                            color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
-                                            font.family: Theme.fontFamily
-                                            font.pixelSize: Theme.fontSize
-                                            anchors.verticalCenter: parent.verticalCenter
+                                                Text {
+                                                    text: modelData.text
+                                                    color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
+                                                    font.family: Theme.fontFamily
+                                                    font.pixelSize: Theme.fontSize
+                                                    height: 27
+                                                    verticalAlignment: Text.AlignVCenter
+                                                }
+                                            }
                                         }
                                     }
-                                }
 
-                                MouseArea {
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onEntered: parent.hovered = true
-                                    onExited: parent.hovered = false
-                                    onClicked: { navTabs.currentIndex = modelData.tag }
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onEntered: parent.hovered = true
+                                        onExited: parent.hovered = false
+                                        onClicked: { navTabs.currentIndex = modelData.tag }
+                                    }
                                 }
+                            }
+                        }
+
+                        // Right spacer
+                        Item { Layout.fillWidth: true }
+
+                        // Minimize button
+                        Item {
+                            id: btnTitleMin
+                            Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                            Layout.alignment: Qt.AlignVCenter
+                            property bool hovered: false
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 28; height: 28; radius: 3
+                                color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
+                            }
+                            Image {
+                                anchors.centerIn: parent
+                                sourceSize: Qt.size(16, 16)
+                                width: 16; height: 16
+                                source: "qrc:/assets/icons/minimize.svg"
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onEntered: btnTitleMin.hovered = true
+                                onExited: btnTitleMin.hovered = false
+                                onClicked: window.showMinimized()
+                            }
+                        }
+
+                        // Close button
+                        Item {
+                            id: btnTitleClose
+                            Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                            Layout.alignment: Qt.AlignVCenter
+                            property bool hovered: false
+
+                            Rectangle {
+                                anchors.centerIn: parent
+                                width: 28; height: 28; radius: 3
+                                color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
+                            }
+                            Image {
+                                anchors.centerIn: parent
+                                sourceSize: Qt.size(16, 16)
+                                width: 16; height: 16
+                                source: "qrc:/assets/icons/close.svg"
+                            }
+                            MouseArea {
+                                anchors.fill: parent
+                                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                onEntered: btnTitleClose.hovered = true
+                                onExited: btnTitleClose.hovered = false
+                                onClicked: window.close()
                             }
                         }
                     }
 
-                    // ---- PanTitleInner (sub-page back navigation, hidden by default) ----
-                    // Shown when navigating into sub-pages
+                    // ---- PanTitleInner (sub-page back navigation overlay) ----
                     Item {
                         id: panTitleInner
                         anchors.fill: parent
@@ -301,13 +322,10 @@ ApplicationWindow {
                             }
                             MouseArea {
                                 anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
+                                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                                 onEntered: btnTitleInner.hovered = true
                                 onExited: btnTitleInner.hovered = false
-                                onClicked: {
-                                    if (pageStack.length > 0) pageStack.pop()
-                                }
+                                onClicked: { if (pageStack.length > 0) pageStack.pop() }
                             }
                         }
 
