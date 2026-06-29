@@ -92,3 +92,4 @@ cmake-build-release/
 /bin
 
 /example
+.codegraph
