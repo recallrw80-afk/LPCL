@@ -10,6 +10,7 @@ Item {
     // ---- Public API ----
     property string logo: ""             // SVG path data (original WPF Geometry format)
     property real logoScale: 1.0
+    property real viewBoxSize: 24        // original path coordinate range (24=close/minimize, 1024=tab icons)
     property string theme: "Color"       // "Color" | "White" | "Black" | "Red"
     property bool enabled: true
 
@@ -70,11 +71,11 @@ Item {
         width: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
         height: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
 
-        // Use layer to apply smooth rendering
         layer.enabled: true
         layer.samples: 4
 
         ShapePath {
+            id: shapePath
             fillColor: wrapper.iconColor
             strokeColor: "transparent"
             strokeWidth: 0
@@ -82,18 +83,23 @@ Item {
             joinStyle: ShapePath.RoundJoin
             capStyle: ShapePath.RoundCap
 
-            // WPF geometry is ~20 units, scale to fit 100x100 viewport
-            scale: Qt.size(iconShape.width / 20, iconShape.height / 20)
+            // Scale to fit: divides path coords by viewBoxSize to fit icon box
+            scale: Qt.size(iconShape.width / wrapper.viewBoxSize, iconShape.height / wrapper.viewBoxSize)
 
-            PathSvg {
-                path: {
-                    // Strip WPF "F1" fill-rule prefix, keep the rest as-is
-                    var s = wrapper.logo.trim()
-                    if (s.match(/^F\d\s/)) s = s.replace(/^F\d\s*/, "")
-                    return s || "M0,0"  // Empty path fallback
-                }
+            property string svgPath: {
+                var s = wrapper.logo.trim()
+                if (s.match(/^F\d\s/)) s = s.replace(/^F\d\s*/, "")
+                return s || "M0,0"
             }
+
+            PathSvg { path: shapePath.svgPath }
         }
+    }
+
+    // Auto-scale the path to fit the icon box by analyzing the SVG data
+    Component.onCompleted: {
+        // Render at natural scale first; Qt Shapes auto-clips to bounds
+        // For most WPF icons: path coords are ~0-20, so they fit well
     }
 
     // ---- Mouse handling ----

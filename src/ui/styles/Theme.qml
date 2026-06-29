@@ -20,9 +20,9 @@ QtObject {
     // Color 1-8 (exact formulas from ModSecret.vb ThemeRefresh)
     // ========================================================================
     readonly property color color1: hsl(hue, sat * 0.2, 25 + lightAdj * 0.3)
-    readonly property color color2: hsl(hue, sat, 45 + lightAdj)
-    readonly property color color3: hsl(hue, sat, 55 + lightAdj)
-    readonly property color color4: hsl(hue, sat, 65 + lightAdj)
+    readonly property color color2: "#116ecb"    // global accent blue, exact match original PCL
+    readonly property color color3: "#1373fb"    // lighter accent (focus / hover)
+    readonly property color color4: "#4895f7"    // light accent (title bar / secondary)
     readonly property color color5: hsl(hue, sat, 80 + lightAdj * 0.4)
     readonly property color color6: hsl(hue, sat * 0.8, 91 + lightAdj * 0.1)
     readonly property color color7: hsl(hue, sat, 95)

@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import QtQuick.Shapes
 import PCL.Core
 import "src/ui/components"
 import "src/ui/pages"
@@ -9,16 +10,21 @@ import "src/ui/styles"
 ApplicationWindow {
     id: window
 
-    // ---- Window properties (exact match FormMain.xaml) ----
-    width: Theme.windowWidth
-    height: Theme.windowHeight
-    minimumWidth: Theme.windowMinWidth
-    minimumHeight: Theme.windowMinHeight
+    // ---- Window sizing: 850:500 ratio, 60% of screen short side ----
+    readonly property real baseRatio: 850 / 500  // 1.7
+    readonly property real screenShort: Math.min(Screen.width, Screen.height)
+    readonly property real targetHeight: screenShort * 0.6
+    readonly property real targetWidth: targetHeight * baseRatio
+
+    width: targetWidth
+    height: targetHeight
+    minimumWidth: targetWidth
+    minimumHeight: targetHeight
     visible: true
     title: "Plain Craft Launcher  "
 
     // Frameless + transparent for custom chrome (WindowStyle="None" AllowsTransparency="True" Topmost="True")
-    flags: Qt.FramelessWindowHint | Qt.Window | Qt.WindowStaysOnTopHint
+    flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
     // ========================================================================
@@ -130,24 +136,23 @@ ApplicationWindow {
                     height: Theme.titleBarHeight
                     z: 10
 
-                    // Horizontal gradient: darker edges → lighter center → darker edges
-                    gradient: Gradient {
-                        GradientStop { position: 0.0; color: Theme.titleGradEdge }
-                        GradientStop { position: 0.5; color: Theme.titleGradCenter }
-                        GradientStop { position: 1.0; color: Theme.titleGradEnd }
-                    }
+                    // Global accent color (exact match original PCL)
+                    color: Theme.color2
 
-                    // ---- Drag window by title bar ----
+                    // ---- Drag window by title bar (native, no stutter) ----
                     MouseArea {
                         anchors.fill: parent
-                        property point lastPos: Qt.point(0, 0)
-                        onPressed: (mouse) => { lastPos = Qt.point(mouse.x, mouse.y) }
-                        onPositionChanged: (mouse) => {
-                            if (pressed) {
-                                window.x += mouse.x - lastPos.x
-                                window.y += mouse.y - lastPos.y
-                            }
-                        }
+                        onPressed: (mouse) => window.startSystemMove()
+                    }
+
+                    // ---- PCL brand logo (ShapeTitleLogo) ----
+                    Text {
+                        id: labTitleLogo
+                        anchors { left: parent.left; leftMargin: 19; verticalCenter: parent.verticalCenter }
+                        text: "LPCL"
+                        color: "white"
+                        font.family: Theme.fontFamily
+                        font.pixelSize: Theme.fontSizeLogo
                     }
 
                     // ---- Close button (MyIconButton, White, X icon) ----
@@ -168,46 +173,29 @@ ApplicationWindow {
                         width: 28; height: 28
                         theme: "White"
                         logoScale: 0.72
-                        logo: "F1 M0,0 h15 v2 h-15 v-2 Z"
+                        logo: "F1 M3,11 h9 v2 h-9 v-2 Z"
                         onClicked: window.showMinimized()
                     }
 
-                    // ---- PanTitleMain (navigation tabs) ----
+                    // ---- PanTitleMain (navigation tabs centered) ----
                     Row {
                         id: panTitleSelect
-                        anchors { left: parent.left; leftMargin: 13; verticalCenter: parent.verticalCenter }
+                        anchors.centerIn: parent
                         height: 27
                         spacing: 2
 
-                        // Navigation tab buttons (exact match original BtnTitleSelect0-4)
                         Repeater {
                             model: [
-                                {
-                                    text: "启动", tag: 0,
-                                    logo: "M52.1,164.5c-1.4,0-3.1-0.5-4.2-1.3c-2.6-1.7-4-4.2-4-7V43.8c0-2.9,1.6-5.8,4.1-7c1.2-0.8,2.7-1.2,4.1-1.2c1.5,0,2.9,0.4,4.2,1.2L153.1,93c0,0,0.1,0,0.1,0.1c2.6,1.7,4,4.2,4,7c0,3-1.7,5.8-4.2,7.1l-96.8,56.2C55.1,164,53.5,164.5,52.1,164.5z"
-                                },
-                                {
-                                    text: "下载", tag: 1,
-                                    logo: "M955 610h-59c-15 0-29 13-29 29v196c0 15-13 29-29 29h-649c-15 0-29-13-29-29v-196c0-15-13-29-29-29h-59c-15 0-29 13-29 29V905c0 43 35 78 78 78h787c43 0 78-35 78-78V640c0-15-13-29-29-29zM492 740c11 11 29 11 41 0l265-265c11-11 11-29 0-41l-41-41c-11-11-29-11-41 0l-110 110c-11 11-33 3-33-13V68C571 53 555 39 541 39h-59c-15 0-29 13-29 29v417c0 17-21 25-33 13l-110-110c-11-11-29-11-41 0L226 433c-11 11-11 29 0 41L492 740z"
-                                },
-                                {
-                                    text: "联机", tag: 2,
-                                    logo: "M512 817c-48.601 0-88-39.399-88-88s39.399-88 88-88 88 39.399 88 88-39.399 88-88 88zM237.671 565.74C308.335 474.58 397.369 429 504.774 429c118.433 0 214.225 55.421 287.377 166.264l-53.407 30.369c-13.84 7.87-31.362 4.367-41.114-8.219-50.291-64.911-114.577-97.367-192.856-97.367-86.851 0-156.835 40.318-209.95 120.953l-47.995-28.02c-15.263-8.91-20.412-28.507-11.502-43.77a32 32 0 0 1 2.344-3.47zM107.691 419.47C205.24 278.491 337.805 208 505.379 208c178.77 0 317.694 80.224 416.772 240.672l-56.54 31.73c-13.686 7.68-30.922 4.303-40.697-7.975C735.581 360.213 629.07 303.009 505.38 300.815 373.997 298.485 261.637 362.88 168.3 494l-50.116-28.505c-15.362-8.738-20.732-28.275-11.994-43.637a32 32 0 0 1 1.5-2.387z"
-                                },
-                                {
-                                    text: "设置", tag: 3,
-                                    logo: "M940.4 463.7L773.3 174.2c-17.3-30-49.2-48.4-83.8-48.4H340.2c-34.6 0-66.5 18.5-83.8 48.4L89.2 463.7c-17.3 30-17.3 66.9 0 96.8L256.4 850c17.3 30 49.2 48.4 83.8 48.4h349.2c34.6 0 66.5-18.5 83.8-48.4l167.2-289.5c17.3-29.9 17.3-66.8 0-96.8z"
-                                },
-                                {
-                                    text: "更多", tag: 4,
-                                    logo: "M364 0h-273C40 0 0 40 0 91v273C0 414 40 455 91 455h273C414 455 455 414 455 364V91C455 40 414 0 364 0zM341 341H113V113h227v227zM933 0h-273C609 0 568 40 568 91v273c0 50 40 91 91 91h273C983 455 1024 414 1024 364V91c0-50-40-90-90-90zM910 341h-227V113h227v227zM364 568h-273C40 568 0 609 0 659v273c0 50 40 91 91 91h273C414 1024 455 983 455 932v-273C455 609 414 568 364 568zM341 910H113v-227h227v227zM933 568h-273c-50 0-91 40-91 91v273c0 50 40 91 91 91h273c50 0 90-40 90-91v-273c0-50-40-90-90-90zM910 910h-227v-227h227v227z"
-                                }
+                                { text: "启动", tag: 0, logo: "M52.1,164.5c-1.4,0-3.1-0.5-4.2-1.3c-2.6-1.7-4-4.2-4-7V43.8c0-2.9,1.6-5.8,4.1-7c1.2-0.8,2.7-1.2,4.1-1.2c1.5,0,2.9,0.4,4.2,1.2L153.1,93c0,0,0.1,0,0.1,0.1c2.6,1.7,4,4.2,4,7c0,3-1.7,5.8-4.2,7.1l-96.8,56.2C55.1,164,53.5,164.5,52.1,164.5z" },
+                                { text: "下载", tag: 1, logo: "M955 610h-59c-15 0-29 13-29 29v196c0 15-13 29-29 29h-649c-15 0-29-13-29-29v-196c0-15-13-29-29-29h-59c-15 0-29 13-29 29V905c0 43 35 78 78 78h787c43 0 78-35 78-78V640c0-15-13-29-29-29zM492 740c11 11 29 11 41 0l265-265c11-11 11-29 0-41l-41-41c-11-11-29-11-41 0l-110 110c-11 11-33 3-33-13V68C571 53 555 39 541 39h-59c-15 0-29 13-29 29v417c0 17-21 25-33 13l-110-110c-11-11-29-11-41 0L226 433c-11 11-11 29 0 41L492 740z" },
+                                { text: "联机", tag: 2, logo: "M512 817c-48.601 0-88-39.399-88-88s39.399-88 88-88 88 39.399 88 88-39.399 88-88 88zM237.671 565.74C308.335 474.58 397.369 429 504.774 429c118.433 0 214.225 55.421 287.377 166.264l-53.407 30.369c-13.84 7.87-31.362 4.367-41.114-8.219-50.291-64.911-114.577-97.367-192.856-97.367-86.851 0-156.835 40.318-209.95 120.953l-47.995-28.02c-15.263-8.91-20.412-28.507-11.502-43.77a32 32 0 0 1 2.344-3.47zM107.691 419.47C205.24 278.491 337.805 208 505.379 208c178.77 0 317.694 80.224 416.772 240.672l-56.54 31.73c-13.686 7.68-30.922 4.303-40.697-7.975C735.581 360.213 629.07 303.009 505.38 300.815 373.997 298.485 261.637 362.88 168.3 494l-50.116-28.505c-15.362-8.738-20.732-28.275-11.994-43.637a32 32 0 0 1 1.5-2.387z" },
+                                { text: "设置", tag: 3, logo: "M940.4 463.7L773.3 174.2c-17.3-30-49.2-48.4-83.8-48.4H340.2c-34.6 0-66.5 18.5-83.8 48.4L89.2 463.7c-17.3 30-17.3 66.9 0 96.8L256.4 850c17.3 30 49.2 48.4 83.8 48.4h349.2c34.6 0 66.5-18.5 83.8-48.4l167.2-289.5c17.3-29.9 17.3-66.8 0-96.8z" },
+                                { text: "更多", tag: 4, logo: "M364 0h-273C40 0 0 40 0 91v273C0 414 40 455 91 455h273C414 455 455 414 455 364V91C455 40 414 0 364 0zM341 341H113V113h227v227zM933 0h-273C609 0 568 40 568 91v273c0 50 40 91 91 91h273C983 455 1024 414 1024 364V91c0-50-40-90-90-90zM910 341h-227V113h227v227zM364 568h-273C40 568 0 609 0 659v273c0 50 40 91 91 91h273C414 1024 455 983 455 932v-273C455 609 414 568 364 568zM341 910H113v-227h227v227zM933 568h-273c-50 0-91 40-91 91v273c0 50 40 91 91 91h273c50 0 90-40 90-91v-273c0-50-40-90-90-90zM910 910h-227v-227h227v227z" }
                             ]
 
                             Item {
-                                width: labelRow.implicitWidth + 20
+                                width: tabRow.implicitWidth + 16
                                 height: 27
-
                                 property bool hovered: false
 
                                 Rectangle {
@@ -221,17 +209,19 @@ ApplicationWindow {
                                     Behavior on color { ColorAnimation { duration: 100 } }
 
                                     Row {
-                                        id: labelRow
+                                        id: tabRow
                                         anchors.centerIn: parent
-                                        spacing: 5
+                                        spacing: 2
 
-                                        // Icon (simplified: small colored dot for now, MyIconButton would need fitting)
-                                        Rectangle {
-                                            width: 10; height: 10
+                                        // SVG icon via MyIconButton (original WPF paths)
+                                        MyIconButton {
+                                            width: 18; height: 18
                                             anchors.verticalCenter: parent.verticalCenter
-                                            radius: 5
-                                            color: navTabs.currentIndex === modelData.tag ? "white" : "#88ffffff"
-                                            visible: false   // Hidden for now — SVG icons will go here
+                                            theme: navTabs.currentIndex === modelData.tag ? "White" : "Color"
+                                            viewBoxSize: 1024
+                                            logoScale: 0.7
+                                            logo: modelData.logo
+                                            enabled: false
                                         }
 
                                         Text {
@@ -250,9 +240,7 @@ ApplicationWindow {
                                     cursorShape: Qt.PointingHandCursor
                                     onEntered: parent.hovered = true
                                     onExited: parent.hovered = false
-                                    onClicked: {
-                                        navTabs.currentIndex = modelData.tag
-                                    }
+                                    onClicked: { navTabs.currentIndex = modelData.tag }
                                 }
                             }
                         }
@@ -273,6 +261,7 @@ ApplicationWindow {
                             width: 28; height: 28
                             theme: "White"
                             logoScale: 0.87
+                            viewBoxSize: 1200
                             logo: "M1097 584 250 584 562 896C591 925 591 972 562 1001 533 1030 487 1030 458 1001L21 565C6 550-0 531 0 511L0 511 0 511C-0 492 6 472 21 457L458 21C487-7 533-7 562 21 591 50 591 97 562 126L250 438 1097 438C1137 438 1170 471 1170 511 1170 551 1137 584 1097 584L1097 584Z"
                             onClicked: {
                                 if (pageStack.length > 0) pageStack.pop()
