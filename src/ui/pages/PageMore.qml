@@ -5,6 +5,13 @@ import "../styles"
 
 // More tab — left sidebar + right content
 Item {
+    property bool isActive: false
+    visible: opacity > 0
+    opacity: isActive ? 1 : 0
+    scale: isActive ? 1 : 0.96
+    Behavior on opacity { NumberAnimation { duration: 100 } }
+    Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
+
     RowLayout {
         anchors.fill: parent
         spacing: 0
