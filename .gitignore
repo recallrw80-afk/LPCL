@@ -87,4 +87,5 @@ PORTING_PLAN.md
 /*.md
 cmake-build-debug/
 cmake-build-release/
-.idea/
+/.idea
+/bin
