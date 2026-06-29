@@ -129,7 +129,6 @@ ApplicationWindow {
 
                 // ============================================================
                 // PanTitle (Height=48) — Title bar
-                // Layout: [LPCL] [---spacer---] [Tabs] [---spacer---] [─] [✕]
                 // ============================================================
                 Rectangle {
                     id: panTitle
@@ -199,13 +198,13 @@ ApplicationWindow {
                                             // SVG icon from assets (external file, no inline code)
                                             Image {
                                                 id: tabIcon
-                                                width: 14; height: 14
+                                                width: 22; height: 22
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 source: modelData.icon
                                                 visible: false
                                             }
                                             ColorOverlay {
-                                                width: 14; height: 14
+                                                width: 18; height: 18
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 source: tabIcon
                                                 color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"

@@ -92,7 +92,7 @@ QtObject {
     readonly property int windowCornerRadius: 6
     readonly property int windowMargin: 10       // PanBack margin
     readonly property int borderMargin: 8        // BorderForm margin
-    readonly property int titleBarHeight: 48
+    readonly property int titleBarHeight: 50
 
     // ========================================================================
     // Control dimensions
