@@ -8,8 +8,6 @@ Item {
 
     property alias text: field.text
     property alias enabled: field.enabled
-    property alias activeFocus: field.activeFocus
-    property alias hovered: field.hovered
     property alias placeholderText: field.placeholderText
     property alias readOnly: field.readOnly
     property alias validator: field.validator

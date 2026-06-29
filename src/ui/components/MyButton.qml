@@ -9,7 +9,6 @@ Item {
 
     property alias text: btn.text
     property alias enabled: btn.enabled
-    property alias hovered: btn.hovered
     property alias down: btn.down
     property alias pressed: btn.pressed
 
