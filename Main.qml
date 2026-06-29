@@ -190,37 +190,35 @@ ApplicationWindow {
                                                parent.hovered ? "#33ffffff" : "transparent"
                                         Behavior on color { ColorAnimation { duration: 100 } }
 
-                                        Item {
-                                            id: tabRow
+                                        Row {
                                             anchors.centerIn: parent
-                                            width: tabRowContent.width
-                                            height: tabRowContent.height
+                                            height: 27
+                                            spacing: 4
 
-                                            Row {
-                                                id: tabRowContent
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                spacing: 4
-
+                                            Item {
+                                                width: 14; height: 27
                                                 Image {
                                                     id: tabIcon
+                                                    anchors.centerIn: parent
                                                     width: 14; height: 14
                                                     source: modelData.icon
                                                     visible: false
                                                 }
                                                 ColorOverlay {
+                                                    anchors.centerIn: parent
                                                     width: 14; height: 14
                                                     source: tabIcon
                                                     color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
                                                 }
+                                            }
 
-                                                Text {
-                                                    text: modelData.text
-                                                    color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
-                                                    font.family: Theme.fontFamily
-                                                    font.pixelSize: Theme.fontSize
-                                                    height: 27
-                                                    verticalAlignment: Text.AlignVCenter
-                                                }
+                                            Text {
+                                                text: modelData.text
+                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
+                                                font.family: Theme.fontFamily
+                                                font.pixelSize: Theme.fontSize
+                                                height: 27
+                                                verticalAlignment: Text.AlignVCenter
                                             }
                                         }
                                     }
