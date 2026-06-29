@@ -129,7 +129,7 @@ void Launcher::doLaunch()
     env.insert("APPDATA", gameDir);
 
     // Minecraft-specific env
-    env.insert("MINECRAFT_LAUNCHER_NAME", "PCL_LIUNX");
+    env.insert("MINECRAFT_LAUNCHER_NAME", "LPCL");
     env.insert("MINECRAFT_LAUNCHER_VERSION", "0.1");
 
     m_gameProcess->setProcessEnvironment(env);

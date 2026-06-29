@@ -48,7 +48,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
     emit downloadStarted(url);
 
     QNetworkRequest request(url);
-    request.setRawHeader("User-Agent", "PCL_LIUNX/0.1");
+    request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
 
@@ -124,7 +124,7 @@ QNetworkReply* DownloadManager::downloadToString(const QString &url,
                                                    int maxRetries)
 {
     QNetworkRequest request(url);
-    request.setRawHeader("User-Agent", "PCL_LIUNX/0.1");
+    request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
 

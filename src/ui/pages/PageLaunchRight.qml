@@ -129,7 +129,7 @@ Item {
                         Text {
                             id: labLog
                             width: parent.width
-                            text: "PCL_LIUNX v0.1\nReady.\n"
+                            text: "LPCL v0.1\nReady.\n"
                             color: Theme.color1
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSize

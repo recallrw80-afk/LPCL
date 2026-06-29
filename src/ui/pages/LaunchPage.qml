@@ -212,7 +212,7 @@ Page {
                     font.pixelSize: Theme.fontSizeXs
                     font.family: "monospace"
                     background: null
-                    text: "PCL_LIUNX v0.1\nReady.\n"
+                    text: "LPCL v0.1\nReady.\n"
                 }
             }
         }

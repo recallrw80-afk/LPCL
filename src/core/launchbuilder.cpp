@@ -276,7 +276,7 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
     r["version_type"] = version.type;
 
     // Launcher
-    r["launcher_name"] = "PCL_LIUNX";
+    r["launcher_name"] = "LPCL";
     r["launcher_version"] = "0.1";
     r["clientid"] = login.clientToken.isEmpty() ? "0" : login.clientToken;
 

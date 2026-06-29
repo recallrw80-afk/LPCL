@@ -181,7 +181,7 @@ Item {
                     spacing: 8
 
                     Text {
-                        text: "About PCL_LIUNX"
+                        text: "About LPCL"
                         color: Theme.color1
                         font.family: Theme.fontFamily
                         font.pixelSize: Theme.fontSizeLarge

@@ -80,7 +80,7 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    engine.loadFromModule("PCL_LIUNX", "Main");
+    engine.loadFromModule("LPCL", "Main");
 
     return app.exec();
 }
