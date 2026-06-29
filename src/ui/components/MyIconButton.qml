@@ -1,16 +1,16 @@
 import QtQuick
-import QtQuick.Shapes
+import Qt5Compat.GraphicalEffects
 import "../styles"
 
 // Exact replica of original MyIconButton (Controls/MyIconButton.xaml + .xaml.vb)
 // Theme: Color (theme-based), White, Black, Red
+// Icons are external SVG files (not inline paths — see RED LINE in CLAUDE.md)
 Item {
     id: wrapper
 
     // ---- Public API ----
-    property string logo: ""             // SVG path data (original WPF Geometry format)
+    property url iconSource: ""           // SVG file path (e.g. "qrc:/assets/icons/xxx.svg")
     property real logoScale: 1.0
-    property real viewBoxSize: 24        // original path coordinate range (24=close/minimize, 1024=tab icons)
     property string theme: "Color"       // "Color" | "White" | "Black" | "Red"
     property bool enabled: true
 
@@ -64,39 +64,24 @@ Item {
         Behavior on color { ColorAnimation { duration: 100 } }
     }
 
-    // ---- SVG icon via QtQuick.Shapes (renders as native vector geometry; window MSAA handles AA) ----
-    Shape {
-        id: iconShape
+    // ---- SVG icon from external file (Image + ColorOverlay, same pattern as nav tab icons) ----
+    property real iconSize: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
+
+    Image {
+        id: iconImage
         anchors.centerIn: parent
-        width: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
-        height: Math.min(parent.width, parent.height) * 0.72 * wrapper.logoScale
-
-        ShapePath {
-            id: shapePath
-            fillColor: wrapper.iconColor
-            strokeColor: "transparent"
-            strokeWidth: 0
-            strokeStyle: ShapePath.SolidLine
-            joinStyle: ShapePath.RoundJoin
-            capStyle: ShapePath.RoundCap
-
-            // Scale to fit: divides path coords by viewBoxSize to fit icon box
-            scale: Qt.size(iconShape.width / wrapper.viewBoxSize, iconShape.height / wrapper.viewBoxSize)
-
-            property string svgPath: {
-                var s = wrapper.logo.trim()
-                if (s.match(/^F\d\s/)) s = s.replace(/^F\d\s*/, "")
-                return s || "M0,0"
-            }
-
-            PathSvg { path: shapePath.svgPath }
-        }
+        width: wrapper.iconSize
+        height: wrapper.iconSize
+        source: wrapper.iconSource
+        sourceSize: Qt.size(iconSize * 4, iconSize * 4)
+        smooth: true
+        mipmap: true
+        visible: false
     }
-
-    // Auto-scale the path to fit the icon box by analyzing the SVG data
-    Component.onCompleted: {
-        // Render at natural scale first; Qt Shapes auto-clips to bounds
-        // For most WPF icons: path coords are ~0-20, so they fit well
+    ColorOverlay {
+        anchors.fill: iconImage
+        source: iconImage
+        color: wrapper.iconColor
     }
 
     // ---- Mouse handling ----

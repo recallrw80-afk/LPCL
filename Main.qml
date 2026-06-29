@@ -23,6 +23,10 @@ ApplicationWindow {
     visible: true
     title: "Plain Craft Launcher  "
 
+    // Opacity driven by custom property for reliable animation (entrance fade-in)
+    property real winOpacity: 0
+    opacity: winOpacity
+
     // Frameless + transparent for custom chrome (WindowStyle="None" AllowsTransparency="True" Topmost="True")
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
@@ -34,6 +38,10 @@ ApplicationWindow {
         id: panBack
         anchors.fill: parent
         anchors.margins: Theme.windowMargin
+
+        // Entrance slide offset (matches WPF TranslateTransform Y="60")
+        property real entranceSlide: 60
+        transform: Translate { y: panBack.entranceSlide }
 
         // ---- 8 Resizer handles (exact match FormMain.xaml resizers) ----
         // Top edge
@@ -466,7 +474,7 @@ ApplicationWindow {
                         width: 28; height: 28
                         theme: "Color"
                         logoScale: 0.9
-                        logo: "F1 M858.496 188.9024 173.1072 188.9024c-30.2848 0-54.8352-24.5504-54.8352-54.8352L118.272 106.6496c0-30.2848 24.5504-54.8352 54.8352-54.8352l685.3888 0c30.2848 0 54.8352 24.5504 54.8352 54.8352l0 27.4176C913.3312 164.352 888.7808 188.9024 858.496 188.9024z"
+                        iconSource: "qrc:/assets/icons/back_to_top.svg"
                         visible: false  // Shown when scrolled down
                     }
                 }
@@ -483,6 +491,32 @@ ApplicationWindow {
                 }
             }
         }
+    }
+
+    // ========================================================================
+    // Entrance animation (splash is a separate window in main.cpp — see FrmStart)
+    // ========================================================================
+    Timer {
+        id: entranceDelay
+        interval: 100  // matches original beginTime=100
+        repeat: false
+        onTriggered: slideUp.start()
+    }
+
+    NumberAnimation {
+        id: fadeInAnim
+        target: window; property: "winOpacity"
+        to: 1.0
+        duration: 250
+        easing.type: Easing.OutCubic
+    }
+
+    NumberAnimation {
+        id: slideUp
+        target: panBack; property: "entranceSlide"
+        to: 0
+        duration: 600
+        easing.type: Easing.OutBack
     }
 
     // ========================================================================
@@ -503,6 +537,12 @@ ApplicationWindow {
     }
 
     Component.onCompleted: {
+        // Entrance animation (splash closes concurrently from main.cpp)
+        //   Fade in: opacity 0 → 1.0, 250ms (original AaOpacity)
+        //   Slide up: Y 60 → 0, 600ms after 100ms delay (original AaDouble EaseOutBack)
+        fadeInAnim.start()
+        entranceDelay.start()
+
         // Initialize — C++ singletons handle startup logic
         JavaManager.scanSystemJava()
         VersionManager.loadLocalVersions()

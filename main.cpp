@@ -5,6 +5,10 @@
 #include <QIcon>
 #include <QDir>
 #include <QSurfaceFormat>
+#include <QQuickWindow>
+#include <QQuickItem>
+#include <QTimer>
+#include <QScreen>
 #include <QLoggingCategory>
 
 #include "src/core/settings.h"
@@ -26,7 +30,7 @@ int main(int argc, char *argv[])
     QGuiApplication app(argc, argv);
     app.setApplicationName("LPCL");
     app.setApplicationVersion("0.1");
-    app.setOrganizationName("PCL");
+    app.setOrganizationName("LPCL");
 
     // Initialize settings
     Settings::initialize();
@@ -38,7 +42,7 @@ int main(int argc, char *argv[])
     auto &downloadMgr = DownloadManager::instance();
 
     // Set up logging
-    QLoggingCategory::setFilterRules("pcl.*.debug=true");
+    QLoggingCategory::setFilterRules("lpcl.*.debug=true");
 
     // Initial Minecraft folder from settings
     QString savedFolder = Settings::instance().getString("LaunchFolderSelect");
@@ -86,7 +90,50 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
+    // ========================================================================
+    // Splash screen — matches original FrmStart = SplashScreen("icon.ico")
+    // Shows immediately before the heavy main window loads
+    // ========================================================================
+    auto *splashWin = new QQuickWindow();
+    splashWin->setFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    splashWin->setColor(QColor("#116ecb"));  // Theme.color2
+    splashWin->resize(120, 120);
+    // Center on screen
+    QScreen *screen = QGuiApplication::primaryScreen();
+    if (screen) {
+        QRect screenGeo = screen->availableGeometry();
+        splashWin->setPosition((screenGeo.width() - 120) / 2,
+                               (screenGeo.height() - 120) / 2);
+    }
+    // "PCL" text in center
+    QQmlComponent textComp(&engine);
+    textComp.setData(R"(
+        import QtQuick
+        Rectangle {
+            width: 120; height: 120
+            color: "#116ecb"
+            radius: 12
+            Text {
+                anchors.centerIn: parent
+                text: "PCL"
+                color: "#ffffff"
+                font.pixelSize: 22
+                font.bold: true
+            }
+        }
+    )", QUrl());
+    if (auto *content = qobject_cast<QQuickItem*>(textComp.create())) {
+        content->setParentItem(splashWin->contentItem());
+    }
+    splashWin->show();
+
+    // Load main module (heavy — takes time while splash is visible)
     engine.loadFromModule("LPCL", "Main");
+
+    // Close splash after main window renders + fade overlap
+    //   Splash fades → 400ms, window fades in → 250ms (starts immediately)
+    //   Close splash at 450ms so crossfade completes cleanly
+    QTimer::singleShot(450, splashWin, &QQuickWindow::close);
 
     return app.exec();
 }
