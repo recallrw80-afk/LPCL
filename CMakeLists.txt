@@ -20,14 +20,17 @@ if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/importedcontent/CMakeLists.txt")
     add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/importedcontent)
 endif()
 
-# nlohmann-json header-only library
-include(FetchContent)
-FetchContent_Declare(
-    nlohmann_json
-    GIT_REPOSITORY https://github.com/nlohmann/json.git
-    GIT_TAG v3.11.3
-)
-FetchContent_MakeAvailable(nlohmann_json)
+# nlohmann-json header-only library (system package preferred)
+find_package(nlohmann_json 3.11 QUIET)
+if(NOT nlohmann_json_FOUND)
+    include(FetchContent)
+    FetchContent_Declare(
+        nlohmann_json
+        GIT_REPOSITORY https://github.com/nlohmann/json.git
+        GIT_TAG v3.11.3
+    )
+    FetchContent_MakeAvailable(nlohmann_json)
+endif()
 
 # Source files
 set(CORE_SOURCES
@@ -64,8 +67,8 @@ qt_add_executable(LiunxPlainCraftLauncher
     ${CORE_HEADERS}
 )
 
-# Icon assets — auto-collect all SVGs
-file(GLOB ICON_FILES assets/icons/*.svg)
+# Icon assets — auto-collect all SVGs (relative paths required by Qt resources)
+file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
 qt_add_resources(LiunxPlainCraftLauncher "assets"
     PREFIX "/"
     FILES ${ICON_FILES}
