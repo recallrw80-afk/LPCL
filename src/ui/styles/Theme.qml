@@ -64,8 +64,8 @@ QtObject {
     readonly property int fontSizeTitle: 15
     readonly property int fontSizeLogo: 17
     readonly property int fontSizeLaunchTitle: 20
-    readonly property int fontSizeLaunchLabel: 12.5
-    readonly property int fontSizeLaunchName: 13.5
+    readonly property real fontSizeLaunchLabel: 12.5
+    readonly property real fontSizeLaunchName: 13.5
 
     // ========================================================================
     // Dimensions
