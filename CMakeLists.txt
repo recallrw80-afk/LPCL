@@ -99,11 +99,12 @@ qt_add_qml_module(LiunxPlainCraftLauncher
     VERSION 1.0
     QML_FILES
         Main.qml
-        src/ui/pages/PageLaunchLeft.qml
-        src/ui/pages/PageLaunchRight.qml
+        src/ui/pages/PageLaunch.qml
+        src/ui/pages/PageDownload.qml
+        src/ui/pages/PageSettings.qml
+        src/ui/pages/PageMore.qml
         src/ui/pages/PageSelectLeft.qml
         src/ui/pages/LoginPage.qml
-        src/ui/pages/SettingsPage.qml
         src/ui/components/MyButton.qml
         src/ui/components/MyIconButton.qml
         src/ui/components/MyComboBox.qml

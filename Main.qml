@@ -156,10 +156,10 @@ ApplicationWindow {
                     }
 
                     RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 13
-                        anchors.rightMargin: 8
-                        spacing: 0
+                            anchors.fill: parent
+                            anchors.leftMargin: 13
+                            anchors.rightMargin: 8
+                            spacing: 0
 
                         // LPCL logo
                         Text {
@@ -328,133 +328,26 @@ ApplicationWindow {
                                 onExited: btnTitleClose.hovered = false
                                 onClicked: window.close()
                             }
-                        }
-                    }
-
-                    // ---- PanTitleInner (sub-page back navigation overlay) ----
-                    Item {
-                        id: panTitleInner
-                        anchors.fill: parent
-                        visible: pageStack.length > 0
-                        opacity: pageStack.length > 0 ? 1 : 0
-                        Behavior on opacity { NumberAnimation { duration: 200 } }
-
-                        Item {
-                            id: btnTitleInner
-                            anchors { left: parent.left; leftMargin: 12; verticalCenter: parent.verticalCenter }
-                            width: 28; height: 28
-                            property bool hovered: false
-
-                            Rectangle {
-                                anchors.centerIn: parent
-                                            anchors.leftMargin: 6
-                                            anchors.rightMargin: 6
-                                width: 24; height: 24; radius: 12
-                                color: btnTitleInner.hovered ? "#33ffffff" : "transparent"
-                                Behavior on color { ColorAnimation { duration: 100 } }
-                            }
-                            Image {
-                                anchors.centerIn: parent
-                                            anchors.leftMargin: 6
-                                            anchors.rightMargin: 6
-                                sourceSize: Qt.size(96, 96)
-                                width: 24; height: 24
-                                id: imgBack
-                                source: "qrc:/assets/icons/back.svg"
-                                smooth: true
-                                mipmap: true
-                                visible: false
-                            }
-                            ColorOverlay {
-                                anchors.fill: imgBack
-                                source: imgBack
-                                color: "#ffffff"
-                            }
-                            MouseArea {
-                                anchors.fill: parent
-                                hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                onEntered: btnTitleInner.hovered = true
-                                onExited: btnTitleInner.hovered = false
-                                onClicked: { if (pageStack.length > 0) pageStack.pop() }
-                            }
-                        }
-
-                        Text {
-                            id: labTitleInner
-                            text: pageStack.length > 0 ? pageStack[pageStack.length - 1].title : ""
-                            color: Theme.color8
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.fontSizeTitle
-                            anchors { left: btnTitleInner.right; leftMargin: 7; verticalCenter: parent.verticalCenter }
-                        }
-                    }
+                    }  // RowLayout
                 }
 
                 // ============================================================
-                // Content Area (below title bar)
+                // Content Area — one StackLayout, one file per tab
                 // ============================================================
-                Item {
+                StackLayout {
                     anchors {
                         left: parent.left
                         right: parent.right
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
+                    currentIndex: navTabs.currentIndex
 
-                    RowLayout {
-                        anchors.fill: parent
-                        spacing: 0
-
-                        // ---- PanLeft (left sidebar) ----
-                        Rectangle {
-                            id: panLeft
-                            Layout.preferredWidth: 300
-                            Layout.fillHeight: true
-                            color: Theme.sidebarBg
-
-                            // Right shadow edge (RectLeftShadow)
-                            Rectangle {
-                                anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-                                width: 4
-                                opacity: 0.04
-                                gradient: Gradient {
-                                    GradientStop { position: 0; color: "#000000" }
-                                    GradientStop { position: 1; color: "#00000000" }
-                                }
-                            }
-
-                            // Page content for left sidebar
-                            StackLayout {
-                                anchors.fill: parent
-                                currentIndex: navTabs.currentIndex
-
-                                PageLaunchLeft {}
-                                Item { /* Download left — placeholder */ }
-                                Item { /* Link left — placeholder */ }
-                                Item { /* Settings left — placeholder */ }
-                                Item { /* More left — placeholder */ }
-                            }
-                        }
-
-                        // ---- PanMain (right content area) ----
-                        Rectangle {
-                            id: panMain
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            color: "transparent"
-
-                            StackLayout {
-                                anchors.fill: parent
-                                currentIndex: navTabs.currentIndex
-
-                                PageLaunchRight {}
-                                Item { /* Download right — placeholder */ }
-                                Item { /* Link right — placeholder */ }
-                                SettingsPage {}
-                                Item { /* More right — placeholder */ }
-                            }
-                        }
-                    }
+                    PageLaunch {}
+                    PageDownload {}
+                    Item { /* Link tab — not yet implemented */ }
+                    PageSettings {}
+                    PageMore {}
                 }
 
                 // ============================================================
@@ -538,20 +431,11 @@ ApplicationWindow {
     }
 
     // ========================================================================
-    // Navigation state
+    // Navigation
     // ========================================================================
-    property var pageStack: []
-    property int currentPage: 0
-
     QtObject {
         id: navTabs
         property int currentIndex: 0
-        onCurrentIndexChanged: {
-            window.currentPage = currentIndex
-            if (window.pageStack.length === 0 || window.pageStack[window.pageStack.length - 1] !== currentIndex) {
-                window.pageStack.push(currentIndex)
-            }
-        }
     }
 
     Component.onCompleted: {
@@ -565,4 +449,5 @@ ApplicationWindow {
         JavaManager.scanSystemJava()
         VersionManager.loadLocalVersions()
     }
+}
 }
