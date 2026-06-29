@@ -1,0 +1,1 @@
+#define FLUENTUI_VERSION "1.0.0"

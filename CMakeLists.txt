@@ -11,7 +11,7 @@ if(NOT DEFINED CMAKE_PREFIX_PATH)
     set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.8.3/gcc_64")
 endif()
 
-find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
+find_package(Qt6 REQUIRED COMPONENTS Quick Widgets PrintSupport Network Concurrent)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -28,6 +28,14 @@ FetchContent_Declare(
     GIT_TAG v3.11.3
 )
 FetchContent_MakeAvailable(nlohmann_json)
+
+# FluentUI for QML — Fluent Design component library
+FetchContent_Declare(
+    FluentUI
+    GIT_REPOSITORY https://github.com/zhuzichu520/FluentUI.git
+    GIT_TAG main
+)
+FetchContent_MakeAvailable(FluentUI)
 
 # Source files
 set(CORE_SOURCES
@@ -75,6 +83,7 @@ target_link_libraries(LPCL
     PRIVATE Qt6::Network
     PRIVATE Qt6::Concurrent
     PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE fluentuiplugin
 )
 
 # Mark Theme.qml as singleton — pragma Singleton in the file is not enough;
@@ -94,6 +103,7 @@ qt_add_qml_module(LPCL
         src/ui/pages/LoginPage.qml
         src/ui/pages/SettingsPage.qml
         src/ui/components/MyButton.qml
+        src/ui/components/MyIconButton.qml
         src/ui/components/MyComboBox.qml
         src/ui/components/MyProgressBar.qml
         src/ui/components/MyTextBox.qml

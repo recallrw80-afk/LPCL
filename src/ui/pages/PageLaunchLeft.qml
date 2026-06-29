@@ -6,324 +6,271 @@ import "../components"
 import "../styles"
 
 // Exact replica of PageLaunchLeft.xaml
-// Left sidebar for the launch page
+// Dual mode: PanInput (version select) ↔ PanLaunching (launch progress)
 Item {
-    id: page
+    id: panBack
+    width: 300
+    clip: true
 
-    // Normal state (PanInput)
+    property bool isLaunching: false
+    property string versionName: "正在加载版本列表，请稍候"
+    property string versionType: ""
+    property bool versionReady: false
+    property bool isOfflineLogin: false
+
+    // ========================================================================
+    // PanInput — Version selection mode
+    // ========================================================================
     Item {
         id: panInput
         anchors.fill: parent
-        opacity: 1
+        visible: !panBack.isLaunching
+        opacity: panBack.isLaunching ? 0 : 1
+        Behavior on opacity { NumberAnimation { duration: 200 } }
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 0
+            anchors { fill: parent; leftMargin: 20; rightMargin: 20; topMargin: 0; bottomMargin: 0 }
             spacing: 0
 
-            // ---- Login type indicator (PanTypeOne) ----
-            Rectangle {
+            // Login area
+            Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 27
-                Layout.minimumHeight: 27
-                Layout.maximumHeight: 27
-                Layout.leftMargin: 20
-                Layout.rightMargin: 20
+                Layout.preferredHeight: 60
+
+                Text {
+                    anchors.centerIn: parent
+                    text: panBack.isOfflineLogin ? "离线模式" : "正版登录"
+                    color: Theme.color3
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSizeTitle
+                }
+            }
+
+            // Version type tag (PanTypeOne)
+            Item {
+                Layout.fillWidth: true
+                Layout.preferredHeight: 30
                 Layout.topMargin: 24
                 Layout.bottomMargin: -4
-                radius: 13
-                color: Theme.semiTransparent
 
-                Row {
+                Rectangle {
                     anchors.centerIn: parent
-                    spacing: 0
+                    width: tagRow.implicitWidth + 30
+                    height: 27
+                    radius: 13
+                    color: Theme.semiTransparent
 
-                    // Icon
-                    Canvas {
-                        width: 16; height: 16
-                        anchors.verticalCenter: parent.verticalCenter
-                        scale: 1.05
-                        onPaint: {
-                            var ctx = getContext("2d")
-                            ctx.fillStyle = Theme.color3
-                            ctx.beginPath()
-                            ctx.arc(8, 8, 7, 0, Math.PI * 2)
-                            ctx.fill()
+                    Row {
+                        id: tagRow
+                        anchors.centerIn: parent
+                        spacing: 10
+
+                        Rectangle {
+                            width: 16; height: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                            radius: 8
+                            color: Theme.color3
+                            visible: panBack.versionType !== ""
                         }
-                    }
 
-                    Text {
-                        text: loginTypeText()
-                        color: Theme.color3
-                        font.family: Theme.fontFamily
-                        font.pixelSize: Theme.fontSizeLarge
-                        leftPadding: 15
-                        rightPadding: 12
-                        anchors.verticalCenter: parent.verticalCenter
+                        Text {
+                            text: panBack.versionType || "选择版本"
+                            font.family: Theme.fontFamily
+                            font.pixelSize: 14
+                            color: Theme.color3
+                            anchors.verticalCenter: parent.verticalCenter
+                        }
                     }
                 }
             }
 
-            // Spacer
             Item { Layout.fillHeight: true }
 
-            // ---- Login type selector (PanType) ----
-            RowLayout {
+            // Login type radios (PanType)
+            Row {
                 Layout.fillWidth: true
                 Layout.preferredHeight: 35
-                Layout.leftMargin: 20
-                Layout.rightMargin: 20
+                Layout.topMargin: 22
+                Layout.alignment: Qt.AlignHCenter
+                spacing: 8
 
-                Item { Layout.fillWidth: true }
                 MyButton {
-                    text: "Microsoft"
-                    colorType: loginType === 5 ? 1 : 0
-                    Layout.preferredWidth: 80
-                    onClicked: loginType = 5
+                    width: 100; height: 28
+                    text: "正版"
+                    colorType: panBack.isOfflineLogin ? 0 : 1
+                    onClicked: panBack.isOfflineLogin = false
                 }
-                Item { Layout.preferredWidth: 10 }
                 MyButton {
-                    text: "Offline"
-                    colorType: loginType === 0 ? 1 : 0
-                    Layout.preferredWidth: 70
-                    onClicked: loginType = 0
+                    width: 100; height: 28
+                    text: "离线"
+                    colorType: panBack.isOfflineLogin ? 1 : 0
+                    onClicked: panBack.isOfflineLogin = true
                 }
-                Item { Layout.fillWidth: true }
             }
 
             Item { Layout.preferredHeight: 15 }
 
-            // ---- Launch button (BtnLaunch) ----
-            Rectangle {
+            // Launch button area
+            Item {
                 Layout.fillWidth: true
-                Layout.preferredHeight: 61
-                Layout.leftMargin: 20
-                Layout.rightMargin: 20
-                color: "transparent"
+                Layout.preferredHeight: 70
 
                 MyButton {
                     id: btnLaunch
-                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    anchors { horizontalCenter: parent.horizontalCenter; top: parent.top }
+                    width: parent.width
                     height: Theme.launchBtnHeight
-                    text: Launcher.isRunning ? "Running..." : "Launch"
-                    colorType: 1 // Highlight
-                    font.pixelSize: Theme.fontSizeLogo
-                    enabled: !Launcher.isRunning
-
-                    onClicked: {
-                        // Switch to launching state
-                        panInput.opacity = 0
-                        panLaunching.visible = true
-                        panLaunching.opacity = 1
-
-                        // Launch logic (wired in later phase)
-                        statusLabel.text = "Launching..."
-                    }
+                    text: panBack.versionReady ? "启动游戏" : "正在加载"
+                    colorType: 1  // Highlight
+                    enabled: panBack.versionReady
+                    onClicked: panBack.isLaunching = true
                 }
 
-                // Version label under launch button
                 Text {
-                    id: versionLabel
-                    anchors { horizontalCenter: parent.horizontalCenter; top: btnLaunch.bottom; topMargin: 2 }
-                    text: versionCombo.currentText || "Select Version"
-                    color: Theme.gray3
+                    id: labVersion
+                    anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
+                    text: panBack.versionName
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSizeXSmall
+                    color: Theme.gray3
+                    elide: Text.ElideRight
                 }
             }
 
-            // ---- Version controls (Row 3) ----
-            RowLayout {
-                Layout.fillWidth: true
-                Layout.preferredHeight: Theme.versionBtnHeight + 10
-                Layout.leftMargin: 0
-                Layout.rightMargin: 10
-                Layout.topMargin: 10
-
-                MyComboBox {
-                    id: versionCombo
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: Theme.versionBtnHeight
-                    model: VersionManager.versionIds.length > 0 ? VersionManager.versionIds : ["No versions found"]
-                    enabled: !Launcher.isRunning
-                }
-
-                MyButton {
-                    text: "..."
-                    Layout.preferredWidth: 40
-                    Layout.preferredHeight: Theme.versionBtnHeight
-                    Layout.leftMargin: 10
-                    enabled: !Launcher.isRunning
-                    onClicked: {
-                        // Version settings
-                    }
-                }
-            }
-
-            // Bottom spacer
             Item { Layout.preferredHeight: 20 }
         }
     }
 
-    // ---- Launching state (PanLaunching) ----
+    // ========================================================================
+    // PanLaunching — Launching mode (with scale+fade transition)
+    // ========================================================================
     Item {
         id: panLaunching
         anchors.fill: parent
-        visible: false
-        opacity: 0
+        visible: panBack.isLaunching
+        opacity: panBack.isLaunching ? 1 : 0
+        scale: panBack.isLaunching ? 1.0 : 0.8
 
         Behavior on opacity { NumberAnimation { duration: 200 } }
+        Behavior on scale { NumberAnimation { duration: 200 } }
 
         ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 0
+            anchors { fill: parent; leftMargin: 20; rightMargin: 20; bottomMargin: 0 }
             spacing: 0
 
             Item { Layout.fillHeight: true }
 
-            // Progress indicator
-            ColumnLayout {
-                Layout.fillWidth: true
-                spacing: 5
+            // Loading spinner
+            Item {
+                Layout.alignment: Qt.AlignCenter
+                Layout.preferredWidth: 50; Layout.preferredHeight: 50
+                Layout.bottomMargin: 10
 
-                // Spinning loading indicator
                 Rectangle {
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.preferredWidth: 50
-                    Layout.preferredHeight: 50
-                    Layout.bottomMargin: 5
-                    radius: 25
-                    color: Theme.color3
-                    opacity: 0.15
-                }
-
-                // Title
-                Text {
-                    id: launchTitle
-                    Layout.alignment: Qt.AlignHCenter
-                    text: "Launching..."
-                    color: Theme.color3
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeLaunchTitle
-                }
-
-                // Version name
-                Text {
-                    id: launchName
-                    Layout.alignment: Qt.AlignHCenter
-                    Layout.leftMargin: 40
-                    Layout.rightMargin: 40
-                    Layout.topMargin: 5
-                    text: versionCombo.currentText || ""
-                    color: Theme.color3
-                    font.family: Theme.fontFamily
-                    font.pixelSize: Theme.fontSizeLaunchName
-                }
-
-                // Progress bar
-                Rectangle {
-                    Layout.fillWidth: true
-                    Layout.preferredHeight: 4
-                    Layout.leftMargin: 30
-                    Layout.rightMargin: 30
-                    Layout.topMargin: 12
-                    Layout.bottomMargin: 27
-                    radius: 0
-                    color: Qt.rgba(213/255, 230/255, 253/255, 0.6)
-
-                    Rectangle {
-                        width: parent.width * 0.6
-                        height: parent.height
-                        gradient: Gradient {
-                            GradientStop { position: 0; color: Theme.color4 }
-                            GradientStop { position: 1; color: Theme.color3 }
-                        }
+                    anchors.centerIn: parent
+                    width: 30; height: 30; radius: 15
+                    color: Theme.color4
+                    RotationAnimation on rotation {
+                        from: 0; to: 360
+                        duration: 1500
+                        loops: Animation.Infinite
                     }
                 }
+            }
 
-                // Status info
-                GridLayout {
-                    Layout.fillWidth: true
-                    Layout.leftMargin: 25
-                    Layout.rightMargin: 25
-                    columns: 2
-                    rowSpacing: 3
-                    columnSpacing: 8
-
-                    // Category labels (right-aligned, 0.5 opacity)
-                    Text { text: "Step:"; color: Theme.color1; opacity: 0.5; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel; Layout.preferredWidth: 80; horizontalAlignment: Text.AlignRight }
-                    Text { text: "Starting..."; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel; Layout.fillWidth: true }
-
-                    Text { text: "Login:"; color: Theme.color1; opacity: 0.5; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel; horizontalAlignment: Text.AlignRight }
-                    Text { text: "Offline"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel }
-
-                    Text { text: "Progress:"; color: Theme.color1; opacity: 0.5; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel; horizontalAlignment: Text.AlignRight }
-                    Text { text: "0%"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchLabel }
+            // "正在启动游戏" title (with skew matching original SkewTransform -3°)
+            Text {
+                Layout.alignment: Qt.AlignCenter
+                text: "正在启动游戏"
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeLaunchTitle
+                color: Theme.color3
+                transform: Matrix4x4 {
+                    property real skewAngle: -3 * Math.PI / 180
+                    matrix: Qt.matrix4x4(1, Math.tan(skewAngle), 0, 0,
+                                         0, 1, 0, 0,
+                                         0, 0, 1, 0,
+                                         0, 0, 0, 1)
                 }
+            }
+
+            // Version name (skewed)
+            Text {
+                Layout.alignment: Qt.AlignCenter
+                Layout.topMargin: 5
+                Layout.leftMargin: 40; Layout.rightMargin: 40
+                text: panBack.versionName
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeLaunchName
+                color: Theme.color3
+                elide: Text.ElideRight
+                transform: Matrix4x4 {
+                    property real skewAngle: -3 * Math.PI / 180
+                    matrix: Qt.matrix4x4(1, Math.tan(skewAngle), 0, 0,
+                                         0, 1, 0, 0,
+                                         0, 0, 1, 0,
+                                         0, 0, 0, 1)
+                }
+            }
+
+            // Progress bar
+            RowLayout {
+                Layout.alignment: Qt.AlignCenter
+                Layout.preferredWidth: parent.width
+                Layout.preferredHeight: 4
+                Layout.topMargin: 12
+                Layout.bottomMargin: 27
+                spacing: 0
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 7
+                    Layout.fillHeight: true
+                    gradient: Gradient {
+                        GradientStop { position: 0; color: Theme.color4 }
+                        GradientStop { position: 0.6; color: Theme.color3 }
+                    }
+                }
+                Rectangle {
+                    Layout.fillWidth: true
+                    Layout.preferredWidth: 3
+                    Layout.fillHeight: true
+                    color: Theme.color6
+                    opacity: 0.6
+                }
+            }
+
+            // Info grid
+            GridLayout {
+                Layout.alignment: Qt.AlignCenter
+                Layout.preferredWidth: 260
+                columns: 4
+                rowSpacing: 5
+                columnSpacing: 0
+
+                // Row 0
+                Text { Layout.row: 0; Layout.column: 1; Layout.alignment: Qt.AlignRight; text: "当前步骤"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1; opacity: 0.5 }
+                Text { Layout.row: 0; Layout.column: 2; Layout.leftMargin: 15; text: "下载支持"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1 }
+
+                // Row 1
+                Text { Layout.row: 1; Layout.column: 1; Layout.alignment: Qt.AlignRight; text: "登录方式"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1; opacity: 0.5 }
+                Text { Layout.row: 1; Layout.column: 2; Layout.leftMargin: 15; text: panBack.isOfflineLogin ? "离线登录" : "正版登录"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1 }
+
+                // Row 2
+                Text { Layout.row: 2; Layout.column: 1; Layout.alignment: Qt.AlignRight; text: "启动进度"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1; opacity: 0.5 }
+                Text { Layout.row: 2; Layout.column: 2; Layout.leftMargin: 15; text: "69.28 %"; font.pixelSize: Theme.fontSizeLaunchLabel; color: Theme.color1 }
             }
 
             Item { Layout.fillHeight: true }
 
-            // Status label
-            Text {
-                id: statusLabel
-                Layout.alignment: Qt.AlignHCenter
-                Layout.bottomMargin: 10
-                text: "Ready"
-                color: Theme.gray3
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-            }
-
             // Cancel button
             MyButton {
-                Layout.fillWidth: true
+                Layout.alignment: Qt.AlignCenter
+                Layout.preferredWidth: parent.width
                 Layout.preferredHeight: Theme.versionBtnHeight
-                Layout.leftMargin: 20
-                Layout.rightMargin: 20
                 Layout.bottomMargin: 20
-                text: "Cancel"
-                colorType: 2 // Red
-                onClicked: {
-                    Launcher.interrupt()
-                    panLaunching.opacity = 0
-                    panLaunching.visible = false
-                    panInput.opacity = 1
-                    statusLabel.text = "Cancelled"
-                }
-            }
-        }
-    }
-
-    // State helpers
-    property int loginType: 0 // 0=Legacy, 5=Ms
-
-    function loginTypeText() {
-        return loginType === 5 ? "Microsoft Login" : "Offline Login"
-    }
-
-    function pageOnEnter() {
-        panInput.opacity = 1
-        panLaunching.visible = false
-        panLaunching.opacity = 0
-    }
-
-    // Connections
-    Connections {
-        target: Launcher
-        function onStateChanged() {
-            if (Launcher.state === Launcher.Running) {
-                launchTitle.text = "Running"
-            } else if (Launcher.state === Launcher.Finished) {
-                panLaunching.opacity = 0
-                panLaunching.visible = false
-                panInput.opacity = 1
-                statusLabel.text = "Game exited"
-            } else if (Launcher.state === Launcher.Failed) {
-                panLaunching.opacity = 0
-                panLaunching.visible = false
-                panInput.opacity = 1
-                statusLabel.text = "Launch failed"
+                text: "取消"
+                onClicked: panBack.isLaunching = false
             }
         }
     }
