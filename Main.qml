@@ -39,9 +39,13 @@ ApplicationWindow {
         anchors.fill: parent
         anchors.margins: Theme.windowMargin
 
-        // Entrance slide offset (matches WPF TranslateTransform Y="60")
+        // Entrance animation props (match WPF TranslateTransform Y="60" + RotateTransform Angle="-4")
         property real entranceSlide: 60
-        transform: Translate { y: panBack.entranceSlide }
+        property real entranceTilt: -4
+        transform: [
+            Translate { y: panBack.entranceSlide },
+            Rotation { angle: panBack.entranceTilt; origin.x: panBack.width / 2; origin.y: panBack.height / 2 }
+        ]
 
         // ---- 8 Resizer handles (exact match FormMain.xaml resizers) ----
         // Top edge
@@ -495,12 +499,18 @@ ApplicationWindow {
 
     // ========================================================================
     // Entrance animation (splash is a separate window in main.cpp — see FrmStart)
+    // Original FormMain_Loaded:
+    //   AaOpacity 250ms | AaDouble Y 60→0 600ms EaseOutBack | AaDouble Angle -4→0 500ms EaseOutBack
+    //   All beginTime=100, run in parallel
     // ========================================================================
     Timer {
         id: entranceDelay
         interval: 100  // matches original beginTime=100
         repeat: false
-        onTriggered: slideUp.start()
+        onTriggered: {
+            slideUp.start()
+            tiltBack.start()
+        }
     }
 
     NumberAnimation {
@@ -516,6 +526,14 @@ ApplicationWindow {
         target: panBack; property: "entranceSlide"
         to: 0
         duration: 600
+        easing.type: Easing.OutBack
+    }
+
+    NumberAnimation {
+        id: tiltBack
+        target: panBack; property: "entranceTilt"
+        to: 0
+        duration: 500
         easing.type: Easing.OutBack
     }
 
