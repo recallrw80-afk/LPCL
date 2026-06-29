@@ -93,7 +93,6 @@ qt_add_qml_module(LPCL
         src/ui/components/MyTextBox.qml
         src/ui/components/MyScrollBar.qml
         src/ui/styles/Theme.qml
-    QML_SINGLETON Theme src/ui/styles/Theme.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
