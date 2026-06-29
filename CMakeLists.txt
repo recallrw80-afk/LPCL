@@ -77,6 +77,12 @@ target_link_libraries(LPCL
     PRIVATE nlohmann_json::nlohmann_json
 )
 
+# Mark Theme.qml as singleton — pragma Singleton in the file is not enough;
+# CMake must be told explicitly so the generated qmldir includes "singleton Theme"
+set_source_files_properties(src/ui/styles/Theme.qml PROPERTIES
+    QT_QML_SINGLETON_TYPE TRUE
+)
+
 qt_add_qml_module(LPCL
     URI PCL_LIUNX
     VERSION 1.0

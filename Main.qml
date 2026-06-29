@@ -22,24 +22,12 @@ ApplicationWindow {
     color: "transparent"
 
     // ====================================================================
-    // Root container with tilt effect (-4 degrees + 60px Y offset)
+    // Root container (tilt effect removed — not appropriate for this stage)
     // ====================================================================
     Item {
         id: panBack
         anchors.fill: parent
         anchors.margins: Theme.windowMargin
-
-        // Tilt transform: -4 degrees rotation + 60px Y offset
-        transform: [
-            Rotation {
-                origin.x: panBack.width / 2
-                origin.y: 0
-                angle: -4
-            },
-            Translate {
-                y: 60
-            }
-        ]
 
         // Resizer handles (8 edges + corners) — simplified for Qt
         MouseArea {
@@ -92,8 +80,8 @@ ApplicationWindow {
                 MouseArea {
                     anchors.fill: parent
                     property point lastPos: Qt.point(0, 0)
-                    onPressed: { lastPos = Qt.point(mouse.x, mouse.y) }
-                    onPositionChanged: {
+                    onPressed: (mouse) => { lastPos = Qt.point(mouse.x, mouse.y) }
+                    onPositionChanged: (mouse) => {
                         if (pressed) {
                             window.x += mouse.x - lastPos.x
                             window.y += mouse.y - lastPos.y

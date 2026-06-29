@@ -35,7 +35,7 @@ public:
     // ---- Version listing ----
 
     /// Load local versions from versions/ directory
-    void loadLocalVersions();
+    Q_INVOKABLE void loadLocalVersions();
 
     /// Fetch version manifest from Mojang API
     void fetchVersionManifest();

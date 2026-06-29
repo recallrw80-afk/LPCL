@@ -25,10 +25,10 @@ public:
     // ---- Scanning ----
 
     /// Scan system for all Java installations (async)
-    void scanSystemJava();
+    Q_INVOKABLE void scanSystemJava();
 
     /// Scan a specific folder for java
-    void scanFolder(const QString &folder, bool isUserImport = false);
+    Q_INVOKABLE void scanFolder(const QString &folder, bool isUserImport = false);
 
     /// Check a specific Java installation (runs java -version)
     /// Returns true on success, sets error string on failure
