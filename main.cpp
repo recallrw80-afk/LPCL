@@ -91,38 +91,34 @@ int main(int argc, char *argv[])
         Qt::QueuedConnection);
 
     // ========================================================================
-    // Splash screen — matches original FrmStart = SplashScreen("icon.ico")
+    // Splash screen — matches original FrmStart = SplashScreen("Images\icon.ico")
     // Shows immediately before the heavy main window loads
     // ========================================================================
     auto *splashWin = new QQuickWindow();
     splashWin->setFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
-    splashWin->setColor(QColor("#116ecb"));  // Theme.color2
-    splashWin->resize(120, 120);
+    splashWin->setColor(Qt::transparent);
+    splashWin->resize(128, 128);
     // Center on screen
     QScreen *screen = QGuiApplication::primaryScreen();
     if (screen) {
         QRect screenGeo = screen->availableGeometry();
-        splashWin->setPosition((screenGeo.width() - 120) / 2,
-                               (screenGeo.height() - 120) / 2);
+        splashWin->setPosition((screenGeo.width() - 128) / 2,
+                               (screenGeo.height() - 128) / 2);
     }
-    // "PCL" text in center
-    QQmlComponent textComp(&engine);
-    textComp.setData(R"(
+    // PCL icon from original (icon.ico — same file used by WPF SplashScreen)
+    QQmlComponent splashComp(&engine);
+    splashComp.setData(R"(
         import QtQuick
-        Rectangle {
-            width: 120; height: 120
-            color: "#116ecb"
-            radius: 12
-            Text {
-                anchors.centerIn: parent
-                text: "PCL"
-                color: "#ffffff"
-                font.pixelSize: 22
-                font.bold: true
-            }
+        Image {
+            width: 128; height: 128
+            source: "qrc:/assets/icon.ico"
+            sourceSize: Qt.size(128, 128)
+            smooth: true
+            mipmap: true
+            fillMode: Image.PreserveAspectFit
         }
     )", QUrl());
-    if (auto *content = qobject_cast<QQuickItem*>(textComp.create())) {
+    if (auto *content = qobject_cast<QQuickItem*>(splashComp.create())) {
         content->setParentItem(splashWin->contentItem());
     }
     splashWin->show();

@@ -69,6 +69,7 @@ qt_add_executable(LiunxPlainCraftLauncher
 
 # Icon assets — auto-collect all SVGs (relative paths required by Qt resources)
 file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
+list(APPEND ICON_FILES assets/icon.ico)
 qt_add_resources(LiunxPlainCraftLauncher "assets"
     PREFIX "/"
     FILES ${ICON_FILES}
