@@ -222,7 +222,7 @@ void Launcher::onGameError(QProcess::ProcessError error)
         break;
     }
 
-    appendLog("[PCL] ERROR: " + errMsg);
+    appendLog("[LPCL] ERROR: " + errMsg);
     qCWarning(logLaunch) << errMsg;
     setState(LaunchState::Failed);
     emit launchFailed(errMsg);
