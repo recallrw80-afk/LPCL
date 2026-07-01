@@ -6,10 +6,14 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
-# 默认 Qt 安装路径（可通过 -DCMAKE_PREFIX_PATH=xxx 覆盖）
-if(NOT DEFINED CMAKE_PREFIX_PATH)
+# Qt 6.8+ 安装路径。
+# QtCreator 会通过 kit 变量 %{Qt:QT_INSTALL_PREFIX} 注入 CMAKE_PREFIX_PATH，
+# 若 kit 未正确配置则可能解析为空，导致 find_package 失败。
+# 这里检测到空值或未定义时自动回退到正确的 Qt 6.8.3 路径。
+if(NOT DEFINED CMAKE_PREFIX_PATH OR CMAKE_PREFIX_PATH STREQUAL "")
     set(CMAKE_PREFIX_PATH "$ENV{HOME}/Qt/6.8.3/gcc_64")
 endif()
+message(STATUS "Using Qt prefix: ${CMAKE_PREFIX_PATH}")
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
 
