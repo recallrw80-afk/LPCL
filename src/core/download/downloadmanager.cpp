@@ -62,7 +62,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
             });
 
     // Completion
-    connect(reply, &QNetworkReply::finished, this, [=]() {
+    connect(reply, &QNetworkReply::finished, this, [=, this]() {
         reply->deleteLater();
 
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -130,13 +130,13 @@ QNetworkReply* DownloadManager::downloadToString(const QString &url,
 
     QNetworkReply *reply = m_nam->get(request);
 
-    connect(reply, &QNetworkReply::finished, this, [=]() {
+    connect(reply, &QNetworkReply::finished, this, [=, this]() {
         reply->deleteLater();
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         bool success = (reply->error() == QNetworkReply::NoError && statusCode < 400);
 
         if (!success && maxRetries > 0) {
-            QTimer::singleShot(500, this, [=]() {
+            QTimer::singleShot(500, this, [=, this]() {
                 downloadToString(url, onComplete, maxRetries - 1);
             });
             return;

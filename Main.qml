@@ -20,6 +20,14 @@ ApplicationWindow {
     height: targetHeight
     minimumWidth: 850
     minimumHeight: 500
+
+    // Center on screen (overlays splash icon position)
+    Component.onCompleted: {
+        const screenGeo = Screen.virtualGeometry
+        x = (screenGeo.width - width) / 2
+        y = (screenGeo.height - height) / 2
+    }
+
     visible: true
     title: "Plain Craft Launcher  "
 
@@ -470,6 +478,10 @@ ApplicationWindow {
         }
 
         Component.onCompleted: {
+            // Bring window to front (above splash)
+            window.raise()
+            window.requestActivate()
+
             // Entrance animation (splash closes concurrently from main.cpp)
             //   Fade in: opacity 0 → 1.0, 250ms (original AaOpacity)
             //   Slide up: Y 60 → 0, 600ms after 100ms delay (original AaDouble EaseOutBack)

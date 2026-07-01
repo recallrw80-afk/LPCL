@@ -32,29 +32,28 @@ Item {
         }
 
         Item {
-            anchors.fill: parent; clip: true
+            anchors.fill: parent;
+            clip: true
             ColumnLayout {
-                anchors { fill: parent;}
+                anchors.fill: parent
                 spacing: 0
-                Item { Layout.fillHeight: true }
-                Row {
-                    Layout.fillWidth: true;
+                RowLayout {
                     Layout.preferredHeight: 35
-                    Layout.topMargin: 22;
-                    Layout.alignment: Qt.AlignHCenter;
+                    Layout.topMargin: 22
+                    Layout.alignment: Qt.AlignHCenter
                     spacing: 8
                     LPCLIconButton {
-                        // width: 120;
-                        // height: 28;
-                        logoScale: 0.9;
-                        iconSource: "qrc:/assets/icons/shield-check-line.svg";
+                        width: 120;
+                        height: 28;
+                        logoScale: 0.9
+                        iconSource: "qrc:/assets/icons/shield-check-line.svg"
                         visible: true
                     }
                     LPCLIconButton {
-                        // width: 100;
-                        // height: 28;
-                        logoScale: 0.9;
-                        iconSource: "qrc:/assets/icons/unlink.svg";
+                        width: 120;
+                        height: 28;
+                        logoScale: 0.9
+                        iconSource: "qrc:/assets/icons/unlink.svg"
                         visible: true
                     }
                 }

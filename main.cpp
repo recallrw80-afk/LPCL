@@ -95,7 +95,7 @@ int main(int argc, char *argv[])
     // Shows immediately before the heavy main window loads
     // ========================================================================
     auto *splashWin = new QQuickWindow();
-    splashWin->setFlags(Qt::FramelessWindowHint | Qt::WindowStaysOnTopHint);
+    splashWin->setFlags(Qt::FramelessWindowHint);
     splashWin->setColor(Qt::transparent);
     splashWin->resize(128, 128);
     // Center on screen
