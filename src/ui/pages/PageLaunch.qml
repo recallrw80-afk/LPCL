@@ -42,19 +42,15 @@ Item {
                     Layout.topMargin: 22
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 8
-                    LPCLIconButton {
-                        width: 120;
-                        height: 28;
-                        logoScale: 0.9
+                    LPCLIcon {
+                        width: 28; height: 28
+                        iconColor: Theme.color3
                         iconSource: "qrc:/assets/icons/shield-check-line.svg"
-                        visible: true
                     }
-                    LPCLIconButton {
-                        width: 120;
-                        height: 28;
-                        logoScale: 0.9
+                    LPCLIcon {
+                        width: 28; height: 28
+                        iconColor: Theme.color3
                         iconSource: "qrc:/assets/icons/unlink.svg"
-                        visible: true
                     }
                 }
                 Item {

@@ -10,7 +10,7 @@ import "src/ui/styles"
 ApplicationWindow {
     id: window
 
-    // ---- Window sizing: 850:500 ratio, 40% of screen short side ----
+    // ---- Window sizing: 850:500 ratio, 40% of screen short side ----active:
     readonly property real baseRatio: 850 / 500  // 1.7
     readonly property real screenShort: Math.min(Screen.width, Screen.height)
     readonly property real targetHeight: screenShort * 0.4
@@ -251,6 +251,12 @@ ApplicationWindow {
                                             spacing: 5
 
                                             // SVG icon from assets (external file, no inline code)
+                                            LPCLIcon {
+                                                width: 22;
+                                                height: 22;
+                                                anchors.verticalCenter: parent.verticalCenter
+                                                lucideIcon: "play";
+                                            }
                                             Image {
                                                 id: tabIcon
                                                 width: 22; height: 22

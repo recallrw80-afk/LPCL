@@ -71,8 +71,42 @@ qt_add_executable(LiunxPlainCraftLauncher
     ${CORE_HEADERS}
 )
 
+# Lucide icons — download on demand from GitHub
+# Add icon names to LUCIDE_ICONS list (e.g. "play" "settings" "x")
+# SVGs are downloaded at configure time and cached in assets/icons/lucide/
+set(LUCIDE_ICONS
+    # "play"
+    # "settings"
+    # "x"
+)
+set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/lucide")
+file(MAKE_DIRECTORY "${LUCIDE_DIR}")
+
+function(fetch_lucide_icon icon_name)
+    set(out_path "${LUCIDE_DIR}/${icon_name}.svg")
+    if(NOT EXISTS "${out_path}")
+        set(lucide_url "https://raw.githubusercontent.com/lucide-icons/lucide/main/icons/${icon_name}.svg")
+        message(STATUS "Downloading Lucide icon: ${icon_name}")
+        file(DOWNLOAD "${lucide_url}" "${out_path}" STATUS dl_status TIMEOUT 10)
+        list(GET dl_status 0 status_code)
+        if(NOT status_code EQUAL 0)
+            message(WARNING "Failed to download lucide:${icon_name} (HTTP ${status_code})")
+            file(REMOVE "${out_path}")
+            return()
+        endif()
+        # Rewrite stroke="currentColor" → stroke="#ffffff" for ColorOverlay tinting
+        file(READ "${out_path}" svg_content)
+        string(REPLACE "stroke=\"currentColor\"" "stroke=\"#ffffff\"" svg_content "${svg_content}")
+        file(WRITE "${out_path}" "${svg_content}")
+    endif()
+endfunction()
+
+foreach(icon ${LUCIDE_ICONS})
+    fetch_lucide_icon(${icon})
+endforeach()
+
 # Icon assets — auto-collect all SVGs (relative paths required by Qt resources)
-file(GLOB ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
+file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
 list(APPEND ICON_FILES assets/icon.ico)
 qt_add_resources(LiunxPlainCraftLauncher "assets"
     PREFIX "/"
@@ -110,7 +144,7 @@ qt_add_qml_module(LiunxPlainCraftLauncher
         src/ui/pages/PageSelectLeft.qml
         src/ui/pages/LoginPage.qml
         src/ui/components/LPCLButton.qml
-        src/ui/components/LPCLIconButton.qml
+        src/ui/components/LPCLIcon.qml
         src/ui/components/LPCLComboBox.qml
         src/ui/components/LPCLProgressBar.qml
         src/ui/components/LPCLTextBox.qml
