@@ -15,6 +15,7 @@ Item {
     property int padding: 10
     property bool down: false
     property bool pressed: false
+    property real radius: Theme.buttonRadius
 
     signal clicked()
     signal pressAndHold()
@@ -63,13 +64,13 @@ Item {
         id: panBack
         anchors.fill: parent
         color: Theme.semiTransparent
-        radius: Theme.buttonRadius
+        radius: wrapper.radius
 
         // ---- PanFore (inner border, colored border + halfWhite background) ----
         Rectangle {
             id: panFore
             anchors.fill: parent
-            radius: Theme.buttonRadius
+            radius: wrapper.radius
             border.width: 1
             border.color: wrapper.borderColor
             color: wrapper.backgroundColor

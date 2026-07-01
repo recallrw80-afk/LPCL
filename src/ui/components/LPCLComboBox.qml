@@ -12,7 +12,7 @@ ComboBox {
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
 
-    // Dynamic border color (same logic as MyTextBox)
+    // Dynamic border color (same logic as LPCLTextBox)
     property color borderColor: {
         if (!enabled) return Theme.gray5
         if (down || popup.visible) return Theme.color3

@@ -40,8 +40,8 @@ Item {
                 Row {
                     Layout.fillWidth: true; Layout.preferredHeight: 35
                     Layout.topMargin: 22; Layout.alignment: Qt.AlignHCenter; spacing: 8
-                    MyButton { width: 100; height: 28; text: "正版"; colorType: 1 }
-                    MyButton { width: 100; height: 28; text: "离线"; colorType: 0 }
+                    LPCLButton { width: 100; height: 28; text: "正版"; colorType: 1; radius: 20 }
+                    LPCLButton { width: 100; height: 28; text: "离线"; colorType: 0; radius: 20 }
                 }
                 Item {
                     Layout.fillWidth: true; Layout.preferredHeight: 60
@@ -67,7 +67,7 @@ Item {
                 Item { Layout.preferredHeight: 15 }
                 Item {
                     Layout.fillWidth: true; Layout.preferredHeight: 70
-                    MyButton {
+                    LPCLButton {
                         anchors { horizontalCenter: parent.horizontalCenter; top: parent.top }
                         width: parent.width; height: Theme.launchBtnHeight
                         text: "启动游戏"; colorType: 1
@@ -91,7 +91,7 @@ Item {
             anchors.fill: parent
             contentWidth: width; contentHeight: panMain.implicitHeight + 25
             clip: true; boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: MyScrollBar {}
+            ScrollBar.vertical: LPCLScrollBar {}
             ColumnLayout {
                 id: panMain
                 anchors { left: parent.left; right: parent.right; top: parent.top }
@@ -116,7 +116,7 @@ Item {
                             Layout.fillWidth: true; Layout.fillHeight: true
                             Layout.leftMargin: 20; Layout.rightMargin: 23; Layout.bottomMargin: 18
                             clip: true; contentWidth: width; contentHeight: labLog.implicitHeight
-                            ScrollBar.vertical: MyScrollBar {}
+                            ScrollBar.vertical: LPCLScrollBar {}
                             Text {
                                 id: labLog; width: parent.width
                                 text: "LPCL v0.1\nReady.\n"

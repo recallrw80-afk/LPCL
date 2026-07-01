@@ -11,7 +11,7 @@ Item {
         contentWidth: width
         contentHeight: content.implicitHeight + 35
         clip: true
-        ScrollBar.vertical: MyScrollBar {}
+        ScrollBar.vertical: LPCLScrollBar {}
 
         ColumnLayout {
             id: content

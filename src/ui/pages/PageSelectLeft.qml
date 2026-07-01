@@ -18,7 +18,7 @@ Item {
         clip: true
         boundsBehavior: Flickable.StopAtBounds
 
-        ScrollBar.vertical: MyScrollBar {}
+        ScrollBar.vertical: LPCLScrollBar {}
 
         ColumnLayout {
             id: panList
@@ -63,7 +63,7 @@ Item {
                             elide: Text.ElideRight
                         }
 
-                        MyButton {
+                        LPCLButton {
                             text: "⚙"
                             Layout.preferredWidth: 28
                             Layout.preferredHeight: 28

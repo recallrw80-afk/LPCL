@@ -51,7 +51,7 @@ Item {
             contentHeight: panContent.implicitHeight + 35
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: MyScrollBar {}
+            ScrollBar.vertical: LPCLScrollBar {}
 
             ColumnLayout {
                 id: panContent
@@ -83,15 +83,15 @@ Item {
                             id: launchGrid
                             columns: 2; rowSpacing: 8; columnSpacing: 15
                             Text { text: "Max Memory:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            MyTextBox { id: maxMemField; text: "4096"; Layout.preferredWidth: 120; placeholderText: "MB" }
+                            LPCLTextBox { id: maxMemField; text: "4096"; Layout.preferredWidth: 120; placeholderText: "MB" }
                             Text { text: "Window Size:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
                             RowLayout {
-                                MyTextBox { id: widthField; text: "854"; Layout.preferredWidth: 70; placeholderText: "W" }
+                                LPCLTextBox { id: widthField; text: "854"; Layout.preferredWidth: 70; placeholderText: "W" }
                                 Text { text: "×"; color: Theme.gray3 }
-                                MyTextBox { id: heightField; text: "480"; Layout.preferredWidth: 70; placeholderText: "H" }
+                                LPCLTextBox { id: heightField; text: "480"; Layout.preferredWidth: 70; placeholderText: "H" }
                             }
                             Text { text: "Java Args:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            MyTextBox { id: javaArgsField; text: ""; Layout.fillWidth: true; placeholderText: "Custom JVM arguments" }
+                            LPCLTextBox { id: javaArgsField; text: ""; Layout.fillWidth: true; placeholderText: "Custom JVM arguments" }
                         }
                     }
                 }
@@ -110,7 +110,7 @@ Item {
                         Text { text: "Java Runtime"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         RowLayout {
                             Text { text: "Selected: " + JavaManager.selectedJavaName; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; Layout.fillWidth: true }
-                            MyButton { text: "Scan for Java"; colorType: 1; onClicked: JavaManager.scanSystemJava() }
+                            LPCLButton { text: "Scan for Java"; colorType: 1; onClicked: JavaManager.scanSystemJava() }
                         }
                         Text { text: "Found " + JavaManager.javaCount + " Java installation(s)"; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall }
                     }
@@ -130,11 +130,11 @@ Item {
                         Text { text: "UI Settings"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         RowLayout {
                             Text { text: "Theme Color:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            MyComboBox { model: ["Blue (Default)", "Red", "Green", "Purple", "Orange"]; Layout.preferredWidth: 180 }
+                            LPCLComboBox { model: ["Blue (Default)", "Red", "Green", "Purple", "Orange"]; Layout.preferredWidth: 180 }
                         }
                         RowLayout {
                             Text { text: "Background Music:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            MyComboBox { model: ["Off", "On"]; Layout.preferredWidth: 120 }
+                            LPCLComboBox { model: ["Off", "On"]; Layout.preferredWidth: 120 }
                         }
                     }
                 }

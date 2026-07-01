@@ -109,12 +109,12 @@ qt_add_qml_module(LiunxPlainCraftLauncher
         src/ui/pages/PageMore.qml
         src/ui/pages/PageSelectLeft.qml
         src/ui/pages/LoginPage.qml
-        src/ui/components/MyButton.qml
-        src/ui/components/MyIconButton.qml
-        src/ui/components/MyComboBox.qml
-        src/ui/components/MyProgressBar.qml
-        src/ui/components/MyTextBox.qml
-        src/ui/components/MyScrollBar.qml
+        src/ui/components/LPCLButton.qml
+        src/ui/components/LPCLIconButton.qml
+        src/ui/components/LPCLComboBox.qml
+        src/ui/components/LPCLProgressBar.qml
+        src/ui/components/LPCLTextBox.qml
+        src/ui/components/LPCLScrollBar.qml
         src/ui/styles/Theme.qml
 )
 
