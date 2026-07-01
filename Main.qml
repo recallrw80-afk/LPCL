@@ -305,8 +305,6 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-
-
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
@@ -343,15 +341,11 @@ ApplicationWindow {
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
                             Image {
                                 anchors.centerIn: parent
-                                anchors.leftMargin: 6
-                                anchors.rightMargin: 6
                                 sourceSize: Qt.size(96, 96)
                                 width: 24; height: 24
                                 id: imgClose
@@ -372,8 +366,8 @@ ApplicationWindow {
                                 onExited: btnTitleClose.hovered = false
                                 onClicked: window.close()
                             }
-                        }  // RowLayout
-                    }  // panTitle
+                        }  // btnTitleClose
+                    }  // RowLayout
 
                     // ============================================================
                     // PanHint — bottom-left hint overlay
