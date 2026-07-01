@@ -45,12 +45,12 @@ Item {
                     LPCLIcon {
                         width: 28; height: 28
                         iconColor: Theme.color3
-                        iconSource: "qrc:/assets/icons/shield-check-line.svg"
+                        lucideIcon: "shield-check"
                     }
                     LPCLIcon {
                         width: 28; height: 28
                         iconColor: Theme.color3
-                        iconSource: "qrc:/assets/icons/unlink.svg"
+                        lucideIcon: "unlink"
                     }
                 }
                 Item {
