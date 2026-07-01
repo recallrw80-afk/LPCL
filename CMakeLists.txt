@@ -81,6 +81,8 @@ set(LUCIDE_ICONS
     "layout-grid"
     "x"
     "minus"
+    "shield-check"
+    "unlink"
 )
 set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/lucide")
 file(MAKE_DIRECTORY "${LUCIDE_DIR}")

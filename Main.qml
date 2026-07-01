@@ -228,7 +228,7 @@ ApplicationWindow {
                                 ]
 
                                 Item {
-                                    width: tabRowContent.width + 20
+                                    width: tabRowContent.width + 25
                                     implicitWidth: width
                                     height: 27
                                     property bool hovered: false
@@ -252,8 +252,8 @@ ApplicationWindow {
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
-                                                width: 18;
-                                                height: 18;
+                                                width: 19;
+                                                height: 19;
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 lucideIcon: modelData.icon;
                                                 iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff";
