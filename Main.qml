@@ -388,7 +388,7 @@ ApplicationWindow {
                         spacing: 5
 
                         // BtnExtraBack — Return to top
-                        MyIconButton {
+                        LPCLIconButton {
                             width: 28; height: 28
                             theme: "Color"
                             logoScale: 0.9

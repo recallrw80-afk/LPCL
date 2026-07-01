@@ -2,7 +2,7 @@ import QtQuick
 import Qt5Compat.GraphicalEffects
 import "../styles"
 
-// Exact replica of original MyIconButton (Controls/MyIconButton.xaml + .xaml.vb)
+// Exact replica of original LPCLIconButton (Controls/LPCLIconButton.xaml + .xaml.vb)
 // Theme: Color (theme-based), White, Black, Red
 // Icons are external SVG files (not inline paths — see RED LINE in CLAUDE.md)
 Item {
