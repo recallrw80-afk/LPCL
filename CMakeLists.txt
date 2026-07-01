@@ -75,9 +75,12 @@ qt_add_executable(LiunxPlainCraftLauncher
 # Add icon names to LUCIDE_ICONS list (e.g. "play" "settings" "x")
 # SVGs are downloaded at configure time and cached in assets/icons/lucide/
 set(LUCIDE_ICONS
-    # "play"
-    # "settings"
-    # "x"
+    "play"
+    "bolt"
+    "arrow-down-to-line"
+    "layout-grid"
+    "x"
+    "minus"
 )
 set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/lucide")
 file(MAKE_DIRECTORY "${LUCIDE_DIR}")

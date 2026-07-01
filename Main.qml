@@ -29,7 +29,7 @@ ApplicationWindow {
     }
 
     visible: true
-    title: "Plain Craft Launcher  "
+    title: "Linux Plain Craft Launcher"
 
     // Opacity driven by custom property for reliable animation (entrance fade-in)
     property real winOpacity: 0
@@ -221,10 +221,10 @@ ApplicationWindow {
 
                             Repeater {
                                 model: [
-                                    {text: "启动", tag: 0, icon: "qrc:/assets/icons/nav_launch.svg"},
-                                    {text: "下载", tag: 1, icon: "qrc:/assets/icons/nav_download.svg"},
-                                    {text: "设置", tag: 2, icon: "qrc:/assets/icons/nav_settings.svg"},
-                                    {text: "更多", tag: 3, icon: "qrc:/assets/icons/nav_more.svg"}
+                                    {text: "启动", tag: 0, icon: "play"},
+                                    {text: "下载", tag: 1, icon: "arrow-down-to-line"},
+                                    {text: "设置", tag: 2, icon: "bolt"},
+                                    {text: "更多", tag: 3, icon: "layout-grid"}
                                 ]
 
                                 Item {
@@ -252,26 +252,11 @@ ApplicationWindow {
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
-                                                width: 22;
-                                                height: 22;
+                                                width: 20;
+                                                height: 20;
                                                 anchors.verticalCenter: parent.verticalCenter
-                                                lucideIcon: "play";
-                                            }
-                                            Image {
-                                                id: tabIcon
-                                                width: 22; height: 22
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                source: modelData.icon
-                                                sourceSize: Qt.size(88, 88)
-                                                smooth: true
-                                                mipmap: true
-                                                visible: false
-                                            }
-                                            ColorOverlay {
-                                                width: 22; height: 22
-                                                anchors.verticalCenter: parent.verticalCenter
-                                                source: tabIcon
-                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
+                                                lucideIcon: modelData.icon;
+                                                iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff";
                                             }
 
                                             Text {
@@ -314,20 +299,12 @@ ApplicationWindow {
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
-                            Image {
-                                id: imgMin
+                            LPCLIcon {
+                                width: 24;
+                                height: 24;
                                 anchors.centerIn: parent
-                                sourceSize: Qt.size(96, 96)
-                                width: 24; height: 24
-                                source: "qrc:/assets/icons/minimize.svg"
-                                smooth: true
-                                mipmap: true
-                                visible: false
-                            }
-                            ColorOverlay {
-                                anchors.fill: imgMin
-                                source: imgMin
-                                color: "#ffffff"
+                                lucideIcon: "minus";
+                                iconColor: "#ffffff";
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -350,20 +327,12 @@ ApplicationWindow {
                                 width: 28; height: 28; radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
-                            Image {
+                            LPCLIcon {
+                                width: 24
+                                height: 24
                                 anchors.centerIn: parent
-                                sourceSize: Qt.size(96, 96)
-                                width: 24; height: 24
-                                id: imgClose
-                                source: "qrc:/assets/icons/close.svg"
-                                smooth: true
-                                mipmap: true
-                                visible: false
-                            }
-                            ColorOverlay {
-                                anchors.fill: imgClose
-                                source: imgClose
-                                color: "#ffffff"
+                                lucideIcon: "x";
+                                iconColor: "#ffffff"
                             }
                             MouseArea {
                                 anchors.fill: parent
