@@ -252,8 +252,8 @@ ApplicationWindow {
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
-                                                width: 20;
-                                                height: 20;
+                                                width: 18;
+                                                height: 18;
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 lucideIcon: modelData.icon;
                                                 iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff";

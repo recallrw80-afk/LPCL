@@ -22,7 +22,7 @@ Item {
         id: iconImage
         anchors.fill: parent
         source: wrapper._resolvedSource
-        sourceSize: Qt.size(wrapper.implicitWidth * 4, wrapper.implicitHeight * 4)
+        sourceSize: Qt.size(wrapper.width * 8, wrapper.height * 8)
         smooth: true
         mipmap: true
         visible: false
