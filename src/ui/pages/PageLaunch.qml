@@ -34,14 +34,29 @@ Item {
         Item {
             anchors.fill: parent; clip: true
             ColumnLayout {
-                // anchors { fill: parent; leftMargin: 20; rightMargin: 20; topMargin: 0; bottomMargin: 0 }
+                anchors { fill: parent;}
                 spacing: 0
                 Item { Layout.fillHeight: true }
                 Row {
-                    Layout.fillWidth: true; Layout.preferredHeight: 35
-                    Layout.topMargin: 22; Layout.alignment: Qt.AlignHCenter; spacing: 8
-                    LPCLButton { width: 100; height: 28; text: "正版"; colorType: 1; radius: 20 }
-                    LPCLButton { width: 100; height: 28; text: "离线"; colorType: 0; radius: 20 }
+                    Layout.fillWidth: true;
+                    Layout.preferredHeight: 35
+                    Layout.topMargin: 22;
+                    Layout.alignment: Qt.AlignHCenter;
+                    spacing: 8
+                    LPCLIconButton {
+                        // width: 120;
+                        // height: 28;
+                        logoScale: 0.9;
+                        iconSource: "qrc:/assets/icons/shield-check-line.svg";
+                        visible: true
+                    }
+                    LPCLIconButton {
+                        // width: 100;
+                        // height: 28;
+                        logoScale: 0.9;
+                        iconSource: "qrc:/assets/icons/unlink.svg";
+                        visible: true
+                    }
                 }
                 Item {
                     Layout.fillWidth: true; Layout.preferredHeight: 60

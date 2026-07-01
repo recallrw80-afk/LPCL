@@ -83,7 +83,7 @@ Item {
             Text {
                 id: labText
                 anchors.centerIn: parent
-                visible: text !== "" && !contentLoader.active
+                visible: text !== "" && contentLoader.item === null
                 color: panFore.border.color
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSize

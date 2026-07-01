@@ -378,24 +378,6 @@ ApplicationWindow {
                         // Hint messages appear here
                     }
 
-                    // ============================================================
-                    // Bottom-right extra buttons
-                    // ============================================================
-                    Column {
-                        anchors {
-                            right: parent.right; bottom: parent.bottom; rightMargin: 15; bottomMargin: 15
-                        }
-                        spacing: 5
-
-                        // BtnExtraBack — Return to top
-                        LPCLIconButton {
-                            width: 28; height: 28
-                            theme: "Color"
-                            logoScale: 0.9
-                            iconSource: "qrc:/assets/icons/back_to_top.svg"
-                            visible: false  // Shown when scrolled down
-                        }
-                    }
 
                     // ============================================================
                     // PanMsg — message overlay (hidden by default)
