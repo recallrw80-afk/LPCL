@@ -11,6 +11,7 @@ Item {
     property alias text: labText.text
     property alias enabled: mouseArea.enabled
     property alias font: labText.font
+    property alias contentItem: contentLoader.sourceComponent
     property int colorType: 0           // 0=Normal, 1=Highlight, 2=Red, 3=Disabled
     property int padding: 10
     property bool down: false
@@ -82,12 +83,19 @@ Item {
             Text {
                 id: labText
                 anchors.centerIn: parent
+                visible: text !== "" && !contentLoader.active
                 color: panFore.border.color
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSize
                 horizontalAlignment: Text.AlignHCenter
                 verticalAlignment: Text.AlignVCenter
                 elide: Text.ElideRight
+            }
+
+            // ---- Custom content loader (replaces labText when set) ----
+            Loader {
+                id: contentLoader
+                anchors.centerIn: parent
             }
         }
     }
