@@ -5,8 +5,12 @@ import LPCL.Core
 import "../components"
 import "../styles"
 
-// Exact replica of PageLaunchLeft.xaml layout
-// PanInput (default) ←→ PanLaunching (during launch)
+// Exact replica of PageLaunchLeft.xaml + PageLaunchRight.xaml layout + interaction logic
+// Single file: left sidebar (300px) + right content
+// Two modes: PanInput (default) ↔ PanLaunching (during launch)
+// Sub-page: version selection (replaces both panels)
+// 4-state launch button matching RefreshButtonsUI()
+// 100ms polling timer with smooth progress
 Item {
     id: page
     property bool isActive: false
@@ -24,21 +28,186 @@ Item {
     Behavior on opacity { NumberAnimation { duration: 100 } }
     Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
 
-    function refreshVersions() {
-        VersionManager.loadLocalVersions()
-        VersionManager.fetchVersionManifest()
+    // ================================================================
+    // 4-state launch button (matching RefreshButtonsUI)
+    // State 0: Loading — "正在加载", disabled
+    // State 1: No versions (download hidden) — "启动游戏", disabled
+    // State 2: No versions (download available) — "下载游戏", enabled
+    // State 3: Ready — "启动游戏", enabled
+    // ================================================================
+    property int btnLaunchState: 0
+    property string statusText: "正在加载版本列表，请稍候"
+
+    readonly property string btnLaunchText: {
+        switch (btnLaunchState) {
+            case 0: return "正在加载"
+            case 1: return "启动游戏"
+            case 2: return "下载游戏"
+            case 3: return "启动游戏"
+            default: return "启动游戏"
+        }
     }
 
+    function refreshButtonsUI() {
+        if (VersionManager.isLoading) {
+            btnLaunchState = 0
+            statusText = "正在加载中，请稍候"
+        } else if (VersionManager.versionIds.length === 0) {
+            btnLaunchState = 2
+            statusText = "未找到可用的游戏版本"
+        } else if (!selectedVersion) {
+            btnLaunchState = 1
+            statusText = "未找到可用的游戏版本"
+        } else {
+            btnLaunchState = 3
+            statusText = "已选择 " + selectedVersion + "，点击启动"
+        }
+    }
+
+    // ================================================================
+    // Launch state
+    // ================================================================
+    readonly property bool isLaunching: {
+        var s = Launcher.launchState
+        return s >= Launcher.Prechecking && s < Launcher.Running
+    }
+    readonly property bool isRunning: Launcher.launchState === Launcher.Running
+
+    // ================================================================
+    // PanInput ↔ PanLaunching transition animations
+    // TO launching: PanInput fades+zooms out, PanLaunching bounces in
+    // BACK to input: PanLaunching shrinks+fades, PanInput bounces back
+    // ================================================================
+    property real panInputOpacity: 1
+    property real panInputScale: 1
+    property real panLaunchingOpacity: 0
+    property real panLaunchingScale: 0.8
+
+    function pageChangeToLaunching() {
+        panLaunchingTitle = "正在启动游戏"
+        showProgress = 0
+        panInputFadeOut.start()
+        panInputZoomOut.start()
+        panLaunchingFadeIn.start()
+        panLaunchingScaleIn.start()
+    }
+
+    function pageChangeToLogin() {
+        panLaunchingFadeOut.start()
+        panLaunchingShrink.start()
+        panInputFadeIn.start()
+        panInputScaleIn.start()
+        refreshButtonsUI()
+    }
+
+    // PanInput animations
+    NumberAnimation { id: panInputFadeOut; target: page; property: "panInputOpacity"; to: 0; duration: 50 }
+    NumberAnimation { id: panInputZoomOut; target: page; property: "panInputScale"; to: 1.2; duration: 160 }
+    NumberAnimation { id: panInputFadeIn; target: page; property: "panInputOpacity"; to: 1; duration: 250; easing.type: Easing.OutCubic }
+    NumberAnimation { id: panInputScaleIn; target: page; property: "panInputScale"; to: 1; duration: 300; easing.type: Easing.OutBack }
+
+    // PanLaunching animations
+    NumberAnimation { id: panLaunchingFadeIn; target: page; property: "panLaunchingOpacity"; to: 1; duration: 150 }
+    NumberAnimation { id: panLaunchingScaleIn; target: page; property: "panLaunchingScale"; to: 1; duration: 500; easing.type: Easing.OutBack }
+    NumberAnimation { id: panLaunchingFadeOut; target: page; property: "panLaunchingOpacity"; to: 0; duration: 150 }
+    NumberAnimation { id: panLaunchingShrink; target: page; property: "panLaunchingScale"; to: 0.8; duration: 150; easing.type: Easing.InCubic }
+
+    // ================================================================
+    // Launching refresh (100ms polling, matching LaunchingRefresh)
+    // ================================================================
+    property real showProgress: 0
+    property string panLaunchingTitle: "正在启动游戏"
+
+    Timer {
+        id: launchingRefreshTimer
+        interval: 100
+        running: page.isLaunching || page.isRunning
+        repeat: true
+        onTriggered: launchingRefresh()
+    }
+
+    function launchingRefresh() {
+        if (isRunning) {
+            panLaunchingTitle = "已启动游戏"
+        } else if (Launcher.launchState === Launcher.Failed) {
+            panLaunchingTitle = "启动失败"
+        } else if (Launcher.launchState === Launcher.Finished) {
+            panLaunchingTitle = "游戏已退出"
+        } else {
+            panLaunchingTitle = "正在启动游戏"
+        }
+
+        var actual = Launcher.progress
+        if (actual < showProgress) {
+            showProgress = actual
+        } else if (isRunning) {
+            showProgress = 100
+        } else {
+            showProgress += (actual - showProgress) * 0.1 + 0.0025
+            if (showProgress > actual) showProgress = actual
+        }
+    }
+
+    // ================================================================
+    // Sub-page navigation (version selection)
+    // ================================================================
+    property bool isSubPage: false
+    property string subPageTitle: ""
+
+    function pushSubPage(title) {
+        subPageTitle = title
+        isSubPage = true
+    }
+    function popSubPage() {
+        isSubPage = false
+        subPageTitle = ""
+    }
+
+    // ================================================================
+    // Launch state watcher
+    // ================================================================
+    Connections {
+        target: Launcher
+        function onStateChanged() {
+            var s = Launcher.launchState
+            if (s >= Launcher.Prechecking && s < Launcher.Running) {
+                pageChangeToLaunching()
+            } else if (s === Launcher.Finished || s === Launcher.Failed || s === Launcher.Interrupted) {
+                pageChangeToLogin()
+            }
+        }
+    }
+
+    // ================================================================
+    // Version list loaded
+    // ================================================================
+    Connections {
+        target: VersionManager
+        function onVersionListChanged() {
+            refreshButtonsUI()
+            if (VersionManager.versionIds.length > 0 && !selectedVersion) {
+                selectedVersion = VersionManager.versionIds[0]
+            }
+        }
+        function onLoadingChanged() {
+            refreshButtonsUI()
+        }
+    }
+
+    // ================================================================
+    // Main layout: left sidebar (300px) + right content
+    // ================================================================
     RowLayout {
         anchors.fill: parent
         spacing: 0
 
-        // Left sidebar — Width=300, matches original MyPageLeft
+        // ---- Left sidebar ----
         Rectangle {
             Layout.preferredWidth: 300
             Layout.fillHeight: true
             color: Theme.sidebarBg
 
+            // Sidebar shadow
             Rectangle {
                 anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
                 width: 4; opacity: 0.04
@@ -48,254 +217,364 @@ Item {
                 }
             }
 
-            // ---- PanInput ----
+            // ---- Main view (launch sidebar) ----
             Item {
-                id: panInput
+                id: mainView
                 anchors.fill: parent
-                visible: !isLaunching && !isRunning
+                visible: !isSubPage
 
-                ColumnLayout {
+                // ============================================================
+                // PanInput — Default mode
+                // ============================================================
+                Item {
+                    id: panInput
                     anchors.fill: parent
-                    spacing: 0
-
-                    // Login type buttons (正版 / 离线)
-                    RowLayout {
-                        Layout.preferredHeight: 35
-                        Layout.topMargin: 22
-                        Layout.alignment: Qt.AlignHCenter
-                        spacing: 8
-
-                        LPCLButton {
-                            id: msBtn
-                            Layout.preferredWidth: 100
-                            padding: 15; radius: height / 2
-                            colorType: loginType === 5 ? 1 : 0
-                            contentItem: Row {
-                                spacing: 6
-                                LPCLIcon { size: 16; lucideIcon: "shield-check"; anchors.verticalCenter: parent.verticalCenter; iconColor: msBtn.labelColor }
-                                Text { text: "正版"; color: msBtn.labelColor; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; anchors.verticalCenter: parent.verticalCenter }
-                            }
-                            onClicked: { loginType = 5 }
-                        }
-                        LPCLButton {
-                            id: offlineBtn
-                            Layout.preferredWidth: 100
-                            padding: 15; radius: height / 2
-                            colorType: loginType === 0 ? 1 : 0
-                            contentItem: Row {
-                                spacing: 6
-                                LPCLIcon { size: 16; lucideIcon: "unlink"; anchors.verticalCenter: parent.verticalCenter; iconColor: offlineBtn.labelColor }
-                                Text { text: "离线"; color: offlineBtn.labelColor; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; anchors.verticalCenter: parent.verticalCenter }
-                            }
-                            onClicked: {
-                                loginType = 0
-                                if (!accountName) {
-                                    accountName = "Player"
-                                    accountUuid = OfflineAuth.generateOfflineUuid("Player")
-                                }
-                            }
-                        }
-                    }
-
-                    // Row 0: Avatar + username (PanLogin area)
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 70
-                        Layout.topMargin: 10
-
-                        // Avatar placeholder circle
-                        Rectangle {
-                            anchors { horizontalCenter: parent.horizontalCenter; top: parent.top }
-                            width: 40; height: 40; radius: 20
-                            color: Theme.color7
-                            border { width: 1; color: Theme.gray5 }
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: accountName ? accountName.charAt(0).toUpperCase() : "?"
-                                font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true
-                                color: Theme.color2
-                            }
-                        }
-
-                        // Username below avatar
-                        Text {
-                            anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 44 }
-                            text: accountName || ""
-                            font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
-                            color: Theme.gray3
-                        }
-                    }
-
-                    // Spacer: fills remaining space
-                    Item { Layout.fillHeight: true; Layout.minimumHeight: 10 }
-
-                    // Launch button + version status
-                    Item {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 75
-
-                        // BtnLaunch — Height=54, Margin=20,0, Padding=30,0,30,15, ColorType=Highlight
-                        LPCLButton {
-                            id: btnLaunch
-                            anchors { left: parent.left; right: parent.right; top: parent.top }
-                            anchors.margins: 20
-                            height: 54
-                            colorType: 1
-                            text: "启动游戏"
-                            enabled: selectedVersion !== ""
-                            padding: 0
-                            onClicked: doLaunch()
-                        }
-
-                        // LabVersion — FontSize=11, ColorBrushGray3, below button
-                        Text {
-                            anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
-                            anchors.bottomMargin: 2
-                            text: statusText
-                            font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeXSmall
-                            color: Theme.gray3; horizontalAlignment: Text.AlignHCenter
-                            width: parent.width - 40; elide: Text.ElideRight
-                        }
-                    }
-
-                    // Row 3: Version select button + version settings
-                    RowLayout {
-                        Layout.fillWidth: true
-                        Layout.preferredHeight: 45
-                        Layout.topMargin: 0
-                        Layout.leftMargin: 20
-                        Layout.rightMargin: 10
-
-                        LPCLButton {
-                            id: btnVersion
-                            Layout.fillWidth: true
-                            Layout.preferredHeight: 35
-                            colorType: 0
-                            text: selectedVersion || "版本选择"
-                            onClicked: versionPopup.visible = !versionPopup.visible
-                        }
-                    }
-
-                    // Row 4: Bottom spacer (20px in original)
-                    Item { Layout.preferredHeight: 20 }
-                }
-            }
-
-            // ---- Version selection popup ----
-            Rectangle {
-                id: versionPopup
-                anchors {
-                    left: parent.left; right: parent.right; bottom: parent.bottom
-                    leftMargin: 20; rightMargin: 10; bottomMargin: 20
-                }
-                height: Math.min(250, verListContent.contentHeight + 10)
-                visible: false; radius: 6; z: 10
-                color: Theme.pureWhite
-                border { width: 1; color: Theme.gray5 }
-
-                Flickable {
-                    id: verListContent
-                    anchors { fill: parent; margins: 5 }
-                    contentWidth: width; contentHeight: verCol.implicitHeight
-                    clip: true
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    visible: panInputOpacity > 0
+                    opacity: panInputOpacity
+                    scale: panInputScale
+                    transformOrigin: Item.Center
 
                     ColumnLayout {
-                        id: verCol
-                        anchors { left: parent.left; right: parent.right }
-                        spacing: 1
-                        Repeater {
-                            model: VersionManager.versionIds
-                            Rectangle {
-                                Layout.fillWidth: true; Layout.preferredHeight: 28; radius: 3
-                                color: vm.containsMouse ? Theme.color7 : "transparent"
-                                Text {
-                                    anchors { left: parent.left; leftMargin: 10; verticalCenter: parent.verticalCenter }
-                                    text: modelData; color: Theme.color1
-                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
+                        anchors.fill: parent
+                        spacing: 0
+
+                        // Login type buttons
+                        RowLayout {
+                            Layout.preferredHeight: 35
+                            Layout.topMargin: 22
+                            Layout.alignment: Qt.AlignHCenter
+                            spacing: 8
+
+                            LPCLButton {
+                                id: msBtn
+                                Layout.preferredWidth: 100
+                                padding: 15; radius: height / 2
+                                colorType: loginType === 5 ? 1 : 0
+                                contentItem: Row {
+                                    spacing: 6
+                                    LPCLIcon { size: 16; lucideIcon: "shield-check"; anchors.verticalCenter: parent.verticalCenter; iconColor: msBtn.labelColor }
+                                    Text { text: "正版"; color: msBtn.labelColor; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; anchors.verticalCenter: parent.verticalCenter }
                                 }
-                                MouseArea {
-                                    id: vm; anchors.fill: parent; hoverEnabled: true
-                                    onClicked: {
-                                        selectedVersion = modelData
-                                        versionPopup.visible = false
+                                onClicked: { loginType = 5 }
+                            }
+                            LPCLButton {
+                                id: offlineBtn
+                                Layout.preferredWidth: 100
+                                padding: 15; radius: height / 2
+                                colorType: loginType === 0 ? 1 : 0
+                                contentItem: Row {
+                                    spacing: 6
+                                    LPCLIcon { size: 16; lucideIcon: "unlink"; anchors.verticalCenter: parent.verticalCenter; iconColor: offlineBtn.labelColor }
+                                    Text { text: "离线"; color: offlineBtn.labelColor; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; anchors.verticalCenter: parent.verticalCenter }
+                                }
+                                onClicked: {
+                                    loginType = 0
+                                    if (!accountName) {
+                                        accountName = "Player"
+                                        accountUuid = OfflineAuth.generateOfflineUuid("Player")
                                     }
                                 }
                             }
                         }
-                    }
-                }
-            }
 
-            // ---- PanLaunching: launch overlay ----
-            Item {
-                id: panLaunching
-                anchors.fill: parent
-                visible: isLaunching || isRunning
-                opacity: visible ? 1 : 0
-                scale: visible ? 1 : 0.8
-                Behavior on opacity { NumberAnimation { duration: 250 } }
-                Behavior on scale { NumberAnimation { duration: 400; easing.type: Easing.OutBack } }
+                        // Avatar + username
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 70
+                            Layout.topMargin: 10
 
-                ColumnLayout {
-                    anchors.centerIn: parent
-                    width: parent.width - 40
-                    spacing: 0
-
-                    LPCLProgressBar {
-                        Layout.fillWidth: true; Layout.preferredHeight: 50
-                        indeterminate: Launcher.launchState < Launcher.Downloading
-                    }
-
-                    Text {
-                        text: launchTitleText
-                        font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchTitle
-                        color: Theme.color3; Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 10
-                    }
-                    Text {
-                        text: selectedVersion
-                        font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchName
-                        color: Theme.color3; Layout.alignment: Qt.AlignHCenter
-                        Layout.topMargin: 5; Layout.bottomMargin: 12
-                    }
-
-                    // Progress bar
-                    Rectangle {
-                        Layout.fillWidth: true; Layout.preferredHeight: 4
-                        Layout.topMargin: 12; Layout.bottomMargin: 27; radius: 2
-                        color: Theme.gray6; opacity: 0.6
-                        Rectangle {
-                            width: parent.width * (Launcher.progress / 100.0)
-                            height: parent.height; radius: 2
-                            gradient: Gradient {
-                                GradientStop { position: 0; color: Theme.color4 }
-                                GradientStop { position: 0.6; color: Theme.color3 }
+                            Rectangle {
+                                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top }
+                                width: 40; height: 40; radius: 20
+                                color: Theme.color7
+                                border { width: 1; color: Theme.gray5 }
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: accountName ? accountName.charAt(0).toUpperCase() : "?"
+                                    font.family: Theme.fontFamily; font.pixelSize: 18; font.bold: true
+                                    color: Theme.color2
+                                }
+                            }
+                            Text {
+                                anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 44 }
+                                text: accountName || ""
+                                font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
+                                color: Theme.gray3
                             }
                         }
-                    }
 
-                    // Status info
-                    GridLayout {
-                        Layout.alignment: Qt.AlignHCenter
-                        columns: 2; rowSpacing: 5; columnSpacing: 15
-                        Text { text: "当前步骤"; font: infoFont; color: Theme.gray3; opacity: 0.5; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: 80 }
-                        Text { text: Launcher.statusText; font: infoFont; color: Theme.color3; Layout.preferredWidth: 100 }
-                        Text { text: "启动进度"; font: infoFont; color: Theme.gray3; opacity: 0.5; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: 80 }
-                        Text { text: Launcher.progress.toFixed(1) + " %"; font: infoFont; color: Theme.color3; Layout.preferredWidth: 100 }
-                    }
+                        // Spacer
+                        Item { Layout.fillHeight: true; Layout.minimumHeight: 10 }
 
-                    LPCLButton {
-                        Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
-                        text: isRunning ? "结束游戏" : "取消"
-                        colorType: 2; Layout.preferredWidth: 120
-                        onClicked: Launcher.interrupt()
+                        // Launch button + version status
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 75
+
+                            LPCLButton {
+                                id: btnLaunch
+                                anchors { left: parent.left; right: parent.right; top: parent.top }
+                                anchors.margins: 20
+                                height: Theme.launchBtnHeight
+                                colorType: (btnLaunchState === 3 || btnLaunchState === 2) ? 1 : 3
+                                text: btnLaunchText
+                                enabled: btnLaunchState >= 2
+                                padding: 0
+                                onClicked: launchButtonClick()
+                            }
+                            Text {
+                                anchors { horizontalCenter: parent.horizontalCenter; bottom: parent.bottom }
+                                anchors.bottomMargin: 2
+                                text: statusText
+                                font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeXSmall
+                                color: Theme.gray3; horizontalAlignment: Text.AlignHCenter
+                                width: parent.width - 40; elide: Text.ElideRight
+                            }
+                        }
+
+                        // Version select + version settings
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 45
+                            Layout.leftMargin: 20
+                            Layout.rightMargin: 10
+
+                            LPCLButton {
+                                id: btnVersion
+                                Layout.fillWidth: true
+                                Layout.preferredHeight: Theme.versionBtnHeight
+                                colorType: 0
+                                text: selectedVersion || "版本选择"
+                                enabled: btnLaunchState !== 0
+                                onClicked: pushSubPage("版本选择")
+                            }
+                            LPCLButton {
+                                id: btnMore
+                                Layout.preferredWidth: 80
+                                Layout.preferredHeight: Theme.versionBtnHeight
+                                colorType: 0
+                                text: "版本设置"
+                                visible: btnLaunchState === 3
+                                onClicked: { /* TODO: Navigate to version setup */ }
+                            }
+                        }
+
+                        Item { Layout.preferredHeight: 20 }
+                    }
+                }
+
+                // ============================================================
+                // PanLaunching — Launch progress overlay
+                // ============================================================
+                Item {
+                    id: panLaunching
+                    anchors.fill: parent
+                    visible: panLaunchingOpacity > 0
+                    opacity: panLaunchingOpacity
+                    scale: panLaunchingScale
+                    transformOrigin: Item.Center
+
+                    ColumnLayout {
+                        anchors.centerIn: parent
+                        width: parent.width - 40
+                        spacing: 0
+
+                        Item {
+                            Layout.alignment: Qt.AlignHCenter
+                            Layout.preferredWidth: 40; Layout.preferredHeight: 40
+                            LPCLProgressBar {
+                                anchors.fill: parent
+                                indeterminate: Launcher.launchState < Launcher.Downloading
+                            }
+                        }
+
+                        Text {
+                            text: panLaunchingTitle
+                            font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchTitle
+                            color: Theme.color3; Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 10
+                            transform: Rotation { angle: -3; origin.x: parent.width / 2; origin.y: parent.height / 2 }
+                        }
+                        Text {
+                            text: selectedVersion
+                            font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLaunchName
+                            color: Theme.color3; Layout.alignment: Qt.AlignHCenter
+                            Layout.topMargin: 5; Layout.bottomMargin: 12
+                            transform: Rotation { angle: -3; origin.x: parent.width / 2; origin.y: parent.height / 2 }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.preferredHeight: Theme.progressBarHeight
+                            Layout.topMargin: 12; Layout.bottomMargin: 27; radius: 2
+                            color: Theme.gray6; opacity: 0.6
+                            Rectangle {
+                                width: parent.width * (showProgress / 100.0)
+                                height: parent.height; radius: 2
+                                gradient: Gradient {
+                                    GradientStop { position: 0; color: Theme.color4 }
+                                    GradientStop { position: 0.6; color: Theme.color3 }
+                                }
+                                Behavior on width { NumberAnimation { duration: 130; easing.type: Easing.OutCubic } }
+                            }
+                        }
+
+                        GridLayout {
+                            Layout.alignment: Qt.AlignHCenter
+                            columns: 2; rowSpacing: 5; columnSpacing: 15
+                            Text { text: "当前步骤"; font: infoFont; color: Theme.gray3; opacity: 0.5; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: 80 }
+                            Text { text: Launcher.statusText; font: infoFont; color: Theme.color3; Layout.preferredWidth: 100 }
+                            Text { text: "登录方式"; font: infoFont; color: Theme.gray3; opacity: 0.5; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: 80 }
+                            Text { text: loginType === 5 ? "正版登录" : "离线登录"; font: infoFont; color: Theme.color3; Layout.preferredWidth: 100 }
+                            Text { text: "启动进度"; font: infoFont; color: Theme.gray3; opacity: 0.5; horizontalAlignment: Text.AlignRight; Layout.preferredWidth: 80 }
+                            Text { text: showProgress.toFixed(2) + " %"; font: infoFont; color: Theme.color3; Layout.preferredWidth: 100 }
+                        }
+
+                        LPCLButton {
+                            Layout.alignment: Qt.AlignHCenter; Layout.topMargin: 20
+                            text: isRunning ? "结束游戏" : "取消"
+                            colorType: 2; Layout.preferredWidth: 120
+                            onClicked: Launcher.interrupt()
+                        }
+                    }
+                }
+
+                // ============================================================
+                // Version selection sub-page (replaces sidebar content)
+                // ============================================================
+                Item {
+                    id: versionSelectView
+                    anchors.fill: parent
+                    visible: isSubPage
+                    opacity: isSubPage ? 1 : 0
+                    Behavior on opacity { NumberAnimation { duration: 100 } }
+
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 0
+
+                        // Header
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 50
+                            color: Theme.gray8
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 15
+                                anchors.rightMargin: 15
+                                spacing: 10
+
+                                LPCLButton {
+                                    Layout.preferredWidth: 60
+                                    Layout.preferredHeight: 30
+                                    text: "← 返回"
+                                    colorType: 0
+                                    onClicked: popSubPage()
+                                }
+                                Text {
+                                    text: subPageTitle
+                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeTitle
+                                    font.bold: true; color: Theme.color1
+                                    Layout.fillWidth: true
+                                }
+                            }
+                        }
+
+                        // Loading spinner
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            color: Theme.pureWhite
+                            visible: VersionManager.isLoading
+
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: 12
+                                LPCLProgressBar {
+                                    Layout.preferredWidth: 50; Layout.preferredHeight: 50
+                                    indeterminate: true
+                                }
+                                Text {
+                                    text: "正在扫描版本..."
+                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
+                                    color: Theme.gray3; Layout.alignment: Qt.AlignHCenter
+                                }
+                            }
+                        }
+
+                        // Version list
+                        Flickable {
+                            Layout.fillWidth: true
+                            Layout.fillHeight: true
+                            visible: !VersionManager.isLoading
+                            contentWidth: width
+                            contentHeight: verCol.implicitHeight
+                            clip: true
+                            boundsBehavior: Flickable.StopAtBounds
+                            ScrollBar.vertical: LPCLScrollBar {}
+
+                            ColumnLayout {
+                                id: verCol
+                                anchors { left: parent.left; right: parent.right; top: parent.top }
+                                spacing: 2
+
+                                Text {
+                                    text: "常规版本"
+                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.gray3; opacity: 0.6
+                                    Layout.leftMargin: 15; Layout.topMargin: 12; Layout.bottomMargin: 4
+                                }
+
+                                Repeater {
+                                    model: VersionManager.versionIds
+
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        Layout.preferredHeight: 40
+                                        Layout.leftMargin: 5; Layout.rightMargin: 5
+                                        radius: Theme.buttonRadius
+                                        color: verMouse.containsMouse ? Theme.color7 : "transparent"
+
+                                        RowLayout {
+                                            anchors.fill: parent
+                                            anchors.leftMargin: 12; anchors.rightMargin: 8
+                                            spacing: 10
+
+                                            Rectangle {
+                                                width: 24; height: 24; radius: 3
+                                                color: Theme.color6
+                                                Layout.alignment: Qt.AlignVCenter
+                                                Text { anchors.centerIn: parent; text: "⛏"; font.pixelSize: 14 }
+                                            }
+                                            Text {
+                                                text: modelData
+                                                font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
+                                                color: Theme.color1; Layout.fillWidth: true; elide: Text.ElideRight
+                                            }
+                                        }
+
+                                        MouseArea {
+                                            id: verMouse
+                                            anchors.fill: parent
+                                            hoverEnabled: true
+                                            cursorShape: Qt.PointingHandCursor
+                                            onClicked: {
+                                                selectedVersion = modelData
+                                                refreshButtonsUI()
+                                                popSubPage()
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Item { Layout.preferredHeight: 10 }
+                            }
+                        }
                     }
                 }
             }
         }
 
-        // Right content — version info + launch log
+        // ---- Right content ----
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
 
@@ -369,51 +648,17 @@ Item {
         }
     }
 
-    // Fonts
-    readonly property font smallFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeSmall })
-    readonly property font infoFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchLabel })
-    readonly property font boldFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchName, bold: true })
-
-    // State
-    property string statusText: "正在加载版本列表，请稍候"
-
-    readonly property bool isLaunching: {
-        var s = Launcher.launchState
-        return s >= Launcher.Prechecking && s < Launcher.Running
-    }
-    readonly property bool isRunning: Launcher.launchState === Launcher.Running
-
-    readonly property string launchTitleText: {
-        if (isRunning) return "游戏运行中"
-        if (Launcher.launchState === Launcher.Failed) return "启动失败"
-        if (Launcher.launchState === Launcher.Finished) return "游戏已退出"
-        return "正在启动游戏"
-    }
-
-    // ---- Version list loaded ----
-    Connections {
-        target: VersionManager
-        function onVersionListChanged() {
-            if (VersionManager.versionIds.length > 0 && !selectedVersion) {
-                selectedVersion = VersionManager.versionIds[0]
-                statusText = "已选择 " + selectedVersion + "，点击启动"
-            }
-        }
-    }
-
     // ---- MS OAuth ----
     MsAuth {
         id: msAuth
         onDeviceCodeReady: function(code, url) {
-            msDeviceCode = code
-            msVerifyUrl = url
+            msDeviceCode = code; msVerifyUrl = url
         }
         onLoginProgress: function(status) { statusText = status }
         onLoginFinished: function(success, result) {
             msPolling = false
             if (success) {
-                accountName = result.name
-                accountUuid = result.uuid
+                accountName = result.name; accountUuid = result.uuid
                 statusText = "已登录: " + accountName
             } else {
                 loginType = 0
@@ -421,7 +666,13 @@ Item {
         }
     }
 
-    // ---- Launch ----
+    // ---- Launch button click (matching LaunchButtonClick) ----
+    function launchButtonClick() {
+        if (btnLaunchState === 2) { /* TODO: Navigate to download page */ return }
+        if (btnLaunchState !== 3) return
+        doLaunch()
+    }
+
     function doLaunch() {
         if (!selectedVersion) return
         if (!accountName) {
@@ -431,12 +682,25 @@ Item {
         Launcher.launchVersion(selectedVersion)
     }
 
-    function startMsLogin() {
-        msPolling = true
-        msAuth.startLogin()
+    function startMsLogin() { msPolling = true; msAuth.startLogin() }
+
+    function refreshVersions() { VersionManager.loadLocalVersions() }
+
+    // ---- Fonts ----
+    readonly property font smallFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeSmall })
+    readonly property font infoFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchLabel })
+    readonly property font boldFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchName, bold: true })
+
+    // ---- Keyboard shortcuts ----
+    Keys.onReturnPressed: {
+        if (isActive && !isSubPage) launchButtonClick()
+    }
+    Keys.onEscapePressed: {
+        if (isSubPage) popSubPage()
     }
 
-    function pageOnEnter() {
-        refreshVersions()
+    // ---- Initialize ----
+    Component.onCompleted: {
+        refreshButtonsUI()
     }
 }

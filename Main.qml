@@ -434,7 +434,7 @@ ApplicationWindow {
                             }
                         }
                     }
-                }  // panForm
+                }  // panTitle
 
                 // Tab 0-3: each page handles its own transition internally
                 PageLaunch {
