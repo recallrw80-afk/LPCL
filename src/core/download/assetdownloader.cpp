@@ -20,9 +20,9 @@ AssetDownloader& AssetDownloader::instance()
     return m;
 }
 
-// ============================================================================
+============
 // Full pipeline
-// ============================================================================
+============
 
 void AssetDownloader::downloadVersion(const QString &versionId,
                                        std::function<void(bool, QString)> onComplete)
@@ -123,9 +123,9 @@ void AssetDownloader::downloadVersion(const QString &versionId,
         });
 }
 
-// ============================================================================
+============
 // Version JSON
-// ============================================================================
+============
 
 void AssetDownloader::downloadVersionJson(const QString &versionId,
                                             std::function<void(bool, QString)> onComplete)
@@ -133,9 +133,9 @@ void AssetDownloader::downloadVersionJson(const QString &versionId,
     downloadVersion(versionId, onComplete);
 }
 
-// ============================================================================
+============
 // Client JAR
-// ============================================================================
+============
 
 void AssetDownloader::downloadClientJar(const McVersion &version,
                                           std::function<void(bool, QString)> onComplete)
@@ -216,9 +216,9 @@ void AssetDownloader::downloadClientJar(const McVersion &version,
         });
 }
 
-// ============================================================================
+============
 // Libraries
-// ============================================================================
+============
 
 void AssetDownloader::downloadLibraries(const McVersion &version,
                                           const json &versionJson,
@@ -318,9 +318,9 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
     }
 }
 
-// ============================================================================
+============
 // Assets
-// ============================================================================
+============
 
 void AssetDownloader::downloadAssets(const McVersion &version,
                                        std::function<void(bool, QString)> onComplete)
@@ -447,9 +447,9 @@ void AssetDownloader::downloadAssets(const McVersion &version,
     }
 }
 
-// ============================================================================
+============
 // Natives
-// ============================================================================
+============
 
 void AssetDownloader::downloadNatives(const McVersion &version,
                                         std::function<void(bool, QString)> onComplete)

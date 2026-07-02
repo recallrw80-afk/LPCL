@@ -25,9 +25,9 @@ void LaunchBuilder::setLaunchOptions(const McLaunchOptions &options)
     m_options = options;
 }
 
-// ============================================================================
+============
 // Main build method
-// ============================================================================
+============
 
 bool LaunchBuilder::build(const McVersion &version,
                            const JavaEntry &java,
@@ -77,9 +77,9 @@ QString LaunchBuilder::commandLine() const
     return all.join(' ');
 }
 
-// ============================================================================
+============
 // JVM arguments
-// ============================================================================
+============
 
 QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntry &java)
 {
@@ -173,9 +173,9 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
     return ArgUtils::deduplicateArgs(args);
 }
 
-// ============================================================================
+============
 // Game arguments
-// ============================================================================
+============
 
 QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginResult &login)
 {
@@ -250,9 +250,9 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
     return ArgUtils::deduplicateArgs(args);
 }
 
-// ============================================================================
+============
 // Replacements
-// ============================================================================
+============
 
 QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version,
                                                          const JavaEntry &java,
@@ -347,9 +347,9 @@ QStringList LaunchBuilder::applyReplacements(const QStringList &args,
     return result;
 }
 
-// ============================================================================
+============
 // Rule checking
-// ============================================================================
+============
 
 bool LaunchBuilder::checkRules(const json &rules)
 {

@@ -34,9 +34,9 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ================================================================
+        
         // Left sidebar
-        // ================================================================
+        
         Rectangle {
             Layout.preferredWidth: 280
             Layout.fillHeight: true
@@ -91,10 +91,7 @@ Item {
                                         LPCLIcon { size: 16; lucideIcon: "shield-check"; anchors.verticalCenter: parent.verticalCenter; iconColor: msBtn.labelColor }
                                         Text { text: "正版"; color: msBtn.labelColor; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; anchors.verticalCenter: parent.verticalCenter }
                                     }
-                                    onClicked: {
-                                        loginType = 5
-                                        startMsLogin()
-                                    }
+                                    onClicked: { loginType = 5 }
                                 }
                                 LPCLButton {
                                     id: offlineBtn
@@ -113,14 +110,54 @@ Item {
                                 }
                             }
 
-                            // Account display
+                            // Account display / name input
                             Item {
                                 Layout.fillWidth: true; Layout.preferredHeight: 60
+
+                                // Logged in (either mode): show account name
                                 Text {
                                     anchors.centerIn: parent
-                                    text: msPolling ? ("请在浏览器中输入: " + msDeviceCode) : (accountName || (loginType === 0 ? "离线登录" : "点击正版登录"))
+                                    visible: accountName !== ""
+                                    text: accountName
                                     color: Theme.color3; font.family: Theme.fontFamily
-                                    font.pixelSize: msPolling ? Theme.fontSizeSmall : Theme.fontSizeTitle
+                                    font.pixelSize: Theme.fontSizeTitle
+                                    horizontalAlignment: Text.AlignHCenter
+                                    width: parent.width - 20
+                                }
+
+                                // Offline mode — name input
+                                LPCLTextBox {
+                                    anchors.centerIn: parent
+                                    visible: loginType === 0 && !accountName
+                                    width: parent.width - 40
+                                    placeholderText: "输入角色名"
+                                    text: "Player"
+                                    onTextChanged: accountName = text
+                                }
+
+                                // MS mode — click to start login
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: loginType === 5 && !accountName && !msPolling
+                                    text: "点击登录"
+                                    color: Theme.color2; font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeTitle
+                                    horizontalAlignment: Text.AlignHCenter
+                                }
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    enabled: loginType === 5 && !accountName && !msPolling
+                                    onClicked: startMsLogin()
+                                }
+
+                                // MS polling — show device code
+                                Text {
+                                    anchors.centerIn: parent
+                                    visible: msPolling
+                                    text: "请在浏览器中输入: " + msDeviceCode
+                                    color: Theme.color3; font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeXSmall
                                     horizontalAlignment: Text.AlignHCenter; wrapMode: Text.WordWrap
                                     width: parent.width - 20
                                 }
@@ -295,30 +332,13 @@ Item {
                         }
                     }
 
-                    // ---- PanLogin: Microsoft OAuth device code input ----
-                    Item {
-                        Layout.fillWidth: true; Layout.preferredHeight: loginInputCol.implicitHeight + 20
-                        visible: loginType === 5 && !accountName && !msPolling
-
-                        ColumnLayout {
-                            id: loginInputCol
-                            anchors { left: parent.left; right: parent.right; top: parent.top }
-                            anchors.margins: 15; spacing: 8
-
-                            LPCLTextBox {
-                                id: usernameField
-                                Layout.fillWidth: true
-                                placeholderText: "离线用户名（仅正版登录失败时使用）"
-                            }
-                        }
-                    }
                 }
             }
         }
 
-        // ================================================================
+        
         // Right content — custom home cards + launch log
-        // ================================================================
+        
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
 
@@ -416,15 +436,15 @@ Item {
         }
     }
 
-    // ====================================================================
+    ====
     // Fonts
-    // ====================================================================
+    ====
     readonly property font smallFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchLabel })
     readonly property font boldFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchName, bold: true })
 
-    // ====================================================================
+    ====
     // State bindings
-    // ====================================================================
+    ====
     property string statusMessage: "正在加载版本列表，请稍候"
 
     readonly property bool isLaunching: {
@@ -440,9 +460,9 @@ Item {
         return "正在启动游戏"
     }
 
-    // ====================================================================
+    ====
     // Version list
-    // ====================================================================
+    ====
     Connections {
         target: VersionManager
         function onVersionListChanged() {
@@ -456,9 +476,9 @@ Item {
         }
     }
 
-    // ====================================================================
+    ====
     // Launch
-    // ====================================================================
+    ====
     function doLaunch() {
         if (!selectedVersion) return
         // For offline login, generate credentials
@@ -468,16 +488,16 @@ Item {
         }
         // For MS login without account, fall back to offline
         if (loginType === 5 && !accountName) {
-            accountName = usernameField.text || "Player"
+            accountName = "Player"
             accountUuid = OfflineAuth.generateOfflineUuid(accountName)
         }
         labLog.text += "Launching " + selectedVersion + " as " + accountName + "\n"
         Launcher.launchVersion(selectedVersion)
     }
 
-    // ====================================================================
+    ====
     // Microsoft OAuth login (MsAuth instance pre-created for signal wiring)
-    // ====================================================================
+    ====
     MsAuth {
         id: msAuth
         onDeviceCodeReady: function(code, url) {
@@ -506,9 +526,9 @@ Item {
         msAuth.startLogin()
     }
 
-    // ====================================================================
+    ====
     // Page lifecycle
-    // ====================================================================
+    ====
     function pageOnEnter() {
         refreshVersions()
     }
