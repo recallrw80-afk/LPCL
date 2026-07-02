@@ -36,6 +36,29 @@ if(NOT nlohmann_json_FOUND)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
+# ---- Git version info (mirrors Windows PCL's CommitHash injection) ----
+execute_process(
+    COMMAND git describe --tags --always --dirty
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_DESCRIBE
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+execute_process(
+    COMMAND git rev-parse --short=7 HEAD
+    WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    OUTPUT_VARIABLE GIT_COMMIT_HASH
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+    ERROR_QUIET
+)
+if(GIT_DESCRIBE STREQUAL "")
+    set(GIT_DESCRIBE "v${PROJECT_VERSION}-unknown")
+endif()
+if(GIT_COMMIT_HASH STREQUAL "")
+    set(GIT_COMMIT_HASH "0000000")
+endif()
+message(STATUS "Build version: ${GIT_DESCRIBE} (${GIT_COMMIT_HASH})")
+
 # Source files
 set(CORE_SOURCES
     src/core/settings.cpp
@@ -129,6 +152,13 @@ target_link_libraries(LiunxPlainCraftLauncher
     PRIVATE Qt6::Network
     PRIVATE Qt6::Concurrent
     PRIVATE nlohmann_json::nlohmann_json
+)
+
+# ---- Version defines (injected at compile time, mirrors Windows PCL CI injection) ----
+target_compile_definitions(LiunxPlainCraftLauncher PRIVATE
+    APP_VERSION="${PROJECT_VERSION}"
+    GIT_DESCRIBE="${GIT_DESCRIBE}"
+    GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
 )
 
 # Mark Theme.qml as singleton — pragma Singleton in the file is not enough;

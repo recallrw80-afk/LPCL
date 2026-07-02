@@ -29,8 +29,11 @@ int main(int argc, char *argv[])
 
     QGuiApplication app(argc, argv);
     app.setApplicationName("LPCL");
-    app.setApplicationVersion("0.1");
+    app.setApplicationVersion(QString::fromLatin1(APP_VERSION));
     app.setOrganizationName("LPCL");
+
+    // Print version info at startup
+    qInfo() << "LPCL version:" << GIT_DESCRIBE << "commit:" << GIT_COMMIT_HASH;
 
     // Initialize settings
     Settings::initialize();
@@ -124,6 +127,9 @@ int main(int argc, char *argv[])
     splashWin->show();
 
     // Load main module (heavy — takes time while splash is visible)
+    engine.setInitialProperties({
+        {"appVersion", QString::fromLatin1(GIT_DESCRIBE)}
+    });
     engine.loadFromModule("LPCL", "Main");
 
     // Close splash after main window renders + fade overlap

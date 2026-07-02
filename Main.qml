@@ -10,6 +10,9 @@ import "src/ui/styles"
 ApplicationWindow {
     id: window
 
+    // ---- App version (injected by main.cpp via setInitialProperties) ----
+    property string appVersion: ""
+
     // ---- Window sizing: 850:500 ratio, 40% of screen short side ----active:
     readonly property real baseRatio: 850 / 500  // 1.7
     readonly property real screenShort: Math.min(Screen.width, Screen.height)
@@ -197,15 +200,33 @@ ApplicationWindow {
                         anchors.rightMargin: 8
                         spacing: 0
 
-                        // LPCL logo
-                        Text {
-                            text: "LPCL"
-                            color: "white"
-                            font.family: Theme.fontFamily
-                            font.pixelSize: Theme.fontSizeLogo
-                            font.bold: true
+                        // LPCL text + version label (baseline-aligned)
+                        Item {
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: 6
+                            implicitWidth: lpclText.implicitWidth + (versionText.visible ? versionText.implicitWidth + 3 : 0)
+                            implicitHeight: lpclText.implicitHeight
+
+                            Text {
+                                id: lpclText
+                                text: "LPCL"
+                                color: "white"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLogo
+                                font.bold: true
+                            }
+
+                            Text {
+                                id: versionText
+                                anchors.left: lpclText.right
+                                anchors.leftMargin: 3
+                                anchors.baseline: lpclText.baseline
+                                text: window.appVersion ? "v" + window.appVersion : ""
+                                color: "white"
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeSmall
+                                visible: window.appVersion !== ""
+                            }
                         }
 
                         // Left spacer
