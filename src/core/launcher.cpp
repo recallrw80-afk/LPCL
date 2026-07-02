@@ -33,9 +33,9 @@ Launcher::Launcher()
             this, &Launcher::onGameError);
 }
 
-====
+// ============================================================================
 // Launch
-====
+// ============================================================================
 
 bool Launcher::launch(const McVersion &version,
                        const JavaEntry &java,
@@ -240,9 +240,9 @@ void Launcher::interrupt()
     }
 }
 
-====
+// ============================================================================
 // Game output
-====
+// ============================================================================
 
 void Launcher::onGameStdout()
 {
@@ -302,9 +302,9 @@ void Launcher::onGameError(QProcess::ProcessError error)
     emit launchFailed(errMsg);
 }
 
-====
+// ============================================================================
 // State management
-====
+// ============================================================================
 
 void Launcher::setState(LaunchState newState)
 {
