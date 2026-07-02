@@ -42,15 +42,31 @@ Item {
                     Layout.topMargin: 22
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 8
-                    LPCLIcon {
-                        size: 28
-                        iconColor: Theme.color3
-                        lucideIcon: "shield-check"
+
+                    LPCLButton{
+                        id: shildButton
+                        width: 120;
+                        radius: width
+                        contentItem:Item{
+                            LPCLIcon {
+                                size: 28
+                                iconColor: Theme.color3
+                                lucideIcon: "shield-check"
+                            }
+                            Text {
+                                id: name
+                                text: ""
+                            }
+                        }
                     }
-                    LPCLIcon {
-                        size: 28
-                        iconColor: Theme.color3
-                        lucideIcon: "unlink"
+                    LPCLButton{
+                        contentItem:Item{
+                            LPCLIcon {
+                                size: 28
+                                iconColor: Theme.color3
+                                lucideIcon: "unlink"
+                            }
+                        }
                     }
                 }
                 Item {

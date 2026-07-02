@@ -18,6 +18,12 @@ Item {
     property bool pressed: false
     property real radius: Theme.buttonRadius
 
+    // state: -1=auto (mouse-driven), 0=Normal, 1=Hover, 2=Pressed, 3=Disabled
+    // Set >= 0 to lock state externally; in auto mode the MouseArea updates it.
+    property int state: -1
+    readonly property int effectiveState: state >= 0 ? state : internalState
+    property int internalState: 0
+
     signal clicked()
     signal pressAndHold()
 
@@ -26,8 +32,8 @@ Item {
 
     // ---- Color logic (exact match original code-behind) ----
     property color borderColor: {
-        if (colorType === 3 || !enabled) return Theme.gray4
-        if (hovered) {
+        if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray4
+        if (effectiveState === 1 || (hovered && effectiveState !== 2)) {
             if (colorType === 2) return Theme.redLight
             return Theme.color3
         }
@@ -36,8 +42,8 @@ Item {
         return Theme.color1
     }
     property color backgroundColor: {
-        if (colorType === 3 || !enabled) return Theme.gray6
-        if (hovered) {
+        if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray6
+        if (effectiveState === 1 || (hovered && effectiveState !== 2)) {
             if (colorType === 2) return Theme.redBack
             if (colorType === 1) return Theme.color7
             return Theme.color7
@@ -47,7 +53,7 @@ Item {
     property bool hovered: false
 
     // ---- Press scale animation (exact match original ScaleTransform) ----
-    property real btnScale: 1.0
+    property real btnScale: effectiveState === 2 ? 0.95 : 1.0
 
     Behavior on btnScale {
         NumberAnimation { duration: 300; easing.type: Easing.OutBack }
@@ -107,11 +113,31 @@ Item {
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
 
-        onEntered: wrapper.hovered = true
-        onExited: { wrapper.hovered = false; wrapper.down = false; wrapper.pressed = false }
-        onPressed: { wrapper.btnScale = 0.95; wrapper.down = true; wrapper.pressed = true }
-        onReleased: { wrapper.btnScale = 1.0; wrapper.down = false; wrapper.pressed = false }
-        onCanceled: { wrapper.btnScale = 1.0; wrapper.down = false; wrapper.pressed = false }
+        onEntered: {
+            wrapper.hovered = true
+            wrapper.internalState = 1
+        }
+        onExited: {
+            wrapper.hovered = false
+            wrapper.down = false
+            wrapper.pressed = false
+            wrapper.internalState = 0
+        }
+        onPressed: {
+            wrapper.down = true
+            wrapper.pressed = true
+            wrapper.internalState = 2
+        }
+        onReleased: {
+            wrapper.down = false
+            wrapper.pressed = false
+            wrapper.internalState = wrapper.hovered ? 1 : 0
+        }
+        onCanceled: {
+            wrapper.down = false
+            wrapper.pressed = false
+            wrapper.internalState = 0
+        }
         onClicked: wrapper.clicked()
         onPressAndHold: wrapper.pressAndHold()
     }
