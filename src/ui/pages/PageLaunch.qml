@@ -45,26 +45,43 @@ Item {
 
                     LPCLButton{
                         id: shildButton
-                        width: 120;
-                        radius: width
-                        contentItem:Item{
+                        padding: 15
+                        radius: height / 2
+                        contentItem: Row {
+                            spacing: 6
                             LPCLIcon {
-                                size: 28
+                                size: 16
                                 iconColor: Theme.color3
                                 lucideIcon: "shield-check"
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                             Text {
-                                id: name
-                                text: ""
+                                text: "正版"
+                                color: Theme.color3
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSize
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
                     LPCLButton{
-                        contentItem:Item{
+                        id: unlinkButton
+                        padding: 15
+                        radius: height / 2
+                        contentItem: Row {
+                            spacing: 6
                             LPCLIcon {
-                                size: 28
+                                size: 16
                                 iconColor: Theme.color3
                                 lucideIcon: "unlink"
+                                anchors.verticalCenter: parent.verticalCenter
+                            }
+                            Text {
+                                text: "离线"
+                                color: Theme.color3
+                                font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSize
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }

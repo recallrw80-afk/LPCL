@@ -27,7 +27,11 @@ Item {
     signal clicked()
     signal pressAndHold()
 
-    implicitWidth: Math.max(60, labText.implicitWidth + padding * 2)
+    implicitWidth: {
+        let contentW = contentLoader.item ? contentLoader.item.implicitWidth : 0
+        let base = Math.max(labText.implicitWidth, contentW) + padding * 2
+        return Math.max(60, base)
+    }
     implicitHeight: 28
 
     // ---- Color logic (exact match original code-behind) ----
@@ -85,23 +89,30 @@ Item {
             Behavior on border.color { ColorAnimation { duration: 100 } }
             Behavior on color { ColorAnimation { duration: 100 } }
 
-            // ---- LabText (text color = border color, matching original) ----
-            Text {
-                id: labText
-                anchors.centerIn: parent
-                visible: text !== "" && contentLoader.item === null
-                color: panFore.border.color
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSize
-                horizontalAlignment: Text.AlignHCenter
-                verticalAlignment: Text.AlignVCenter
-                elide: Text.ElideRight
-            }
+            // ---- Content area (inset by padding) ----
+            Item {
+                id: contentArea
+                anchors.fill: parent
+                anchors.margins: wrapper.padding
 
-            // ---- Custom content loader (replaces labText when set) ----
-            Loader {
-                id: contentLoader
-                anchors.centerIn: parent
+                // ---- LabText (text color = border color, matching original) ----
+                Text {
+                    id: labText
+                    anchors.centerIn: parent
+                    visible: text !== "" && contentLoader.item === null
+                    color: panFore.border.color
+                    font.family: Theme.fontFamily
+                    font.pixelSize: Theme.fontSize
+                    horizontalAlignment: Text.AlignHCenter
+                    verticalAlignment: Text.AlignVCenter
+                    elide: Text.ElideRight
+                }
+
+                // ---- Custom content loader (replaces labText when set) ----
+                Loader {
+                    id: contentLoader
+                    anchors.centerIn: parent
+                }
             }
         }
     }
