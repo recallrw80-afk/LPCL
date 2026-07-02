@@ -144,9 +144,9 @@ ApplicationWindow {
             onPressed: (mouse) => window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
         }
 
-        ====
+        // ================================================================
         // BorderForm (Margin=8, Clip RadiusX=6 RadiusY=6)
-        ====
+        // ================================================================
         Rectangle {
             id: borderForm
             anchors.fill: parent

@@ -21,9 +21,9 @@ DownloadManager::DownloadManager()
     m_nam = new QNetworkAccessManager(this);
 }
 
-============
+// ============================================================================
 // Simple download
-============
+// ============================================================================
 
 QNetworkReply* DownloadManager::download(const QString &url, const QString &savePath,
                                           int maxRetries)
@@ -115,9 +115,9 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
     return reply;
 }
 
-============
+// ============================================================================
 // Memory download
-============
+// ============================================================================
 
 QNetworkReply* DownloadManager::downloadToString(const QString &url,
                                                    std::function<void(bool, QString)> onComplete,
@@ -172,9 +172,9 @@ QNetworkReply* DownloadManager::downloadJson(const QString &url,
     }, maxRetries);
 }
 
-============
+// ============================================================================
 // URL helpers
-============
+// ============================================================================
 
 QString DownloadManager::versionManifestUrl()
 {

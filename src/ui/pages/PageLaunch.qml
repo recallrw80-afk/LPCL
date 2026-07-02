@@ -436,15 +436,15 @@ Item {
         }
     }
 
-    ====
+    // ================================================================
     // Fonts
-    ====
+    // ================================================================
     readonly property font smallFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchLabel })
     readonly property font boldFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchName, bold: true })
 
-    ====
+    // ================================================================
     // State bindings
-    ====
+    // ================================================================
     property string statusMessage: "正在加载版本列表，请稍候"
 
     readonly property bool isLaunching: {
@@ -460,9 +460,9 @@ Item {
         return "正在启动游戏"
     }
 
-    ====
+    // ================================================================
     // Version list
-    ====
+    // ================================================================
     Connections {
         target: VersionManager
         function onVersionListChanged() {
@@ -476,9 +476,9 @@ Item {
         }
     }
 
-    ====
+    // ================================================================
     // Launch
-    ====
+    // ================================================================
     function doLaunch() {
         if (!selectedVersion) return
         // For offline login, generate credentials
@@ -495,9 +495,9 @@ Item {
         Launcher.launchVersion(selectedVersion)
     }
 
-    ====
+    // ================================================================
     // Microsoft OAuth login (MsAuth instance pre-created for signal wiring)
-    ====
+    // ================================================================
     MsAuth {
         id: msAuth
         onDeviceCodeReady: function(code, url) {
@@ -526,9 +526,9 @@ Item {
         msAuth.startLogin()
     }
 
-    ====
+    // ================================================================
     // Page lifecycle
-    ====
+    // ================================================================
     function pageOnEnter() {
         refreshVersions()
     }

@@ -27,9 +27,9 @@ Installer& Installer::instance()
     return i;
 }
 
-============
+// ============================================================================
 // URL helpers
-============
+// ============================================================================
 
 QString Installer::getInstallerUrl(const QString &loaderType, const QString &mcVersion)
 {
@@ -81,9 +81,9 @@ void Installer::downloadInstaller(const QString &loaderType, const QString &mcVe
         });
 }
 
-============
+// ============================================================================
 // Installer runner
-============
+// ============================================================================
 
 void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
                                   const QStringList &args,
@@ -132,9 +132,9 @@ void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
     emit installProgress("Installing...", 50);
 }
 
-============
+// ============================================================================
 // Forge
-============
+// ============================================================================
 
 void Installer::installForge(const QString &mcVersionDir, const QString &mcVersion,
                                const QString &forgeVersion, const QString &javaPath,
@@ -195,9 +195,9 @@ void Installer::installLoader(const QString &loaderType, const QString &mcVersio
     else if (onComplete) onComplete(false, "Unsupported loader: " + loaderType);
 }
 
-============
+// ============================================================================
 // Version detection — fetch available versions from APIs
-============
+// ============================================================================
 
 void Installer::fetchForgeVersions(std::function<void(bool, QStringList)> onComplete)
 {

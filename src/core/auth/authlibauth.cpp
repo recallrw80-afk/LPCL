@@ -176,9 +176,9 @@ void AuthlibAuth::doNideLogin(Callback onComplete)
     });
 }
 
-============
+// ============================================================================
 // AuthBase factory
-============
+// ============================================================================
 
 AuthBase* AuthBase::create(LoginType type)
 {
