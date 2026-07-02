@@ -221,7 +221,7 @@ ApplicationWindow {
                                 anchors.left: lpclText.right
                                 anchors.leftMargin: 3
                                 anchors.baseline: lpclText.baseline
-                                text: window.appVersion ? "v" + window.appVersion : ""
+                                text: window.appVersion ? window.appVersion : ""
                                 color: "white"
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeSmall
@@ -273,7 +273,7 @@ ApplicationWindow {
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
-                                                size: 19
+                                                size: 16
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 lucideIcon: modelData.icon;
                                                 iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff";
