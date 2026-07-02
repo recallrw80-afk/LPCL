@@ -1,5 +1,5 @@
-#ifndef PCL_OFFLINEAUTH_H
-#define PCL_OFFLINEAUTH_H
+#ifndef LPCL_OFFLINEAUTH_H
+#define LPCL_OFFLINEAUTH_H
 
 #include "auth/authbase.h"
 #include <QCryptographicHash>
@@ -23,7 +23,7 @@ public:
     QString username() const { return m_username; }
 
     /// Generate offline UUID from username (matching the Mojang algorithm)
-    static QString generateOfflineUuid(const QString &username);
+    Q_INVOKABLE static QString generateOfflineUuid(const QString &username);
 
     /// Generate a random client token
     static QString generateClientToken();
@@ -32,4 +32,4 @@ private:
     QString m_username;
 };
 
-#endif // PCL_OFFLINEAUTH_H
+#endif // LPCL_OFFLINEAUTH_H

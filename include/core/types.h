@@ -1,5 +1,5 @@
-#ifndef PCL_TYPES_H
-#define PCL_TYPES_H
+#ifndef LPCL_TYPES_H
+#define LPCL_TYPES_H
 
 #include <QString>
 #include <QList>
@@ -8,9 +8,9 @@
 #include <optional>
 #include "util/platform_utils.h"
 
-// ============================================================================
+====
 // Load state (mirrors original LoadState enum)
-// ============================================================================
+====
 
 enum class LoadState {
     Waiting,
@@ -20,9 +20,9 @@ enum class LoadState {
     Interrupted
 };
 
-// ============================================================================
+====
 // Java
-// ============================================================================
+====
 
 struct JavaEntry {
     QString pathFolder;      // Path to java binary folder (trailing separator)
@@ -49,9 +49,9 @@ struct JavaEntry {
     }
 };
 
-// ============================================================================
+====
 // Minecraft Login
-// ============================================================================
+====
 
 enum class LoginType {
     Legacy = 0,  // Offline
@@ -61,6 +61,13 @@ enum class LoginType {
 };
 
 struct LoginResult {
+    Q_GADGET
+    Q_PROPERTY(QString name MEMBER name)
+    Q_PROPERTY(QString uuid MEMBER uuid)
+    Q_PROPERTY(QString accessToken MEMBER accessToken)
+    Q_PROPERTY(QString type MEMBER type)
+
+public:
     QString name;
     QString uuid;
     QString accessToken;
@@ -73,9 +80,9 @@ struct LoginResult {
     }
 };
 
-// ============================================================================
+====
 // Minecraft Version
-// ============================================================================
+====
 
 struct McVersionInfo {
     QString id;              // Version ID (e.g., "1.20.1")
@@ -129,9 +136,9 @@ struct McVersion {
     }
 };
 
-// ============================================================================
+====
 // Minecraft Folder
-// ============================================================================
+====
 
 struct McFolder {
     QString name;
@@ -145,9 +152,9 @@ struct McFolder {
     Type type = Type::Vanilla;
 };
 
-// ============================================================================
+====
 // Download
-// ============================================================================
+====
 
 struct DownloadProgress {
     qint64 bytesReceived = 0;
@@ -156,9 +163,9 @@ struct DownloadProgress {
     QString status;           // Current status text
 };
 
-// ============================================================================
+====
 // Launch options
-// ============================================================================
+====
 
 struct McLaunchOptions {
     QString serverIp;
@@ -172,9 +179,9 @@ struct McLaunchOptions {
     int windowHeight = 480;
 };
 
-// ============================================================================
+====
 // Log entry (for UI log display)
-// ============================================================================
+====
 
 struct LogEntry {
     QDateTime time;
@@ -182,4 +189,4 @@ struct LogEntry {
     enum Level { Info, Warn, Error } level = Info;
 };
 
-#endif // PCL_TYPES_H
+#endif // LPCL_TYPES_H

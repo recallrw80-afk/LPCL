@@ -2,10 +2,10 @@ pragma Singleton
 import QtQuick
 
 QtObject {
-    // ========================================================================
+    
     // HSL-based dynamic theme (mirrors ModSecret.ThemeRefresh exactly)
     // Default: Hue=210, Sat=85, LightAdjust=0
-    // ========================================================================
+    
     property real hue: 210
     property real sat: 85
     property real lightAdj: 0
@@ -16,9 +16,9 @@ QtObject {
         return Qt.hsla(h / 360, s / 100, l / 100, 1.0)
     }
 
-    // ========================================================================
+    
     // Color 1-8 (exact formulas from ModSecret.vb ThemeRefresh)
-    // ========================================================================
+    
     readonly property color color1: hsl(hue, sat * 0.2, 25 + lightAdj * 0.3)
     readonly property color color2: "#116ecb"    // global accent blue, exact match original PCL
     readonly property color color3: "#1373fb"    // lighter accent (focus / hover)
@@ -36,9 +36,9 @@ QtObject {
     // Derived background (used by controls — scrollbar, combo box, text box)
     readonly property color colorBg0: "#96c0f9"   // color4*0.4 + color5*0.4 + gray4*0.2
 
-    // ========================================================================
+    
     // Gray scale
-    // ========================================================================
+    
     readonly property color gray1: "#404040"
     readonly property color gray2: "#737373"
     readonly property color gray3: "#8c8c8c"
@@ -48,9 +48,9 @@ QtObject {
     readonly property color gray7: "#f0f0f0"
     readonly property color gray8: "#f5f5f5"
 
-    // ========================================================================
+    
     // Special brushes (matching original StaticResource / DynamicResource)
-    // ========================================================================
+    
     readonly property color halfWhite: "#55ffffff"       // ColorBrushHalfWhite — 33% white
     readonly property color semiWhite: "#bbffffff"       // ~73% white
     readonly property color pureWhite: "#ffffff"         // Pure white (form background)
@@ -60,17 +60,17 @@ QtObject {
     readonly property color redLight: "#ff4c4c"          // Red highlight
     readonly property color redDark: "#ce2111"           // Red dark
 
-    // ========================================================================
+    
     // Title bar gradient (exact formula from ModSecret.GetTitleBackground)
     // Horizontal: darker edges → lighter center → darker edges
-    // ========================================================================
+    
     readonly property color titleGradEdge: hsl(hue + (hueTopbarDelta > 0 ? -hueTopbarDelta : 0), sat, 48 + lightAdj)
     readonly property color titleGradCenter: hsl(hue, sat, 54 + lightAdj)
     readonly property color titleGradEnd: hsl(hue + (hueTopbarDelta > 0 ? hueTopbarDelta : 0), sat, 48 + lightAdj)
 
-    // ========================================================================
+    
     // Font
-    // ========================================================================
+    
     property string fontFamily: "Microsoft YaHei UI, PingFang SC, Noto Sans CJK SC, sans-serif"
     readonly property int fontSize: 13
     readonly property int fontSizeSmall: 12
@@ -82,9 +82,9 @@ QtObject {
     readonly property real fontSizeLaunchLabel: 12.5
     readonly property real fontSizeLaunchName: 13.5
 
-    // ========================================================================
+    
     // Window dimensions (exact match FormMain.xaml)
-    // ========================================================================
+    
     readonly property int windowWidth: 850
     readonly property int windowHeight: 500
     readonly property int windowMinWidth: 810
@@ -94,9 +94,9 @@ QtObject {
     readonly property int borderMargin: 8        // BorderForm margin
     readonly property int titleBarHeight: 50
 
-    // ========================================================================
+    
     // Control dimensions
-    // ========================================================================
+    
     readonly property int buttonRadius: 3
     readonly property int inputRadius: 3
     readonly property int tooltipRadius: 4
@@ -109,9 +109,9 @@ QtObject {
     readonly property int actionItemHeight: 34
     readonly property int progressBarHeight: 4
 
-    // ========================================================================
+    
     // Animation easings (mirroring ModAnimation)
-    // ========================================================================
+    
     function easeOutBack(t) { var c1 = 1.70158; var c3 = c1 + 1; return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2) }
     function easeOutFluent(t) { return 1 - Math.pow(1 - t, 1.8) }
     function easeInFluent(t) { return Math.pow(t, 1.8) }

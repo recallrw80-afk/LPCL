@@ -1,5 +1,5 @@
-#ifndef PCL_MODPLATFORM_H
-#define PCL_MODPLATFORM_H
+#ifndef LPCL_MODPLATFORM_H
+#define LPCL_MODPLATFORM_H
 
 #include <QObject>
 #include <QString>
@@ -10,9 +10,9 @@
 
 using json = nlohmann::json;
 
-// ============================================================================
+====
 // Common types
-// ============================================================================
+====
 
 struct ModResource {
     QString id;               // Platform-specific ID
@@ -122,4 +122,4 @@ private:
     static const QString MR_API;
 };
 
-#endif // PCL_MODPLATFORM_H
+#endif // LPCL_MODPLATFORM_H

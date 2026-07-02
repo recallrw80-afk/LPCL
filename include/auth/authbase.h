@@ -1,5 +1,5 @@
-#ifndef PCL_AUTHBASE_H
-#define PCL_AUTHBASE_H
+#ifndef LPCL_AUTHBASE_H
+#define LPCL_AUTHBASE_H
 
 #include <QObject>
 #include <functional>
@@ -35,4 +35,4 @@ signals:
     void loginFinished(bool success, const LoginResult &result);
 };
 
-#endif // PCL_AUTHBASE_H
+#endif // LPCL_AUTHBASE_H

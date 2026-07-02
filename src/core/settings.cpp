@@ -6,7 +6,7 @@
 #include <QStandardPaths>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logSettings, "pcl.settings")
+static Q_LOGGING_CATEGORY(logSettings, "lpcl.settings")
 
 Settings& Settings::instance()
 {

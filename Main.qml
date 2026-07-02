@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import PCL.Core
+import LPCL.Core
 import "src/ui/components"
 import "src/ui/pages"
 import "src/ui/styles"
@@ -42,9 +42,9 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
-    // ========================================================================
+    
     // PanBack (Grid, Margin=10)
-    // ========================================================================
+    
     Item {
         id: panBack
         anchors.fill: parent
@@ -476,12 +476,12 @@ ApplicationWindow {
             }  // borderForm
         }  // panBack
 
-        // ========================================================================
+        
         // Entrance animation (splash is a separate window in main.cpp — see FrmStart)
         // Original FormMain_Loaded:
         //   AaOpacity 250ms | AaDouble Y 60→0 600ms EaseOutBack | AaDouble Angle -4→0 500ms EaseOutBack
         //   All beginTime=100, run in parallel
-        // ========================================================================
+        
         Timer {
             id: entranceDelay
             interval: 100  // matches original beginTime=100
@@ -516,9 +516,9 @@ ApplicationWindow {
             easing.type: Easing.OutBack
         }
 
-        // ========================================================================
+        
         // Navigation
-        // ========================================================================
+        
         QtObject {
             id: navTabs
             property int currentIndex: 0

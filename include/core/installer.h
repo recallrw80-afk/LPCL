@@ -1,5 +1,5 @@
-#ifndef PCL_INSTALLER_H
-#define PCL_INSTALLER_H
+#ifndef LPCL_INSTALLER_H
+#define LPCL_INSTALLER_H
 
 #include <QObject>
 #include <QProcess>
@@ -92,4 +92,4 @@ private:
     static const QString NEOFORGE_API;
 };
 
-#endif // PCL_INSTALLER_H
+#endif // LPCL_INSTALLER_H

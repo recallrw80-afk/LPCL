@@ -1,5 +1,5 @@
-#ifndef PCL_MSAUTH_H
-#define PCL_MSAUTH_H
+#ifndef LPCL_MSAUTH_H
+#define LPCL_MSAUTH_H
 
 #include "auth/authbase.h"
 #include <QNetworkAccessManager>
@@ -28,6 +28,9 @@ public:
     void cancel() override;
     LoginType loginType() const override { return LoginType::Ms; }
 
+    /// QML-friendly: start login, results via deviceCodeReady + loginFinished signals
+    Q_INVOKABLE void startLogin() { login(nullptr); }
+
 signals:
     /// Emitted when user needs to open a URL and enter a code
     void deviceCodeReady(const QString &userCode, const QString &verificationUrl);
@@ -47,4 +50,4 @@ private:
     bool m_cancelled = false;
 };
 
-#endif // PCL_MSAUTH_H
+#endif // LPCL_MSAUTH_H

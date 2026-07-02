@@ -1,5 +1,5 @@
-#ifndef PCL_LAUNCHER_H
-#define PCL_LAUNCHER_H
+#ifndef LPCL_LAUNCHER_H
+#define LPCL_LAUNCHER_H
 
 #include <QObject>
 #include <QProcess>
@@ -93,4 +93,4 @@ private:
     int m_progress = 0;
 };
 
-#endif // PCL_LAUNCHER_H
+#endif // LPCL_LAUNCHER_H

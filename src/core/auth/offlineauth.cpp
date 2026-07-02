@@ -3,7 +3,7 @@
 #include <QUuid>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logAuth, "pcl.auth.offline")
+static Q_LOGGING_CATEGORY(logAuth, "lpcl.auth.offline")
 
 OfflineAuth::OfflineAuth(const QString &username)
     : m_username(username)

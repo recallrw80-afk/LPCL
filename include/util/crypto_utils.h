@@ -1,5 +1,5 @@
-#ifndef PCL_CRYPTO_UTILS_H
-#define PCL_CRYPTO_UTILS_H
+#ifndef LPCL_CRYPTO_UTILS_H
+#define LPCL_CRYPTO_UTILS_H
 
 #include <QString>
 #include <QByteArray>
@@ -30,4 +30,4 @@ inline QString pclDecrypt(const QString &cipherB64) {
 
 } // namespace CryptoUtils
 
-#endif // PCL_CRYPTO_UTILS_H
+#endif // LPCL_CRYPTO_UTILS_H

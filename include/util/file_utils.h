@@ -1,5 +1,5 @@
-#ifndef PCL_FILE_UTILS_H
-#define PCL_FILE_UTILS_H
+#ifndef LPCL_FILE_UTILS_H
+#define LPCL_FILE_UTILS_H
 
 #include <QString>
 
@@ -13,4 +13,4 @@ bool verifySha1(const QString &filePath, const QString &expectedHash);
 
 } // namespace FileUtils
 
-#endif // PCL_FILE_UTILS_H
+#endif // LPCL_FILE_UTILS_H

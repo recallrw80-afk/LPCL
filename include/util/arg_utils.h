@@ -1,5 +1,5 @@
-#ifndef PCL_ARG_UTILS_H
-#define PCL_ARG_UTILS_H
+#ifndef LPCL_ARG_UTILS_H
+#define LPCL_ARG_UTILS_H
 
 #include <QStringList>
 
@@ -13,4 +13,4 @@ QStringList deduplicateArgs(const QStringList &args);
 
 } // namespace ArgUtils
 
-#endif // PCL_ARG_UTILS_H
+#endif // LPCL_ARG_UTILS_H

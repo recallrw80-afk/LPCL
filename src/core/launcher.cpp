@@ -10,7 +10,7 @@
 #include <QLoggingCategory>
 #include <QStandardPaths>
 
-static Q_LOGGING_CATEGORY(logLaunch, "pcl.launcher")
+static Q_LOGGING_CATEGORY(logLaunch, "lpcl.launcher")
 
 Launcher& Launcher::instance()
 {
@@ -33,9 +33,9 @@ Launcher::Launcher()
             this, &Launcher::onGameError);
 }
 
-// ============================================================================
+====
 // Launch
-// ============================================================================
+====
 
 bool Launcher::launch(const McVersion &version,
                        const JavaEntry &java,
@@ -240,9 +240,9 @@ void Launcher::interrupt()
     }
 }
 
-// ============================================================================
+====
 // Game output
-// ============================================================================
+====
 
 void Launcher::onGameStdout()
 {
@@ -302,9 +302,9 @@ void Launcher::onGameError(QProcess::ProcessError error)
     emit launchFailed(errMsg);
 }
 
-// ============================================================================
+====
 // State management
-// ============================================================================
+====
 
 void Launcher::setState(LaunchState newState)
 {
@@ -339,7 +339,7 @@ void Launcher::setProgress(int value)
 void Launcher::appendLog(const QString &line)
 {
     // Log to Qt logging system
-    static QLoggingCategory logCat("pcl.game");
+    static QLoggingCategory logCat("lpcl.game");
     qCInfo(logCat).noquote() << line;
 
     // The UI can connect to gameLog() signal for display

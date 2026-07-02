@@ -1,5 +1,5 @@
-#ifndef PCL_VERSIONMANAGER_H
-#define PCL_VERSIONMANAGER_H
+#ifndef LPCL_VERSIONMANAGER_H
+#define LPCL_VERSIONMANAGER_H
 
 #include <QObject>
 #include <QList>
@@ -92,4 +92,4 @@ private:
     bool m_isLoading = false;
 };
 
-#endif // PCL_VERSIONMANAGER_H
+#endif // LPCL_VERSIONMANAGER_H

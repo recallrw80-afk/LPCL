@@ -10,7 +10,7 @@
 #include <QUuid>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logAl, "pcl.auth.authlib")
+static Q_LOGGING_CATEGORY(logAl, "lpcl.auth.authlib")
 
 AuthlibAuth::AuthlibAuth(ServerType type)
     : m_type(type)
@@ -176,9 +176,9 @@ void AuthlibAuth::doNideLogin(Callback onComplete)
     });
 }
 
-// ============================================================================
+====
 // AuthBase factory
-// ============================================================================
+====
 
 AuthBase* AuthBase::create(LoginType type)
 {

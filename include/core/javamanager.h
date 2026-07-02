@@ -1,5 +1,5 @@
-#ifndef PCL_JAVAMANAGER_H
-#define PCL_JAVAMANAGER_H
+#ifndef LPCL_JAVAMANAGER_H
+#define LPCL_JAVAMANAGER_H
 
 #include <QObject>
 #include <QList>
@@ -94,4 +94,4 @@ private:
     mutable QMutex m_mutex;
 };
 
-#endif // PCL_JAVAMANAGER_H
+#endif // LPCL_JAVAMANAGER_H

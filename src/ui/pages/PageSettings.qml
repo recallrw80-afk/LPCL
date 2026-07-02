@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import PCL.Core
+import LPCL.Core
 import "../components"
 import "../styles"
 

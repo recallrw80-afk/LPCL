@@ -1,5 +1,5 @@
-#ifndef PCL_PLATFORM_UTILS_H
-#define PCL_PLATFORM_UTILS_H
+#ifndef LPCL_PLATFORM_UTILS_H
+#define LPCL_PLATFORM_UTILS_H
 
 #include <QString>
 #include <QSysInfo>
@@ -36,4 +36,4 @@ inline QString platformName() {
     }
 }
 
-#endif // PCL_PLATFORM_UTILS_H
+#endif // LPCL_PLATFORM_UTILS_H

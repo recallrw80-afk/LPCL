@@ -1,5 +1,5 @@
-#ifndef PCL_ASSETDOWNLOADER_H
-#define PCL_ASSETDOWNLOADER_H
+#ifndef LPCL_ASSETDOWNLOADER_H
+#define LPCL_ASSETDOWNLOADER_H
 
 #include <QObject>
 #include <functional>
@@ -61,4 +61,4 @@ private:
     int m_completedTasks = 0;
 };
 
-#endif // PCL_ASSETDOWNLOADER_H
+#endif // LPCL_ASSETDOWNLOADER_H

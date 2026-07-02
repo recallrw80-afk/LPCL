@@ -7,7 +7,7 @@
 #include <QUrlQuery>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logMod, "pcl.mod")
+static Q_LOGGING_CATEGORY(logMod, "lpcl.mod")
 
 const QString ModPlatform::CF_API = "https://api.curseforge.com/v1";
 const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
@@ -18,9 +18,9 @@ ModPlatform& ModPlatform::instance()
     return m;
 }
 
-// ============================================================================
+====
 // Public API — search
-// ============================================================================
+====
 
 void ModPlatform::searchMods(Platform platform, const QString &query, int page, int pageSize,
                                std::function<void(bool, QList<ModResource>)> onComplete)
@@ -104,9 +104,9 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
     }
 }
 
-// ============================================================================
+====
 // CurseForge API implementation
-// ============================================================================
+====
 
 void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
                                      std::function<void(bool, QList<ModResource>)> onComplete)
@@ -207,9 +207,9 @@ void ModPlatform::getCurseForgeFiles(const QString &modId,
         });
 }
 
-// ============================================================================
+====
 // Modrinth API implementation
-// ============================================================================
+====
 
 void ModPlatform::searchModrinth(const QString &query, int page, int pageSize,
                                    std::function<void(bool, QList<ModResource>)> onComplete)

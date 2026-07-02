@@ -1,5 +1,5 @@
-#ifndef PCL_LAUNCHBUILDER_H
-#define PCL_LAUNCHBUILDER_H
+#ifndef LPCL_LAUNCHBUILDER_H
+#define LPCL_LAUNCHBUILDER_H
 
 #include <QObject>
 #include <QMap>
@@ -76,4 +76,4 @@ private:
     QString m_mainClass;
 };
 
-#endif // PCL_LAUNCHBUILDER_H
+#endif // LPCL_LAUNCHBUILDER_H

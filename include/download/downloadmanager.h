@@ -1,5 +1,5 @@
-#ifndef PCL_DOWNLOADMANAGER_H
-#define PCL_DOWNLOADMANAGER_H
+#ifndef LPCL_DOWNLOADMANAGER_H
+#define LPCL_DOWNLOADMANAGER_H
 
 #include <QObject>
 #include <QNetworkAccessManager>
@@ -74,4 +74,4 @@ private:
     QNetworkAccessManager *m_nam = nullptr;
 };
 
-#endif // PCL_DOWNLOADMANAGER_H
+#endif // LPCL_DOWNLOADMANAGER_H

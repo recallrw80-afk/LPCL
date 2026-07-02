@@ -1,5 +1,5 @@
-#ifndef PCL_SETTINGS_H
-#define PCL_SETTINGS_H
+#ifndef LPCL_SETTINGS_H
+#define LPCL_SETTINGS_H
 
 #include <QObject>
 #include <QSettings>
@@ -112,4 +112,4 @@ inline void Settings::set<bool>(const QString &key, const bool &value) {
     m_settings->sync();
 }
 
-#endif // PCL_SETTINGS_H
+#endif // LPCL_SETTINGS_H

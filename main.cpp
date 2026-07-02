@@ -17,6 +17,7 @@
 #include "core/launchbuilder.h"
 #include "core/launcher.h"
 #include "auth/offlineauth.h"
+#include "auth/msauth.h"
 #include "download/downloadmanager.h"
 #include "download/assetdownloader.h"
 
@@ -62,24 +63,27 @@ int main(int argc, char *argv[])
     QQmlApplicationEngine engine;
 
     // Register C++ singletons for QML access
-    // These become available in QML as: import PCL.Core 1.0
-    qmlRegisterSingletonInstance("PCL.Core", 1, 0, "JavaManager", &javaMgr);
-    qmlRegisterSingletonInstance("PCL.Core", 1, 0, "VersionManager", &verMgr);
-    qmlRegisterSingletonInstance("PCL.Core", 1, 0, "Launcher", &launcher);
-    qmlRegisterSingletonInstance("PCL.Core", 1, 0, "DownloadManager", &downloadMgr);
-    qmlRegisterSingletonInstance("PCL.Core", 1, 0, "Settings", &Settings::instance());
+    // These become available in QML as: import LPCL.Core 1.0
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "JavaManager", &javaMgr);
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "VersionManager", &verMgr);
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "Launcher", &launcher);
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "DownloadManager", &downloadMgr);
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "Settings", &Settings::instance());
 
     // Register types for enums
-    qmlRegisterUncreatableType<Launcher>("PCL.Core", 1, 0, "LaunchState",
+    qmlRegisterUncreatableType<Launcher>("LPCL.Core", 1, 0, "LaunchState",
                                          "LaunchState enum only");
-    qmlRegisterUncreatableType<VersionManager>("PCL.Core", 1, 0, "VersionMgr",
+    qmlRegisterUncreatableType<VersionManager>("LPCL.Core", 1, 0, "VersionMgr",
                                                "VersionManager singleton only");
 
-    // Register OfflineAuth static methods
-    qmlRegisterSingletonType<OfflineAuth>("PCL.Core", 1, 0, "OfflineAuth",
+    // Register OfflineAuth singleton (provides generateOfflineUuid)
+    qmlRegisterSingletonType<OfflineAuth>("LPCL.Core", 1, 0, "OfflineAuth",
         [](QQmlEngine *, QJSEngine *) -> QObject* {
             return new OfflineAuth();
         });
+
+    // Register MsAuth as creatable type for QML login flow
+    qmlRegisterType<MsAuth>("LPCL.Core", 1, 0, "MsAuth");
 
     // Connect status text changes
     QObject::connect(&launcher, &Launcher::statusTextChanged, []() {
@@ -93,10 +97,10 @@ int main(int argc, char *argv[])
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
 
-    // ========================================================================
+    
     // Splash screen — matches original FrmStart = SplashScreen("Images\icon.ico")
     // Shows immediately before the heavy main window loads
-    // ========================================================================
+    
     auto *splashWin = new QQuickWindow();
     splashWin->setFlags(Qt::FramelessWindowHint);
     splashWin->setColor(Qt::transparent);

@@ -1,5 +1,5 @@
-#ifndef PCL_AUTHLIBAUTH_H
-#define PCL_AUTHLIBAUTH_H
+#ifndef LPCL_AUTHLIBAUTH_H
+#define LPCL_AUTHLIBAUTH_H
 
 #include "auth/authbase.h"
 #include <QNetworkAccessManager>
@@ -43,4 +43,4 @@ private:
     bool m_cancelled = false;
 };
 
-#endif // PCL_AUTHLIBAUTH_H
+#endif // LPCL_AUTHLIBAUTH_H
