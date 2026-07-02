@@ -11,6 +11,11 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 #include <QCoreApplication>
+#include <QNetworkAccessManager>
+#include <QNetworkReply>
+#include <QNetworkRequest>
+#include <QUrl>
+#include <QSet>
 
 static Q_LOGGING_CATEGORY(logVer, "pcl.version")
 
@@ -189,9 +194,87 @@ void VersionManager::loadLocalVersions()
 
 void VersionManager::fetchVersionManifest()
 {
-    // Will be implemented in Phase 4 (download manager)
-    // Calls https://launchermeta.mojang.com/mc/game/version_manifest.json
-    qCInfo(logVer) << "Remote version fetch will be implemented in Phase 4";
+    m_isLoading = true;
+    emit loadingChanged();
+    emit versionLoadProgress("Fetching remote version list...");
+
+    QNetworkRequest request(QUrl("https://launchermeta.mojang.com/mc/game/version_manifest.json"));
+    request.setRawHeader("User-Agent", "LPCL/0.1");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
+
+    if (!m_nam) {
+        m_nam = new QNetworkAccessManager(this);
+    }
+
+    QNetworkReply *reply = m_nam->get(request);
+    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
+        reply->deleteLater();
+
+        if (reply->error() != QNetworkReply::NoError) {
+            qCWarning(logVer) << "Failed to fetch version manifest:" << reply->errorString();
+            m_isLoading = false;
+            emit loadingChanged();
+            emit versionLoadError("", "Network error: " + reply->errorString());
+            return;
+        }
+
+        QByteArray data = reply->readAll();
+        json manifest = json::parse(data.toStdString(), nullptr, false);
+        if (manifest.is_discarded() || !manifest.contains("versions")) {
+            qCWarning(logVer) << "Invalid version manifest JSON";
+            m_isLoading = false;
+            emit loadingChanged();
+            return;
+        }
+
+        // Cache manifest to disk
+        QString cacheDir = mcFolder() + "versions/";
+        QDir().mkpath(cacheDir);
+        QFile cacheFile(cacheDir + "version_manifest.json");
+        if (cacheFile.open(QIODevice::WriteOnly)) {
+            cacheFile.write(data);
+            cacheFile.close();
+        }
+
+        // Parse remote versions
+        QList<McVersionInfo> remoteVersions;
+        for (const auto &v : manifest["versions"]) {
+            McVersionInfo info;
+            info.id = QString::fromStdString(v.value("id", ""));
+            info.type = QString::fromStdString(v.value("type", ""));
+            info.url = QString::fromStdString(v.value("url", ""));
+            QString timeStr = QString::fromStdString(v.value("releaseTime", ""));
+            if (!timeStr.isEmpty())
+                info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+            info.isLocal = false;
+            remoteVersions.append(info);
+        }
+
+        // Merge: add remote versions not already in local list
+        QSet<QString> localIds;
+        for (const auto &v : m_versionList) localIds.insert(v.id);
+        for (const auto &rv : remoteVersions) {
+            if (!localIds.contains(rv.id))
+                m_versionList.append(rv);
+        }
+
+        // Sort: releases first, then by releaseTime desc
+        std::sort(m_versionList.begin(), m_versionList.end(),
+                  [](const McVersionInfo &a, const McVersionInfo &b) {
+            if (a.type != b.type) {
+                if (a.type == "release") return true;
+                if (b.type == "release") return false;
+            }
+            return a.releaseTime > b.releaseTime;
+        });
+
+        emit versionListChanged();
+        m_isLoading = false;
+        emit loadingChanged();
+        qCInfo(logVer) << "Fetched" << remoteVersions.size()
+                        << "remote versions, total:" << m_versionList.size();
+    });
 }
 
 QStringList VersionManager::versionIds() const

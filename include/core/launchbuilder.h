@@ -69,12 +69,6 @@ private:
     /// Build game arguments from version JSON
     QStringList buildGameArgs(const McVersion &version, const LoginResult &login);
 
-    /// Split Java arguments respecting quotes
-    static QStringList splitJavaArgs(const QString &str);
-
-    /// Deduplicate Java arguments (last occurrence wins)
-    static QStringList deduplicateArgs(const QStringList &args);
-
     json m_versionJson;
     McLaunchOptions m_options;
     QStringList m_jvmArgs;

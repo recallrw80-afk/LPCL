@@ -2,7 +2,11 @@
 #define PCL_ASSETDOWNLOADER_H
 
 #include <QObject>
+#include <functional>
+#include <nlohmann/json.hpp>
 #include "core/types.h"
+
+using json = nlohmann::json;
 
 /**
  * Minecraft asset and library downloader.
@@ -23,8 +27,13 @@ public:
     void downloadVersionJson(const QString &versionId,
                               std::function<void(bool, QString)> onComplete);
 
-    /// Download the version JAR
+    /// Download the client JAR (including verification)
     void downloadClientJar(const McVersion &version,
+                            std::function<void(bool, QString)> onComplete);
+
+    /// Download all libraries for a version
+    void downloadLibraries(const McVersion &version,
+                            const json &versionJson,
                             std::function<void(bool, QString)> onComplete);
 
     /// Download asset index and all assets
@@ -36,10 +45,20 @@ public:
                           std::function<void(bool, QString)> onComplete);
 
 signals:
-    void downloadProgress(const QString &task, qint64 received, qint64 total);
+    void downloadProgress(const QString &task, int current, int total);
+    void downloadLog(const QString &message);
 
 private:
     AssetDownloader() = default;
+
+    /// Build asset index path from hash
+    static QString assetPathFromHash(const QString &hash);
+
+    /// Verify file SHA1 matches expected hash
+    static bool verifySha1(const QString &filePath, const QString &expectedHash);
+
+    int m_totalTasks = 0;
+    int m_completedTasks = 0;
 };
 
 #endif // PCL_ASSETDOWNLOADER_H

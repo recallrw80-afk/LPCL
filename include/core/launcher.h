@@ -77,6 +77,7 @@ private:
     Launcher();
     void setState(LaunchState newState);
     void setStatus(const QString &text);
+    void setProgress(int value);
     void appendLog(const QString &line);
     void doLaunch();
 

@@ -7,6 +7,8 @@
 #include <nlohmann/json.hpp>
 #include "core/types.h"
 
+class QNetworkAccessManager;
+
 using json = nlohmann::json;
 
 /**
@@ -85,6 +87,7 @@ private:
 
     QString m_mcFolder;
     QList<McVersionInfo> m_versionList;
+    QNetworkAccessManager *m_nam = nullptr;
     const McVersion *m_selectedVersion = nullptr;
     bool m_isLoading = false;
 };

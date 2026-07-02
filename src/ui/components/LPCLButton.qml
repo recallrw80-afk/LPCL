@@ -37,23 +37,32 @@ Item {
     // ---- Color logic (exact match original code-behind) ----
     property color borderColor: {
         if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray4
-        if (effectiveState === 1 || (hovered && effectiveState !== 2)) {
+        if (colorType === 1) {
+            // Filled (Highlight): border = fill color
+            if (hovered) return Theme.color3
+            return Theme.color2
+        }
+        if (hovered) {
             if (colorType === 2) return Theme.redLight
             return Theme.color3
         }
         if (colorType === 2) return Theme.redDark
-        if (colorType === 1) return Theme.color2
-        return Theme.color1
+        return Theme.color2
     }
     property color backgroundColor: {
         if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray6
-        if (effectiveState === 1 || (hovered && effectiveState !== 2)) {
+        if (colorType === 1) {
+            // Filled style — solid blue, white text
+            if (hovered) return Theme.color3
+            return Theme.color2
+        }
+        if (hovered) {
             if (colorType === 2) return Theme.redBack
-            if (colorType === 1) return Theme.color7
             return Theme.color7
         }
         return Theme.halfWhite
     }
+    readonly property color labelColor: colorType === 1 ? "white" : borderColor
     property bool hovered: false
 
     // ---- Press scale animation (exact match original ScaleTransform) ----
@@ -100,7 +109,7 @@ Item {
                     id: labText
                     anchors.centerIn: parent
                     visible: text !== "" && contentLoader.item === null
-                    color: panFore.border.color
+                    color: wrapper.labelColor
                     font.family: Theme.fontFamily
                     font.pixelSize: Theme.fontSize
                     horizontalAlignment: Text.AlignHCenter

@@ -1,6 +1,7 @@
 #include "core/launchbuilder.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
+#include "util/arg_utils.h"
 
 #include <QDir>
 #include <QLoggingCategory>
@@ -119,7 +120,7 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
         customArg = Settings::instance().getString("LaunchAdvanceJvm");
     }
     if (!customArg.isEmpty()) {
-        args.append(splitJavaArgs(customArg));
+        args.append(ArgUtils::splitJavaArgs(customArg));
     }
 
     // Memory allocation
@@ -169,7 +170,7 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
         args.append("-XX:+UseCompactObjectHeaders");
     }
 
-    return deduplicateArgs(args);
+    return ArgUtils::deduplicateArgs(args);
 }
 
 // ============================================================================
@@ -202,7 +203,7 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
     } else if (m_versionJson.contains("minecraftArguments")) {
         // Old format: minecraftArguments string
         QString oldArgs = QString::fromStdString(m_versionJson["minecraftArguments"].get<std::string>());
-        args.append(splitJavaArgs(oldArgs));
+        args.append(ArgUtils::splitJavaArgs(oldArgs));
         // Always add resolution args
         args.append("--height");
         args.append("${resolution_height}");
@@ -216,7 +217,7 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
         customArg = Settings::instance().getString("LaunchAdvanceGame");
     }
     if (!customArg.isEmpty()) {
-        args.append(splitJavaArgs(customArg));
+        args.append(ArgUtils::splitJavaArgs(customArg));
     }
 
     // Extra args from launch options
@@ -246,7 +247,7 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
         }
     }
 
-    return deduplicateArgs(args);
+    return ArgUtils::deduplicateArgs(args);
 }
 
 // ============================================================================
@@ -408,52 +409,4 @@ bool LaunchBuilder::checkFeatures(const json &features)
     }
 
     return true;
-}
-
-// ============================================================================
-// Argument utilities
-// ============================================================================
-
-QStringList LaunchBuilder::splitJavaArgs(const QString &str)
-{
-    QStringList args;
-    bool inQuote = false;
-    QString current;
-
-    for (int i = 0; i < str.length(); ++i) {
-        QChar c = str[i];
-        if (c == '"') {
-            inQuote = !inQuote;
-        } else if (c == ' ' && !inQuote) {
-            if (!current.isEmpty()) {
-                args.append(current.trimmed());
-                current.clear();
-            }
-        } else {
-            current += c;
-        }
-    }
-    if (!current.trimmed().isEmpty()) {
-        args.append(current.trimmed());
-    }
-    return args;
-}
-
-QStringList LaunchBuilder::deduplicateArgs(const QStringList &args)
-{
-    // Last occurrence wins for arguments with the same prefix (up to '=' or first space)
-    QMap<QString, int> seen;
-    for (int i = 0; i < args.size(); ++i) {
-        QString prefix = args[i].section(QRegularExpression("[= ]"), 0, 0);
-        seen[prefix] = i;
-    }
-
-    QStringList result;
-    for (int i = 0; i < args.size(); ++i) {
-        QString prefix = args[i].section(QRegularExpression("[= ]"), 0, 0);
-        if (seen[prefix] == i) {
-            result.append(args[i]);
-        }
-    }
-    return result;
 }

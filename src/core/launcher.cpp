@@ -2,6 +2,8 @@
 #include "core/launchbuilder.h"
 #include "core/versionmanager.h"
 #include "core/settings.h"
+#include "core/javamanager.h"
+#include "auth/offlineauth.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -80,6 +82,78 @@ bool Launcher::launch(const McVersion &version,
 
     doLaunch();
     return true;
+}
+
+bool Launcher::launchVersion(const QString &versionId)
+{
+    if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
+        qCWarning(logLaunch) << "Game already running or launching";
+        return false;
+    }
+
+    // 1. Load version
+    setState(LaunchState::Prechecking);
+    setStatus("正在检查版本...");
+    setProgress(5);
+
+    auto &verMgr = VersionManager::instance();
+    McVersion version = verMgr.loadVersion(versionId);
+    if (!version.isValid) {
+        setState(LaunchState::Failed);
+        emit launchFailed("Cannot load version: " + versionId);
+        return false;
+    }
+
+    // 2. Get Java
+    setState(LaunchState::GettingJava);
+    setStatus("正在查找 Java...");
+    setProgress(10);
+
+    auto &javaMgr = JavaManager::instance();
+    auto javaList = javaMgr.javaList();
+    if (javaList.isEmpty()) {
+        javaMgr.scanSystemJava();
+        javaList = javaMgr.javaList();
+    }
+    if (javaList.isEmpty()) {
+        setState(LaunchState::Failed);
+        emit launchFailed("No Java runtime found. Please install Java.");
+        return false;
+    }
+
+    // Pick best Java for this version
+    JavaEntry bestJava = javaList.first();
+    int targetMajor = version.vanillaVersion.majorVersion() > 0
+        ? version.vanillaVersion.majorVersion() : 8;
+    for (const auto &j : javaList) {
+        if (j.majorVersion >= targetMajor && j.is64Bit == is64BitSystem()) {
+            bestJava = j;
+            break;
+        }
+    }
+
+    // 3. Create offline login
+    setState(LaunchState::LoggingIn);
+    setStatus("正在设置登录...");
+    setProgress(15);
+
+    LoginResult login;
+    login.name = "Player";
+    login.uuid = OfflineAuth::generateOfflineUuid("Player");
+    login.accessToken = "0";
+    login.type = "Legacy";
+    login.clientToken = OfflineAuth::generateClientToken();
+
+    // 4. Build launch options from settings
+    McLaunchOptions options;
+    options.maxMemoryMB = Settings::instance().getString("LaunchMaxMemory", "4096").toInt();
+    options.minMemoryMB = Settings::instance().getString("LaunchMinMemory", "512").toInt();
+    options.fullscreen = Settings::instance().getString("LaunchFullscreen", "False") == "True";
+    options.windowWidth = Settings::instance().getString("LaunchWidth", "854").toInt();
+    options.windowHeight = Settings::instance().getString("LaunchHeight", "480").toInt();
+
+    // 5. Delegate to the full launch method
+    return launch(version, bestJava, login, options);
 }
 
 void Launcher::doLaunch()
@@ -253,6 +327,13 @@ void Launcher::setStatus(const QString &text)
 {
     m_statusText = text;
     emit statusTextChanged();
+}
+
+void Launcher::setProgress(int value)
+{
+    if (m_progress == value) return;
+    m_progress = value;
+    emit progressChanged();
 }
 
 void Launcher::appendLog(const QString &line)

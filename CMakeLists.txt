@@ -71,6 +71,8 @@ set(CORE_SOURCES
     src/core/auth/offlineauth.cpp
     src/core/auth/msauth.cpp
     src/core/auth/authlibauth.cpp
+    src/util/file_utils.cpp
+    src/util/arg_utils.cpp
 )
 
 set(CORE_HEADERS
@@ -86,6 +88,9 @@ set(CORE_HEADERS
     include/auth/offlineauth.h
     include/auth/msauth.h
     include/auth/authlibauth.h
+    include/util/platform_utils.h
+    include/util/file_utils.h
+    include/util/arg_utils.h
 )
 
 qt_add_executable(LiunxPlainCraftLauncher
@@ -144,6 +149,7 @@ qt_add_resources(LiunxPlainCraftLauncher "assets"
 target_include_directories(LiunxPlainCraftLauncher PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/util
     ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include
 )
 
