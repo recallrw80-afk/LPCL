@@ -89,8 +89,10 @@ Item {
                             }
                             onClicked: {
                                 loginType = 0
-                                accountName = "Player"
-                                accountUuid = OfflineAuth.generateOfflineUuid("Player")
+                                if (!accountName) {
+                                    accountName = "Player"
+                                    accountUuid = OfflineAuth.generateOfflineUuid("Player")
+                                }
                             }
                         }
                     }
@@ -119,7 +121,7 @@ Item {
                         // Username below avatar
                         Text {
                             anchors { horizontalCenter: parent.horizontalCenter; top: parent.top; topMargin: 44 }
-                            text: accountName || (loginType === 0 ? "输入角色名" : "未登录")
+                            text: accountName || ""
                             font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                             color: Theme.gray3
                         }
