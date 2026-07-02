@@ -5,7 +5,7 @@
 #include <QList>
 #include <QVersionNumber>
 #include <QMutex>
-#include "types.h"
+#include "core/types.h"
 
 /**
  * Cross-platform Java detection, selection, and compatibility matching.

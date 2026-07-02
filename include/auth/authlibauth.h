@@ -1,7 +1,7 @@
 #ifndef PCL_AUTHLIBAUTH_H
 #define PCL_AUTHLIBAUTH_H
 
-#include "authbase.h"
+#include "auth/authbase.h"
 #include <QNetworkAccessManager>
 
 /**

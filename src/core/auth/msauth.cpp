@@ -1,4 +1,4 @@
-#include "msauth.h"
+#include "auth/msauth.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

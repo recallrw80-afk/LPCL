@@ -1,6 +1,6 @@
-#include "launchbuilder.h"
-#include "settings.h"
-#include "versionmanager.h"
+#include "core/launchbuilder.h"
+#include "core/settings.h"
+#include "core/versionmanager.h"
 
 #include <QDir>
 #include <QLoggingCategory>

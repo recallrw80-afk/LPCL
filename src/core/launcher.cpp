@@ -1,7 +1,7 @@
-#include "launcher.h"
-#include "launchbuilder.h"
-#include "versionmanager.h"
-#include "settings.h"
+#include "core/launcher.h"
+#include "core/launchbuilder.h"
+#include "core/versionmanager.h"
+#include "core/settings.h"
 
 #include <QDir>
 #include <QFileInfo>

@@ -11,14 +11,14 @@
 #include <QScreen>
 #include <QLoggingCategory>
 
-#include "src/core/settings.h"
-#include "src/core/javamanager.h"
-#include "src/core/versionmanager.h"
-#include "src/core/launchbuilder.h"
-#include "src/core/launcher.h"
-#include "src/core/auth/offlineauth.h"
-#include "src/core/download/downloadmanager.h"
-#include "src/core/download/assetdownloader.h"
+#include "core/settings.h"
+#include "core/javamanager.h"
+#include "core/versionmanager.h"
+#include "core/launchbuilder.h"
+#include "core/launcher.h"
+#include "auth/offlineauth.h"
+#include "download/downloadmanager.h"
+#include "download/assetdownloader.h"
 
 int main(int argc, char *argv[])
 {

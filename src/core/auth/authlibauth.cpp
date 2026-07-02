@@ -1,7 +1,7 @@
-#include "authlibauth.h"
-#include "offlineauth.h"
-#include "msauth.h"
-#include "settings.h"
+#include "auth/authlibauth.h"
+#include "auth/offlineauth.h"
+#include "auth/msauth.h"
+#include "core/settings.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

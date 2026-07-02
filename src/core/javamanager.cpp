@@ -1,5 +1,5 @@
-#include "javamanager.h"
-#include "settings.h"
+#include "core/javamanager.h"
+#include "core/settings.h"
 
 #include <QDir>
 #include <QFileInfo>

@@ -1,7 +1,7 @@
 #ifndef PCL_OFFLINEAUTH_H
 #define PCL_OFFLINEAUTH_H
 
-#include "authbase.h"
+#include "auth/authbase.h"
 #include <QCryptographicHash>
 
 /**

@@ -1,7 +1,7 @@
 #ifndef PCL_MSAUTH_H
 #define PCL_MSAUTH_H
 
-#include "authbase.h"
+#include "auth/authbase.h"
 #include <QNetworkAccessManager>
 #include <QTimer>
 

@@ -1,5 +1,5 @@
-#include "versionmanager.h"
-#include "settings.h"
+#include "core/versionmanager.h"
+#include "core/settings.h"
 
 #include <QDir>
 #include <QFile>

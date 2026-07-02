@@ -7,7 +7,7 @@
 #include <QMap>
 #include <functional>
 #include <nlohmann/json.hpp>
-#include "types.h"
+#include "core/types.h"
 
 /**
  * HTTP download manager with retry logic, progress tracking,

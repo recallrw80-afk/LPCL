@@ -74,18 +74,18 @@ set(CORE_SOURCES
 )
 
 set(CORE_HEADERS
-    src/core/types.h
-    src/core/settings.h
-    src/core/javamanager.h
-    src/core/versionmanager.h
-    src/core/launchbuilder.h
-    src/core/launcher.h
-    src/core/download/downloadmanager.h
-    src/core/download/assetdownloader.h
-    src/core/auth/authbase.h
-    src/core/auth/offlineauth.h
-    src/core/auth/msauth.h
-    src/core/auth/authlibauth.h
+    include/core/types.h
+    include/core/settings.h
+    include/core/javamanager.h
+    include/core/versionmanager.h
+    include/core/launchbuilder.h
+    include/core/launcher.h
+    include/download/downloadmanager.h
+    include/download/assetdownloader.h
+    include/auth/authbase.h
+    include/auth/offlineauth.h
+    include/auth/msauth.h
+    include/auth/authlibauth.h
 )
 
 qt_add_executable(LiunxPlainCraftLauncher
@@ -143,7 +143,7 @@ qt_add_resources(LiunxPlainCraftLauncher "assets"
 
 target_include_directories(LiunxPlainCraftLauncher PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/src/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include
 )
 

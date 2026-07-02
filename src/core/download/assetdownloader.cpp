@@ -1,5 +1,5 @@
-#include "assetdownloader.h"
-#include "downloadmanager.h"
+#include "download/assetdownloader.h"
+#include "download/downloadmanager.h"
 
 #include <QLoggingCategory>
 

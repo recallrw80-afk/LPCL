@@ -2,7 +2,7 @@
 #define PCL_ASSETDOWNLOADER_H
 
 #include <QObject>
-#include "types.h"
+#include "core/types.h"
 
 /**
  * Minecraft asset and library downloader.

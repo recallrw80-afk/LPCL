@@ -5,7 +5,7 @@
 #include <QList>
 #include <QMap>
 #include <nlohmann/json.hpp>
-#include "types.h"
+#include "core/types.h"
 
 using json = nlohmann::json;
 

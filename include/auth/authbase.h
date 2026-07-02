@@ -3,7 +3,7 @@
 
 #include <QObject>
 #include <functional>
-#include "types.h"
+#include "core/types.h"
 
 /**
  * Base class for authentication providers.

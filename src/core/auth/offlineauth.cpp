@@ -1,4 +1,4 @@
-#include "offlineauth.h"
+#include "auth/offlineauth.h"
 
 #include <QUuid>
 #include <QLoggingCategory>

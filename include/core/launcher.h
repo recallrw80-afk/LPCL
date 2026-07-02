@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QProcess>
 #include <QTimer>
-#include "types.h"
+#include "core/types.h"
 
 /**
  * Minecraft game launcher using QProcess.
