@@ -1,9 +1,10 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import "../components"
 import "../styles"
 
-// More tab — left sidebar + right content
+// More tab — about, tools, help links
 Item {
     property bool isActive: false
     visible: opacity > 0
@@ -16,38 +17,215 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-    Rectangle {
-        Layout.preferredWidth: 300
-        Layout.fillHeight: true
-        color: Theme.sidebarBg
+        // ---- Left sidebar ----
         Rectangle {
-            anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-            width: 4; opacity: 0.04
-            gradient: Gradient {
-                GradientStop { position: 0; color: "#000000" }
-                GradientStop { position: 1; color: "#00000000" }
+            Layout.preferredWidth: 280
+            Layout.fillHeight: true
+            color: Theme.sidebarBg
+
+            Rectangle {
+                anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
+                width: 4; opacity: 0.04
+                gradient: Gradient {
+                    GradientStop { position: 0; color: "#000000" }
+                    GradientStop { position: 1; color: "#00000000" }
+                }
+            }
+
+            Flickable {
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: panMore.implicitHeight + 20
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: LPCLScrollBar {}
+
+                ColumnLayout {
+                    id: panMore
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    spacing: 0
+
+                    // Section: 工具
+                    Text {
+                        text: "工具"
+                        color: Theme.color1; opacity: 0.6
+                        font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
+                        Layout.leftMargin: 15; Layout.topMargin: 18; Layout.bottomMargin: 4
+                    }
+                    Repeater {
+                        model: [
+                            { name: "打开 Mods 文件夹", icon: "layout-grid" },
+                            { name: "打开版本文件夹", icon: "layout-grid" },
+                            { name: "打开游戏目录", icon: "layout-grid" },
+                            { name: "启动器日志", icon: "layout-grid" }
+                        ]
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 34
+                            color: toolMouse.containsMouse ? Theme.color7 : "transparent"
+                            radius: Theme.buttonRadius
+                            Layout.leftMargin: 8; Layout.rightMargin: 8
+
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
+                                Text {
+                                    text: modelData.name; color: Theme.color1
+                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                            }
+                            MouseArea {
+                                id: toolMouse; anchors.fill: parent; hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+                    }
+
+                    // Section: 关于
+                    Text {
+                        text: "关于"
+                        color: Theme.color1; opacity: 0.6
+                        font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
+                        Layout.leftMargin: 15; Layout.topMargin: 18; Layout.bottomMargin: 4
+                    }
+                    Repeater {
+                        model: [
+                            { name: "帮助文档", icon: "bolt" },
+                            { name: "GitHub 仓库", icon: "bolt" },
+                            { name: "检查更新", icon: "bolt" },
+                            { name: "功能投票", icon: "bolt" }
+                        ]
+                        Rectangle {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 34
+                            color: aboutMouse.containsMouse ? Theme.color7 : "transparent"
+                            radius: Theme.buttonRadius
+                            Layout.leftMargin: 8; Layout.rightMargin: 8
+
+                            RowLayout {
+                                anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
+                                Text {
+                                    text: modelData.name; color: Theme.color1
+                                    font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
+                                    Layout.fillWidth: true; elide: Text.ElideRight
+                                }
+                            }
+                            MouseArea {
+                                id: aboutMouse; anchors.fill: parent; hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                            }
+                        }
+                    }
+                    Item { Layout.preferredHeight: 20 }
+                }
             }
         }
-        Text {
-            anchors.centerIn: parent
-            text: "更多"
-            color: Theme.gray3
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeLarge
-        }
-    }
 
-    Rectangle {
-        Layout.fillWidth: true
-        Layout.fillHeight: true
-        color: "transparent"
-        Text {
-            anchors.centerIn: parent
-            text: "更多页面"
-            color: Theme.gray3
-            font.family: Theme.fontFamily
-            font.pixelSize: Theme.fontSizeLarge
+        // ---- Right content ----
+        Rectangle {
+            Layout.fillWidth: true
+            Layout.fillHeight: true
+            color: "transparent"
+
+            Flickable {
+                anchors.fill: parent
+                contentWidth: width
+                contentHeight: panContent.implicitHeight + 35
+                clip: true
+                boundsBehavior: Flickable.StopAtBounds
+                ScrollBar.vertical: LPCLScrollBar {}
+
+                ColumnLayout {
+                    id: panContent
+                    anchors { left: parent.left; right: parent.right; top: parent.top }
+                    anchors.margins: 25
+                    spacing: 15
+
+                    // About LPCL card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: aboutInner.height + 36
+                        radius: Theme.buttonRadius
+                        color: Theme.pureWhite
+                        border { width: 1; color: Theme.gray5 }
+
+                        ColumnLayout {
+                            id: aboutInner
+                            anchors { left: parent.left; right: parent.right; top: parent.top }
+                            anchors.margins: 20; spacing: 8
+                            Text {
+                                text: "关于 Linux Plain Craft Launcher"
+                                color: Theme.color1; font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLarge; font.bold: true
+                            }
+                            Text {
+                                text: "版本: v" + Qt.application.version + "\n\n" +
+                                      "PCL 的 Qt6/C++20 Linux 移植版本。\n" +
+                                      "使用 QML + C++ 构建，支持跨平台运行。\n\n" +
+                                      "原版 Windows PCL 使用 VB.NET/WPF，\n" +
+                                      "约 49,000 行代码，由 LTCatt 开发。\n\n" +
+                                      "目标: Windows | macOS | Linux"
+                                color: Theme.gray3; font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSize; Layout.fillWidth: true
+                                wrapMode: Text.Wrap
+                            }
+                        }
+                    }
+
+                    // Help links card
+                    Rectangle {
+                        Layout.fillWidth: true
+                        implicitHeight: helpInner.height + 36
+                        radius: Theme.buttonRadius
+                        color: Theme.pureWhite
+                        border { width: 1; color: Theme.gray5 }
+
+                        ColumnLayout {
+                            id: helpInner
+                            anchors { left: parent.left; right: parent.right; top: parent.top }
+                            anchors.margins: 20; spacing: 10
+                            Text {
+                                text: "相关链接"
+                                color: Theme.color1; font.family: Theme.fontFamily
+                                font.pixelSize: Theme.fontSizeLarge; font.bold: true
+                            }
+                            Repeater {
+                                model: [
+                                    { text: "PCL 下载", desc: "下载正式版 PCL (Windows)", url: "https://meloong.com/afd/p/0164034c016c11ebafcb52540025c377" },
+                                    { text: "GitHub", desc: "Meloong-Git/PCL 仓库", url: "https://github.com/Meloong-Git/PCL" },
+                                    { text: "帮助文档", desc: "PCL2Help 帮助文档库", url: "https://github.com/LTCatt/PCL2Help" },
+                                    { text: "功能投票", desc: "参与功能投票，决定开发优先级", url: "https://github.com/Meloong-Git/PCL/discussions/2" }
+                                ]
+                                LPCLButton {
+                                    Layout.fillWidth: true
+                                    Layout.preferredHeight: 40
+                                    colorType: 0
+                                    contentItem: ColumnLayout {
+                                        anchors.centerIn: parent
+                                        spacing: 2
+                                        Text {
+                                            text: modelData.text
+                                            color: Theme.color3; font.family: Theme.fontFamily
+                                            font.pixelSize: Theme.fontSize; font.bold: true
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                        Text {
+                                            text: modelData.desc
+                                            color: Theme.gray3; font.family: Theme.fontFamily
+                                            font.pixelSize: Theme.fontSizeXSmall
+                                            Layout.alignment: Qt.AlignHCenter
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Item { Layout.preferredHeight: 10 }
+                }
+            }
         }
     }
-}
 }

@@ -384,6 +384,66 @@ ApplicationWindow {
                         visible: false
                         z: 100
                     }
+
+                    // ============================================================
+                    // Bottom-right extra buttons
+                    // ============================================================
+                    ColumnLayout {
+                        anchors { right: parent.right; bottom: parent.bottom; margins: 15 }
+                        spacing: 6
+                        z: 50
+
+                        // Back to top
+                        Item {
+                            id: btnExtraBack
+                            Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                            property bool hovered: false
+                            visible: false
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Theme.buttonRadius
+                                color: btnExtraBack.hovered ? Theme.color7 : "transparent"
+                            }
+                            LPCLIcon {
+                                size: 16; anchors.centerIn: parent
+                                lucideIcon: "arrow-down-to-line"; rotation: 180
+                                iconColor: Theme.gray3
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: btnExtraBack.hovered = true
+                                onExited: btnExtraBack.hovered = false
+                            }
+                        }
+
+                        // Download manager
+                        Item {
+                            id: btnExtraDownload
+                            Layout.preferredWidth: 28; Layout.preferredHeight: 28
+                            property bool hovered: false
+                            visible: false
+
+                            Rectangle {
+                                anchors.fill: parent
+                                radius: Theme.buttonRadius
+                                color: btnExtraDownload.hovered ? Theme.color7 : "transparent"
+                            }
+                            LPCLIcon {
+                                size: 16; anchors.centerIn: parent
+                                lucideIcon: "arrow-down-to-line"
+                                iconColor: Theme.gray3
+                            }
+                            MouseArea {
+                                anchors.fill: parent; hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onEntered: btnExtraDownload.hovered = true
+                                onExited: btnExtraDownload.hovered = false
+                                onClicked: navTabs.currentIndex = 1
+                            }
+                        }
+                    }
                 }  // panForm
 
                 // ============================================================

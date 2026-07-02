@@ -14,14 +14,14 @@
 class Launcher : public QObject
 {
     Q_OBJECT
-    Q_PROPERTY(LaunchState state READ state NOTIFY stateChanged)
+    Q_PROPERTY(LaunchState launchState READ state NOTIFY stateChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(int progress READ progress NOTIFY progressChanged)
     Q_PROPERTY(bool isRunning READ isRunning NOTIFY stateChanged)
 
 public:
-    enum class LaunchState {
-        Idle,
+    enum LaunchState {
+        Idle = 0,
         Prechecking,
         GettingJava,
         LoggingIn,
@@ -38,12 +38,14 @@ public:
 
     // ---- Launch ----
 
-    /// Start the Minecraft launch sequence
-    /// Returns true if launch started successfully
+    /// Start the Minecraft launch sequence (C++ API)
     Q_INVOKABLE bool launch(const McVersion &version,
                              const JavaEntry &java,
                              const LoginResult &login,
                              const McLaunchOptions &options = McLaunchOptions());
+
+    /// QML-friendly: launch by version ID (handles java/login internally)
+    Q_INVOKABLE bool launchVersion(const QString &versionId);
 
     /// Interrupt/cancel the launch
     Q_INVOKABLE void interrupt();
