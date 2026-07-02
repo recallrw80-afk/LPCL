@@ -25,9 +25,7 @@ VersionManager& VersionManager::instance()
     return m;
 }
 
-// ============================================================================
 // Minecraft folder
-// ============================================================================
 
 void VersionManager::setMcFolder(const QString &path)
 {
@@ -127,9 +125,7 @@ QList<McFolder> VersionManager::loadFolderList()
     return folders;
 }
 
-// ============================================================================
 // Version listing
-// ============================================================================
 
 void VersionManager::loadLocalVersions()
 {
@@ -286,9 +282,7 @@ QStringList VersionManager::versionIds() const
     return ids;
 }
 
-// ============================================================================
 // Version parsing
-// ============================================================================
 
 McVersion VersionManager::loadVersion(const QString &versionId)
 {
@@ -361,9 +355,7 @@ McVersion VersionManager::parseVersionJson(const json &j, const QString &version
     return ver;
 }
 
-// ============================================================================
 // Mod loader detection
-// ============================================================================
 
 McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson)
 {
@@ -450,9 +442,7 @@ QString VersionManager::detectVanillaVersion(const json &versionJson, const QStr
     return versionId;
 }
 
-// ============================================================================
 // Inheritance resolution
-// ============================================================================
 
 json VersionManager::resolveInheritanceChain(const QString &jsonPath)
 {

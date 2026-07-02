@@ -33,9 +33,7 @@ Item {
         anchors.fill: parent
         spacing: 0
 
-        // ================================================================
         // Left sidebar — Width=300, matches original MyPageLeft
-        // ================================================================
         Rectangle {
             Layout.preferredWidth: 300
             Layout.fillHeight: true
@@ -69,6 +67,7 @@ Item {
 
                         LPCLButton {
                             id: msBtn
+                            Layout.preferredWidth: 100
                             padding: 15; radius: height / 2
                             colorType: loginType === 5 ? 1 : 0
                             contentItem: Row {
@@ -80,6 +79,7 @@ Item {
                         }
                         LPCLButton {
                             id: offlineBtn
+                            Layout.preferredWidth: 100
                             padding: 15; radius: height / 2
                             colorType: loginType === 0 ? 1 : 0
                             contentItem: Row {
@@ -295,9 +295,7 @@ Item {
             }
         }
 
-        // ================================================================
         // Right content — version info + launch log
-        // ================================================================
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true; color: "transparent"
 
@@ -371,16 +369,12 @@ Item {
         }
     }
 
-    // ====================================================================
     // Fonts
-    // ====================================================================
     readonly property font smallFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeSmall })
     readonly property font infoFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchLabel })
     readonly property font boldFont: Qt.font({ family: Theme.fontFamily, pixelSize: Theme.fontSizeLaunchName, bold: true })
 
-    // ====================================================================
     // State
-    // ====================================================================
     property string statusText: "正在加载版本列表，请稍候"
 
     readonly property bool isLaunching: {

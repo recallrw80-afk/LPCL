@@ -8,9 +8,7 @@
 #include <optional>
 #include "util/platform_utils.h"
 
-// ============================================================================
 // Load state (mirrors original LoadState enum)
-// ============================================================================
 
 enum class LoadState {
     Waiting,
@@ -20,9 +18,7 @@ enum class LoadState {
     Interrupted
 };
 
-// ============================================================================
 // Java
-// ============================================================================
 
 struct JavaEntry {
     QString pathFolder;      // Path to java binary folder (trailing separator)
@@ -49,9 +45,7 @@ struct JavaEntry {
     }
 };
 
-// ============================================================================
 // Minecraft Login
-// ============================================================================
 
 enum class LoginType {
     Legacy = 0,  // Offline
@@ -80,9 +74,7 @@ public:
     }
 };
 
-// ============================================================================
 // Minecraft Version
-// ============================================================================
 
 struct McVersionInfo {
     QString id;              // Version ID (e.g., "1.20.1")
@@ -136,9 +128,7 @@ struct McVersion {
     }
 };
 
-// ============================================================================
 // Minecraft Folder
-// ============================================================================
 
 struct McFolder {
     QString name;
@@ -152,9 +142,7 @@ struct McFolder {
     Type type = Type::Vanilla;
 };
 
-// ============================================================================
 // Download
-// ============================================================================
 
 struct DownloadProgress {
     qint64 bytesReceived = 0;
@@ -163,9 +151,7 @@ struct DownloadProgress {
     QString status;           // Current status text
 };
 
-// ============================================================================
 // Launch options
-// ============================================================================
 
 struct McLaunchOptions {
     QString serverIp;
@@ -179,9 +165,7 @@ struct McLaunchOptions {
     int windowHeight = 480;
 };
 
-// ============================================================================
 // Log entry (for UI log display)
-// ============================================================================
 
 struct LogEntry {
     QDateTime time;

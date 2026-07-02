@@ -17,9 +17,7 @@ JavaManager& JavaManager::instance()
     return m;
 }
 
-// ============================================================================
 // Scanning
-// ============================================================================
 
 QStringList JavaManager::javaSearchPaths()
 {
@@ -272,9 +270,7 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport)
     }
 }
 
-// ============================================================================
 // Java runtime checking
-// ============================================================================
 
 bool JavaManager::checkJava(JavaEntry &entry)
 {
@@ -354,9 +350,7 @@ QList<JavaEntry> JavaManager::checkJavaList(const QList<JavaEntry> &list)
     return valid;
 }
 
-// ============================================================================
 // Version parsing
-// ============================================================================
 
 QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output)
 {
@@ -407,9 +401,7 @@ QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output)
     return QVersionNumber(segments);
 }
 
-// ============================================================================
 // Java selection
-// ============================================================================
 
 JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
                                     const QVersionNumber &maxVersion)
@@ -442,9 +434,7 @@ JavaEntry* JavaManager::selectJavaForVersion(const McVersion &version)
     return selectJava(minVer, maxVer);
 }
 
-// ============================================================================
 // Java version compatibility matrix
-// ============================================================================
 
 void JavaManager::getJavaCompatibilityRange(const McVersion &version,
                                              QVersionNumber &outMin,
@@ -534,9 +524,7 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
     }
 }
 
-// ============================================================================
 // Java selection (getter/setter)
-// ============================================================================
 
 void JavaManager::setSelectedJava(JavaEntry *entry)
 {
@@ -559,9 +547,7 @@ QStringList JavaManager::javaNames() const
     return names;
 }
 
-// ============================================================================
 // Java download
-// ============================================================================
 
 QString JavaManager::getJavaDownloadUrl(int majorVersion) const
 {

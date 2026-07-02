@@ -144,9 +144,7 @@ ApplicationWindow {
             onPressed: (mouse) => window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
         }
 
-        // ================================================================
         // BorderForm (Margin=8, Clip RadiusX=6 RadiusY=6)
-        // ================================================================
         Rectangle {
             id: borderForm
             anchors.fill: parent
@@ -176,9 +174,7 @@ ApplicationWindow {
                     }
                 }
 
-                // ============================================================
                 // PanTitle (Height=48) — Title bar
-                // ============================================================
                 Rectangle {
                     id: panTitle
                     anchors {
@@ -362,9 +358,7 @@ ApplicationWindow {
                         }  // btnTitleClose
                     }  // RowLayout
 
-                    // ============================================================
                     // PanHint — bottom-left hint overlay
-                    // ============================================================
                     Item {
                         id: panHint
                         anchors {
@@ -374,9 +368,7 @@ ApplicationWindow {
                     }
 
 
-                    // ============================================================
                     // PanMsg — message overlay (hidden by default)
-                    // ============================================================
                     Rectangle {
                         id: panMsg
                         anchors.fill: parent
@@ -385,9 +377,7 @@ ApplicationWindow {
                         z: 100
                     }
 
-                    // ============================================================
                     // Bottom-right extra buttons
-                    // ============================================================
                     ColumnLayout {
                         anchors { right: parent.right; bottom: parent.bottom; margins: 15 }
                         spacing: 6
@@ -446,9 +436,7 @@ ApplicationWindow {
                     }
                 }  // panForm
 
-                // ============================================================
                 // Tab 0-3: each page handles its own transition internally
-                // ============================================================
                 PageLaunch {
                     anchors {
                         left: parent.left; right: parent.right; top: panTitle.bottom; bottom: parent.bottom
