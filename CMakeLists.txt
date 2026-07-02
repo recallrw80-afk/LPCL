@@ -71,8 +71,11 @@ set(CORE_SOURCES
     src/core/auth/offlineauth.cpp
     src/core/auth/msauth.cpp
     src/core/auth/authlibauth.cpp
+    src/core/installer.cpp
+    src/core/download/modplatform.cpp
     src/util/file_utils.cpp
     src/util/arg_utils.cpp
+    src/util/crypto_utils.cpp
 )
 
 set(CORE_HEADERS
@@ -91,6 +94,9 @@ set(CORE_HEADERS
     include/util/platform_utils.h
     include/util/file_utils.h
     include/util/arg_utils.h
+    include/util/crypto_utils.h
+    include/download/modplatform.h
+    include/core/installer.h
 )
 
 qt_add_executable(LiunxPlainCraftLauncher

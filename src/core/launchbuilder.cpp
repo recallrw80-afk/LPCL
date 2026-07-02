@@ -115,7 +115,7 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
     }
 
     // Custom JVM args from settings
-    QString customArg = Settings::instance().getInstance<QString>("VersionAdvanceJvm", version.id);
+    QString customArg = Settings::instance().getInstance(version.id, "VersionAdvanceJvm");
     if (customArg.isEmpty()) {
         customArg = Settings::instance().getString("LaunchAdvanceJvm");
     }
@@ -134,7 +134,7 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
     }
 
     // GC selection
-    int gcType = Settings::instance().getInstance<int>("VersionAdvanceGC", version.id);
+    int gcType = Settings::instance().getInstance(version.id, "VersionAdvanceGC", "0").toInt();
     if (gcType <= 0) gcType = Settings::instance().getInt("LaunchAdvanceGC");
     if (gcType != 3) { // 3 = custom/user-defined
         bool useG1GC = false;
@@ -212,7 +212,7 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
     }
 
     // Custom game args from settings
-    QString customArg = Settings::instance().getInstance<QString>("VersionAdvanceGame", version.id);
+    QString customArg = Settings::instance().getInstance(version.id, "VersionAdvanceGame");
     if (customArg.isEmpty()) {
         customArg = Settings::instance().getString("LaunchAdvanceGame");
     }

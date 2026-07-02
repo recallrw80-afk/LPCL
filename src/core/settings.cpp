@@ -1,4 +1,5 @@
 #include "core/settings.h"
+#include "util/crypto_utils.h"
 
 #include <QCoreApplication>
 #include <QDir>
@@ -119,4 +120,48 @@ void Settings::setValue(const QString &key, const QVariant &value)
     m_settings->setValue(key, value);
     m_settings->sync();
     emit settingChanged(key);
+}
+
+// ---- Encrypted settings ----
+
+QString Settings::getEncrypted(const QString &key, const QString &defaultValue) const
+{
+    QString raw = get<QString>(key);
+    if (raw.isEmpty()) return defaultValue;
+    return CryptoUtils::pclDecrypt(raw);
+}
+
+void Settings::setEncrypted(const QString &key, const QString &value)
+{
+    set<QString>(key, CryptoUtils::pclEncrypt(value));
+}
+
+// ---- Instance isolation ----
+
+QString Settings::getInstance(const QString &instanceId, const QString &key,
+                                const QString &defaultValue) const
+{
+    if (instanceId.isEmpty()) return getString(key, defaultValue);
+    QString instanceKey = QString("Instance_%1/%2").arg(instanceId, key);
+    QString val = getString(instanceKey);
+    return val.isEmpty() ? defaultValue : val;
+}
+
+void Settings::setInstance(const QString &instanceId, const QString &key, const QString &value)
+{
+    if (instanceId.isEmpty()) {
+        setString(key, value);
+    } else {
+        QString instanceKey = QString("Instance_%1/%2").arg(instanceId, key);
+        setString(instanceKey, value);
+    }
+}
+
+QString Settings::instancePath(const QString &instanceId) const
+{
+    if (instanceId.isEmpty()) return getString("LaunchFolderSelect");
+    // Per-instance path: base .minecraft / versions / instanceId
+    QString base = getString("LaunchFolderSelect");
+    if (base.isEmpty()) base = QDir::homePath() + "/.minecraft/";
+    return base + "versions/" + instanceId + "/";
 }

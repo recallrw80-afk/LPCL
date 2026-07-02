@@ -2,8 +2,6 @@
 
 #include <QByteArray>
 #include <QCryptographicHash>
-#include <QDataStream>
-#include <openssl/des.h>  // fallback to manual DES if unavailable
 
 // Minimal DES implementation — mirrors .NET DESCryptoServiceProvider
 // We implement DES-ECB manually to avoid OpenSSL dep

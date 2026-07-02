@@ -49,30 +49,19 @@ public:
     QString getString(const QString &key, const QString &defaultValue = QString()) const;
     void setString(const QString &key, const QString &value);
 
-    // Per-instance settings (keyed by instance ID)
-    template<typename T>
-    T getInstance(const QString &key, const QString &instanceId, const T &defaultValue = T()) const {
-        if (instanceId.isEmpty()) return get<T>(key, defaultValue);
-        QString instanceKey = QString("Instance_%1/%2").arg(instanceId, key);
-        QVariant v = m_settings->value(instanceKey);
-        if (!v.isValid() || v.isNull()) return get<T>(key, defaultValue);
-        return v.value<T>();
-    }
-
-    template<typename T>
-    void setInstance(const QString &key, const T &value, const QString &instanceId) {
-        if (instanceId.isEmpty()) {
-            set(key, value);
-        } else {
-            QString instanceKey = QString("Instance_%1/%2").arg(instanceId, key);
-            m_settings->setValue(instanceKey, QVariant::fromValue(value));
-            m_settings->sync();
-        }
-    }
-
     // Direct QVariant access
     QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const;
     void setValue(const QString &key, const QVariant &value);
+
+    // Encrypted settings (DES via CryptoUtils::pclEncrypt/pclDecrypt)
+    QString getEncrypted(const QString &key, const QString &defaultValue = QString()) const;
+    void setEncrypted(const QString &key, const QString &value);
+
+    // Instance isolation (per-version .minecraft)
+    QString getInstance(const QString &instanceId, const QString &key,
+                        const QString &defaultValue = QString()) const;
+    void setInstance(const QString &instanceId, const QString &key, const QString &value);
+    QString instancePath(const QString &instanceId) const;
 
     // Initialize defaults
     void initDefaults();

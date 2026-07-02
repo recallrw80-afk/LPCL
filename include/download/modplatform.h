@@ -60,11 +60,11 @@ public:
     // ---- Search ----
 
     /// Search mods on the given platform
-    void searchMods(Platform platform, const QString &query, int page = 0, int pageSize = 25,
+    void searchMods(Platform platform, const QString &query, int page, int pageSize,
                     std::function<void(bool, QList<ModResource>)> onComplete);
 
     /// Search by category/filters
-    void searchByCategory(Platform platform, int category, int page = 0,
+    void searchByCategory(Platform platform, int category, int page,
                           std::function<void(bool, QList<ModResource>)> onComplete);
 
     // ---- Mod details ----
