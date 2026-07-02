@@ -10,9 +10,10 @@ Item {
     property string iconSource: ""     // QRC path (e.g. "qrc:/assets/icons/xxx.svg")
     property string lucideIcon: ""     // Lucide icon name (e.g. "play") → auto-resolves
     property color iconColor: Theme.color3
+    property int size: 0               // When > 0, overrides width and height
 
-    implicitWidth: 28
-    implicitHeight: 28
+    implicitWidth: size > 0 ? size : 28
+    implicitHeight: size > 0 ? size : 28
 
     readonly property url _resolvedSource: lucideIcon !== ""
         ? "qrc:/assets/icons/lucide/" + lucideIcon + ".svg"

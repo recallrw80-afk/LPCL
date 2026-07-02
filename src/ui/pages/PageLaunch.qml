@@ -43,12 +43,12 @@ Item {
                     Layout.alignment: Qt.AlignHCenter
                     spacing: 8
                     LPCLIcon {
-                        width: 28; height: 28
+                        size: 28
                         iconColor: Theme.color3
                         lucideIcon: "shield-check"
                     }
                     LPCLIcon {
-                        width: 28; height: 28
+                        size: 28
                         iconColor: Theme.color3
                         lucideIcon: "unlink"
                     }

@@ -252,8 +252,7 @@ ApplicationWindow {
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
-                                                width: 19;
-                                                height: 19;
+                                                size: 19
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 lucideIcon: modelData.icon;
                                                 iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff";
@@ -300,8 +299,7 @@ ApplicationWindow {
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
                             LPCLIcon {
-                                width: 24;
-                                height: 24;
+                                size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "minus";
                                 iconColor: "#ffffff";
@@ -328,8 +326,7 @@ ApplicationWindow {
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
                             LPCLIcon {
-                                width: 24
-                                height: 24
+                                size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "x";
                                 iconColor: "#ffffff"
