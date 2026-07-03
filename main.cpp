@@ -115,7 +115,7 @@ int main(int argc, char *argv[]){
         import QtQuick
         Image {
             width: 128; height: 128
-            source: "qrc:/assets/icon.ico"
+            source: "qrc:/assets/icons/icon.ico"
             sourceSize: Qt.size(128, 128)
             smooth: true
             mipmap: true
