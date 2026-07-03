@@ -521,6 +521,7 @@ void AssetDownloader::downloadNatives(const McVersion &version,
 
     int total = nativesToDownload.size();
     int *completed = new int(0);
+    int *failed = new int(0);
 
     QString nativesDir = version.pathVersion + "natives/";
     QDir().mkpath(nativesDir);
@@ -528,17 +529,34 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     emit downloadLog(QString("Downloading %1 native libraries...").arg(total));
     emit downloadProgress("Natives", 0, total);
 
+    auto *downloadedJars = new QStringList();
+
     for (const auto &item : nativesToDownload) {
         DownloadManager::instance().download(
             item.first, item.second,
             nullptr,
-            [this, completed, total, nativesDir, onComplete](bool success, QString) {
+            [this, completed, failed, total, nativesDir, downloadedJars, onComplete](bool success, QString savePath) {
                 (*completed)++;
                 emit downloadProgress("Natives", *completed, total);
+                if (!success) {
+                    (*failed)++;
+                } else if (savePath.endsWith(".jar")) {
+                    downloadedJars->append(savePath);
+                }
+
                 if (*completed >= total) {
-                    delete completed;
-                    emit downloadLog("Native libraries downloaded to: " + nativesDir);
-                    if (onComplete) onComplete(true, QString());
+                    // Extract only from JARs we just downloaded, not all JARs on disk
+                    emit downloadLog("Extracting native libraries...");
+                    for (const QString &jarPath : *downloadedJars) {
+                        QStringList extracted = FileUtils::extractNativesJar(jarPath, nativesDir);
+                        for (const QString &f : extracted) {
+                            emit downloadLog("  Extracted: " + QFileInfo(f).fileName());
+                        }
+                    }
+                    emit downloadLog("Native libraries extracted to: " + nativesDir);
+                    int f = *failed;
+                    delete completed; delete failed; delete downloadedJars;
+                    if (onComplete) onComplete(f == 0, f > 0 ? QString("%1/%2 failed").arg(f).arg(total) : QString());
                 }
             });
     }

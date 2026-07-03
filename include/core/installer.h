@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QProcess>
+#include <QMap>
 #include <functional>
 #include "core/types.h"
 
@@ -55,10 +56,12 @@ public:
 
     // ---- Version detection ----
 
-    /// Detect the best loader version for a Minecraft version
-    QString detectBestForgeVersion(const QString &mcVersion);
+    /// Detect the best loader version for a Minecraft version (async, with cache)
+    void detectBestForgeVersion(const QString &mcVersion,
+                                 std::function<void(QString)> onComplete);
     QString detectBestFabricVersion(const QString &mcVersion);
-    QString detectBestNeoForgeVersion(const QString &mcVersion);
+    void detectBestNeoForgeVersion(const QString &mcVersion,
+                                    std::function<void(QString)> onComplete);
 
     /// Get available loader versions
     void fetchForgeVersions(std::function<void(bool, QStringList)> onComplete);
@@ -85,6 +88,11 @@ private:
 
     QString m_statusText;
     bool m_isRunning = false;
+
+    // Version cache (mcVersion -> loaderVersion)
+    QMap<QString, QString> m_forgeCache;
+    QMap<QString, QString> m_neoCache;
+    QStringList m_fabricVersions;
 
     // API URLs
     static const QString FORGE_API;

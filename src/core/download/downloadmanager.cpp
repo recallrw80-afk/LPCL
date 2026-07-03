@@ -19,7 +19,94 @@ DownloadManager::DownloadManager() {
     m_nam = new QNetworkAccessManager(this);
 }
 
-// Simple download
+// ---- Concurrency control ----
+
+void DownloadManager::setMaxConcurrent(int max)
+{
+    m_maxConcurrent = qMax(1, max);
+    processQueue();
+}
+
+void DownloadManager::enqueue(const QueueEntry &entry)
+{
+    m_queue.enqueue(entry);
+    processQueue();
+}
+
+void DownloadManager::processQueue()
+{
+    while (m_activeCount < m_maxConcurrent && !m_queue.isEmpty()) {
+        QueueEntry entry = m_queue.dequeue();
+        m_activeCount++;
+        emit activeCountChanged(m_activeCount);
+
+        // Apply mirror URL rewriting
+        QString url = applyMirror(entry.url);
+
+        downloadInternal(url, entry.savePath, entry.onProgress,
+            [this, entry](bool success, QString msg) {
+                onDownloadFinished();
+                if (entry.onComplete) entry.onComplete(success, msg);
+            }, entry.retries);
+    }
+}
+
+void DownloadManager::onDownloadFinished()
+{
+    m_activeCount--;
+    emit activeCountChanged(m_activeCount);
+    // Process next item in queue
+    QTimer::singleShot(0, this, &DownloadManager::processQueue);
+}
+
+// ---- Mirror source ----
+
+void DownloadManager::setMirrorSource(MirrorSource source)
+{
+    m_mirror = source;
+}
+
+QString DownloadManager::applyMirror(const QString &url) const
+{
+    if (m_mirror == None) return url;
+
+    // BMCLAPI mirror: https://bmclapi2.bangbang93.com
+    // Rewrites Mojang URLs:
+    //   launchermeta.mojang.com → bmclapi2.bangbang93.com
+    //   launcher.mojang.com → bmclapi2.bangbang93.com
+    //   resources.download.minecraft.net → bmclapi2.bangbang93.com
+    //   libraries.minecraft.net → bmclapi2.bangbang93.com
+    //   piston-data.mojang.com → bmclapi2.bangbang93.com
+    //   piston-meta.mojang.com → bmclapi2.bangbang93.com
+
+    QString mirrored = url;
+    const QString bmclHost = "bmclapi2.bangbang93.com";
+
+    if (m_mirror == BMCLAPI) {
+        mirrored.replace("launchermeta.mojang.com", bmclHost);
+        mirrored.replace("launcher.mojang.com", bmclHost);
+        mirrored.replace("resources.download.minecraft.net", bmclHost);
+        mirrored.replace("libraries.minecraft.net", bmclHost);
+        mirrored.replace("piston-data.mojang.com", bmclHost);
+        mirrored.replace("piston-meta.mojang.com", bmclHost);
+    } else if (m_mirror == MCBBS) {
+        // MCBBS mirror (download.mcbbs.net) — similar URL rewriting
+        const QString mcbbsHost = "download.mcbbs.net";
+        mirrored.replace("launchermeta.mojang.com", mcbbsHost);
+        mirrored.replace("launcher.mojang.com", mcbbsHost);
+        mirrored.replace("resources.download.minecraft.net", mcbbsHost);
+        mirrored.replace("libraries.minecraft.net", mcbbsHost);
+        mirrored.replace("piston-data.mojang.com", mcbbsHost);
+        mirrored.replace("piston-meta.mojang.com", mcbbsHost);
+    }
+
+    if (mirrored != url) {
+        qCDebug(logDl) << "Mirror rewrite:" << url << "->" << mirrored;
+    }
+    return mirrored;
+}
+
+// ---- Simple download ----
 
 QNetworkReply* DownloadManager::download(const QString &url, const QString &savePath,
                                           int maxRetries) {
@@ -108,7 +195,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
     return reply;
 }
 
-// Memory download
+// ---- Memory download ----
 
 QNetworkReply* DownloadManager::downloadToString(const QString &url,
                                                    std::function<void(bool, QString)> onComplete,
@@ -161,7 +248,7 @@ QNetworkReply* DownloadManager::downloadJson(const QString &url,
     }, maxRetries);
 }
 
-// URL helpers
+// ---- URL helpers ----
 
 QString DownloadManager::versionManifestUrl() {
     return "https://launchermeta.mojang.com/mc/game/version_manifest.json";

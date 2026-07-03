@@ -1,5 +1,7 @@
 #include "download/modplatform.h"
 #include "download/downloadmanager.h"
+#include "core/settings.h"
+#include "util/crypto_utils.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -14,6 +16,21 @@ const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
 ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
+    // Initialize CurseForge API key from settings or default
+    // PCL uses a compiled-in key; LPCL reads from settings first
+    if (m.m_cfApiKey.isEmpty()) {
+        // Try settings first
+        QString key = Settings::instance().getString("CurseForgeApiKey", "");
+        if (!key.isEmpty()) {
+            m.m_cfApiKey = CryptoUtils::pclDecrypt(key);
+        }
+        // Fallback: default key (same as PCL2 open-source distribution)
+        if (m.m_cfApiKey.isEmpty()) {
+            m.m_cfApiKey = "$2a$10$wAadBaDMFGiEYjFJQOYiKOKz1OzIj1mVj2jYjJfJjJfJjJfJjJfJj";
+            // NOTE: Replace with a valid CurseForge Core API key from https://console.curseforge.com
+            // The above placeholder will cause CF requests to fail with 401
+        }
+    }
     return m;
 }
 

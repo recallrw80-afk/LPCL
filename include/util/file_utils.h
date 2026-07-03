@@ -2,6 +2,7 @@
 #define LPCL_FILE_UTILS_H
 
 #include <QString>
+#include <QStringList>
 
 namespace FileUtils {
 
@@ -10,6 +11,11 @@ QString assetPathFromHash(const QString &hash);
 
 /// Verify file SHA1 matches expected hash
 bool verifySha1(const QString &filePath, const QString &expectedHash);
+
+/// Extract native libraries from a JAR/ZIP file into destDir.
+/// Only extracts .so, .dll, .dylib, .jnilib files (skipping META-INF/).
+/// Returns list of extracted file paths, or empty on failure.
+QStringList extractNativesJar(const QString &jarPath, const QString &destDir);
 
 } // namespace FileUtils
 

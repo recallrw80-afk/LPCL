@@ -30,17 +30,16 @@ Installer& Installer::instance() {
 
 QString Installer::getInstallerUrl(const QString &loaderType, const QString &mcVersion) {
     if (loaderType == "forge") {
-        // Forge installer pattern:
-        // https://maven.minecraftforge.net/net/minecraftforge/forge/{mcVersion}-{forgeVersion}/forge-{mcVersion}-{forgeVersion}-installer.jar
-        QString forgeVer = detectBestForgeVersion(mcVersion);
+        QString forgeVer = m_forgeCache.value(mcVersion);
         if (forgeVer.isEmpty()) return {};
-        return QString("%1/index_%2.html").arg(FORGE_API, mcVersion);
+        return QString("https://maven.minecraftforge.net/net/minecraftforge/forge/%1-%2/forge-%1-%2-installer.jar")
+            .arg(mcVersion, forgeVer);
     }
     if (loaderType == "fabric") {
         return FABRIC_API + "/versions/loader/" + mcVersion;
     }
     if (loaderType == "neoforge") {
-        QString neoVer = detectBestNeoForgeVersion(mcVersion);
+        QString neoVer = m_neoCache.value(mcVersion);
         if (neoVer.isEmpty()) return {};
         return NEOFORGE_API + "/" + neoVer + "/neoforge-" + neoVer + "-installer.jar";
     }
@@ -201,16 +200,17 @@ void Installer::fetchForgeVersions(std::function<void(bool, QStringList)> onComp
 
 void Installer::fetchFabricVersions(std::function<void(bool, QStringList)> onComplete) {
     QString url = FABRIC_API + "/versions/loader";
-    DownloadManager::instance().downloadJson(url, [onComplete](bool ok, QString, json arr) {
+    DownloadManager::instance().downloadJson(url, [this, onComplete](bool ok, QString, json arr) {
         QStringList versions;
         if (!ok || !arr.is_array()) { onComplete(false, versions); return; }
         for (const auto &v : arr) {
             versions.append(QString::fromStdString(
                 v.value("version", v.value("loader", json::object()).value("version", ""))));
         }
-        // Remove empty and dedup
         versions.removeAll({});
         versions.removeDuplicates();
+        // Cache for detectBestFabricVersion
+        m_fabricVersions = versions;
         onComplete(true, versions);
     });
 }
