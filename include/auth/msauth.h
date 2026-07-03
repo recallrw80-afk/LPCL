@@ -43,6 +43,9 @@ private:
     void authenticateWithMinecraft(const QString &xstsToken, const QString &userHash);
     void getMinecraftProfile(const QString &mcAccessToken);
 
+    /// Emit loginFinished and invoke the callback (if set) with the same result.
+    void finishLogin(bool success, const LoginResult &result);
+
     QNetworkAccessManager *m_nam = nullptr;
     Callback m_callback;
     QTimer *m_pollTimer = nullptr;

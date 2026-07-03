@@ -27,8 +27,7 @@ void AuthlibAuth::login(Callback onComplete) {
 
     if (m_username.trimmed().isEmpty() || m_password.isEmpty()) {
         qCWarning(logAl) << "Username or password empty";
-        emit loginFinished(false, LoginResult());
-        if (onComplete) onComplete(false, LoginResult());
+        finishLogin(false, LoginResult(), onComplete);
         return;
     }
 
@@ -42,6 +41,11 @@ void AuthlibAuth::login(Callback onComplete) {
 void AuthlibAuth::cancel() {
     m_cancelled = true;
     emit loginFinished(false, LoginResult());
+}
+
+void AuthlibAuth::finishLogin(bool success, const LoginResult &result, const Callback &cb) {
+    emit loginFinished(success, result);
+    if (cb) cb(success, result);
 }
 
 void AuthlibAuth::doAuthlibLogin(Callback onComplete) {
@@ -79,8 +83,7 @@ void AuthlibAuth::doAuthlibLogin(Callback onComplete) {
         if (reply->error() != QNetworkReply::NoError) {
             QString errMsg = QString::fromUtf8(reply->readAll());
             qCWarning(logAl) << "Authlib auth failed:" << reply->errorString() << errMsg;
-            emit loginFinished(false, LoginResult());
-            if (onComplete) onComplete(false, LoginResult());
+            finishLogin(false, LoginResult(), onComplete);
             return;
         }
 
@@ -97,14 +100,12 @@ void AuthlibAuth::doAuthlibLogin(Callback onComplete) {
         if (result.name.isEmpty() || result.accessToken.isEmpty()) {
             QString err = root.value("errorMessage").toString("Unknown error");
             qCWarning(logAl) << "Authlib login failed:" << err;
-            emit loginFinished(false, LoginResult());
-            if (onComplete) onComplete(false, LoginResult());
+            finishLogin(false, LoginResult(), onComplete);
             return;
         }
 
         qCInfo(logAl) << "Authlib login success:" << result.name;
-        emit loginFinished(true, result);
-        if (onComplete) onComplete(true, result);
+        finishLogin(true, result, onComplete);
     });
 }
 
@@ -142,8 +143,7 @@ void AuthlibAuth::doNideLogin(Callback onComplete) {
         if (reply->error() != QNetworkReply::NoError) {
             QString errMsg = QString::fromUtf8(reply->readAll());
             qCWarning(logAl) << "Nide8 auth failed:" << reply->errorString() << errMsg;
-            emit loginFinished(false, LoginResult());
-            if (onComplete) onComplete(false, LoginResult());
+            finishLogin(false, LoginResult(), onComplete);
             return;
         }
 
@@ -160,14 +160,12 @@ void AuthlibAuth::doNideLogin(Callback onComplete) {
         if (result.name.isEmpty() || result.accessToken.isEmpty()) {
             QString err = root.value("errorMessage").toString("Unknown error");
             qCWarning(logAl) << "Nide8 login failed:" << err;
-            emit loginFinished(false, LoginResult());
-            if (onComplete) onComplete(false, LoginResult());
+            finishLogin(false, LoginResult(), onComplete);
             return;
         }
 
         qCInfo(logAl) << "Nide8 login success:" << result.name;
-        emit loginFinished(true, result);
-        if (onComplete) onComplete(true, result);
+        finishLogin(true, result, onComplete);
     });
 }
 

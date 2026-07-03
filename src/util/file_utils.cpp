@@ -25,11 +25,9 @@ bool verifySha1(const QString &filePath, const QString &expectedHash) {
     return actual == expectedHash.toLower();
 }
 
-// ============================================================
 // Minimal ZIP/JAR extractor for native libraries
 // Extracts .so, .dll, .dylib, .jnilib files, skipping META-INF/
 // Supports STORED (method 0) and DEFLATE (method 8) via zlib
-// ============================================================
 
 static bool isNativeFile(const QString &name)
 {

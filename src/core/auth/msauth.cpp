@@ -34,8 +34,12 @@ void MsAuth::login(Callback onComplete) {
 void MsAuth::cancel() {
     m_cancelled = true;
     if (m_pollTimer) m_pollTimer->stop();
-    emit loginFinished(false, LoginResult());
-    if (m_callback) m_callback(false, LoginResult());
+    finishLogin(false, LoginResult());
+}
+
+void MsAuth::finishLogin(bool success, const LoginResult &result) {
+    emit loginFinished(success, result);
+    if (m_callback) m_callback(success, result);
 }
 
 void MsAuth::requestDeviceCode() {
@@ -51,8 +55,7 @@ void MsAuth::requestDeviceCode() {
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(logMs) << "Device code request failed:" << reply->errorString();
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -66,8 +69,7 @@ void MsAuth::requestDeviceCode() {
 
         if (userCode.isEmpty() || deviceCode.isEmpty()) {
             qCWarning(logMs) << "Invalid device code response";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -104,8 +106,7 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
             m_pollRetries++;
             if (m_pollRetries > 120) { // 10 minutes max
                 qCWarning(logMs) << "Polling timed out";
-                emit loginFinished(false, LoginResult());
-                if (m_callback) m_callback(false, LoginResult());
+                finishLogin(false, LoginResult());
                 return;
             }
             emit loginProgress("Waiting for approval...");
@@ -118,23 +119,18 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
 
         if (!error.isEmpty()) {
             qCWarning(logMs) << "Token error:" << error;
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
         QString accessToken = root.value("access_token").toString();
-        QString refreshToken = root.value("refresh_token").toString();
         if (accessToken.isEmpty()) {
             qCWarning(logMs) << "No access token in response";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
         qCInfo(logMs) << "Got Microsoft access token";
-        // Store refresh token for future use
-        // Settings::instance().setString("CacheMsV2OAuthRefresh", refreshToken);
 
         emit loginProgress("Authenticating with Xbox Live...");
         authenticateWithXbl(accessToken);
@@ -161,8 +157,7 @@ void MsAuth::authenticateWithXbl(const QString &accessToken) {
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(logMs) << "XBL auth failed:" << reply->errorString();
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -171,8 +166,7 @@ void MsAuth::authenticateWithXbl(const QString &accessToken) {
 
         if (xblToken.isEmpty()) {
             qCWarning(logMs) << "No XBL token";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -203,8 +197,7 @@ void MsAuth::authenticateWithXsts(const QString &xblToken) {
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(logMs) << "XSTS auth failed:" << reply->errorString();
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -221,8 +214,7 @@ void MsAuth::authenticateWithXsts(const QString &xblToken) {
 
         if (xstsToken.isEmpty() || userHash.isEmpty()) {
             qCWarning(logMs) << "No XSTS token or user hash";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -246,8 +238,7 @@ void MsAuth::authenticateWithMinecraft(const QString &xstsToken, const QString &
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(logMs) << "MC auth failed:" << reply->errorString();
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -256,8 +247,7 @@ void MsAuth::authenticateWithMinecraft(const QString &xstsToken, const QString &
 
         if (mcToken.isEmpty()) {
             qCWarning(logMs) << "No Minecraft token";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -278,8 +268,7 @@ void MsAuth::getMinecraftProfile(const QString &mcAccessToken) {
 
         if (reply->error() != QNetworkReply::NoError) {
             qCWarning(logMs) << "Profile request failed:" << reply->errorString();
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
@@ -296,13 +285,11 @@ void MsAuth::getMinecraftProfile(const QString &mcAccessToken) {
 
         if (result.name.isEmpty() || result.uuid.isEmpty()) {
             qCWarning(logMs) << "Empty profile - need to buy Minecraft?";
-            emit loginFinished(false, LoginResult());
-            if (m_callback) m_callback(false, LoginResult());
+            finishLogin(false, LoginResult());
             return;
         }
 
         qCInfo(logMs) << "Logged in as:" << result.name << "(UUID:" << result.uuid << ")";
-        emit loginFinished(true, result);
-        if (m_callback) m_callback(true, result);
+        finishLogin(true, result);
     });
 }

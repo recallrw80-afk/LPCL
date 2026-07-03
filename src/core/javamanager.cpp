@@ -147,16 +147,7 @@ void JavaManager::scanPathVariable() {
             entry.isUserImport = false;
 
             if (checkJava(entry)) {
-                QMutexLocker lock(&m_mutex);
-                // Avoid duplicates
-                bool exists = false;
-                for (const auto &e : m_javaList) {
-                    if (e.pathFolder == entry.pathFolder) { exists = true; break; }
-                }
-                if (!exists) {
-                    m_javaList.append(entry);
-                    emit javaListChanged();
-                }
+                addJavaEntry(entry);
             }
         }
     }
@@ -177,15 +168,7 @@ void JavaManager::scanJavaHome() {
         entry.isUserImport = false;
 
         if (checkJava(entry)) {
-            QMutexLocker lock(&m_mutex);
-            bool exists = false;
-            for (const auto &e : m_javaList) {
-                if (e.pathFolder == entry.pathFolder) { exists = true; break; }
-            }
-            if (!exists) {
-                m_javaList.append(entry);
-                emit javaListChanged();
-            }
+                addJavaEntry(entry);
         }
     }
 }
@@ -216,15 +199,7 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport) {
                 je.isUserImport = isUserImport;
 
                 if (checkJava(je)) {
-                    QMutexLocker lock(&m_mutex);
-                    bool exists = false;
-                    for (const auto &e : m_javaList) {
-                        if (e.pathFolder == je.pathFolder) { exists = true; break; }
-                    }
-                    if (!exists) {
-                        m_javaList.append(je);
-                        emit javaListChanged();
-                    }
+                addJavaEntry(je);
                 }
             }
             // On macOS, also check Contents/Home/bin/java inside JavaVirtualMachines
@@ -236,15 +211,7 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport) {
                 je.isUserImport = isUserImport;
 
                 if (checkJava(je)) {
-                    QMutexLocker lock(&m_mutex);
-                    bool exists = false;
-                    for (const auto &e : m_javaList) {
-                        if (e.pathFolder == je.pathFolder) { exists = true; break; }
-                    }
-                    if (!exists) {
-                        m_javaList.append(je);
-                        emit javaListChanged();
-                    }
+                addJavaEntry(je);
                 }
             }
         } else {
@@ -256,19 +223,23 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport) {
                 je.isUserImport = isUserImport;
 
                 if (checkJava(je)) {
-                    QMutexLocker lock(&m_mutex);
-                    bool exists = false;
-                    for (const auto &e : m_javaList) {
-                        if (e.pathFolder == je.pathFolder) { exists = true; break; }
-                    }
-                    if (!exists) {
-                        m_javaList.append(je);
-                        emit javaListChanged();
-                    }
+                addJavaEntry(je);
                 }
             }
         }
     }
+}
+
+// ---- Deduplicating append (thread-safe) ----
+
+bool JavaManager::addJavaEntry(const JavaEntry &entry) {
+    QMutexLocker lock(&m_mutex);
+    for (const auto &e : m_javaList) {
+        if (e.pathFolder == entry.pathFolder) return false;
+    }
+    m_javaList.append(entry);
+    emit javaListChanged();
+    return true;
 }
 
 // Java runtime checking

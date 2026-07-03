@@ -88,6 +88,10 @@ private:
     void scanJavaHome();
     bool isJavaBinary(const QString &path) const;
 
+    /// Append a Java entry if its pathFolder isn't already in m_javaList.
+    /// Thread-safe (locks m_mutex). Returns true if added.
+    bool addJavaEntry(const JavaEntry &entry);
+
     QList<JavaEntry> m_javaList;
     JavaEntry *m_selectedJava = nullptr;
     bool m_isScanning = false;

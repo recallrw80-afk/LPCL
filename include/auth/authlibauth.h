@@ -34,6 +34,9 @@ private:
     void doAuthlibLogin(Callback onComplete);
     void doNideLogin(Callback onComplete);
 
+    /// Emit loginFinished and invoke the callback (if set) with the same result.
+    void finishLogin(bool success, const LoginResult &result, const Callback &cb);
+
     ServerType m_type;
     QString m_serverUrl;
     QString m_username;
