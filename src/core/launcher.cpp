@@ -12,14 +12,12 @@
 
 static Q_LOGGING_CATEGORY(logLaunch, "lpcl.launcher")
 
-Launcher& Launcher::instance()
-{
+Launcher& Launcher::instance() {
     static Launcher l;
     return l;
 }
 
-Launcher::Launcher()
-{
+Launcher::Launcher() {
     m_gameProcess = new QProcess(this);
     m_gameProcess->setProcessChannelMode(QProcess::SeparateChannels);
 
@@ -38,8 +36,7 @@ Launcher::Launcher()
 bool Launcher::launch(const McVersion &version,
                        const JavaEntry &java,
                        const LoginResult &login,
-                       const McLaunchOptions &options)
-{
+                       const McLaunchOptions &options) {
     if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
         qCWarning(logLaunch) << "Game already running or launching";
         return false;
@@ -82,8 +79,7 @@ bool Launcher::launch(const McVersion &version,
     return true;
 }
 
-bool Launcher::launchVersion(const QString &versionId)
-{
+bool Launcher::launchVersion(const QString &versionId) {
     if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
         qCWarning(logLaunch) << "Game already running or launching";
         return false;
@@ -154,8 +150,7 @@ bool Launcher::launchVersion(const QString &versionId)
     return launch(version, bestJava, login, options);
 }
 
-void Launcher::doLaunch()
-{
+void Launcher::doLaunch() {
     setState(LaunchState::Launching);
     setStatus("Starting game process...");
 
@@ -225,8 +220,7 @@ void Launcher::doLaunch()
     qCInfo(logLaunch) << "Game process started, PID:" << m_gameProcess->processId();
 }
 
-void Launcher::interrupt()
-{
+void Launcher::interrupt() {
     if (m_state == LaunchState::Running) {
         m_gameProcess->kill();
         setState(LaunchState::Interrupted);
@@ -240,8 +234,7 @@ void Launcher::interrupt()
 
 // Game output
 
-void Launcher::onGameStdout()
-{
+void Launcher::onGameStdout() {
     QByteArray data = m_gameProcess->readAllStandardOutput();
     QString text = QString::fromUtf8(data);
     for (const auto &line : text.split('\n', Qt::SkipEmptyParts)) {
@@ -250,8 +243,7 @@ void Launcher::onGameStdout()
     }
 }
 
-void Launcher::onGameStderr()
-{
+void Launcher::onGameStderr() {
     QByteArray data = m_gameProcess->readAllStandardError();
     QString text = QString::fromUtf8(data);
     for (const auto &line : text.split('\n', Qt::SkipEmptyParts)) {
@@ -260,8 +252,7 @@ void Launcher::onGameStderr()
     }
 }
 
-void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus)
-{
+void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
     if (exitStatus == QProcess::CrashExit) {
         appendLog(QString("[PCL] Game crashed with exit code %1").arg(exitCode));
         setState(LaunchState::Failed);
@@ -274,8 +265,7 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus)
     }
 }
 
-void Launcher::onGameError(QProcess::ProcessError error)
-{
+void Launcher::onGameError(QProcess::ProcessError error) {
     QString errMsg;
     switch (error) {
     case QProcess::FailedToStart:
@@ -300,8 +290,7 @@ void Launcher::onGameError(QProcess::ProcessError error)
 
 // State management
 
-void Launcher::setState(LaunchState newState)
-{
+void Launcher::setState(LaunchState newState) {
     if (m_state == newState) return;
     m_state = newState;
     emit stateChanged();
@@ -317,21 +306,18 @@ void Launcher::setState(LaunchState newState)
     }
 }
 
-void Launcher::setStatus(const QString &text)
-{
+void Launcher::setStatus(const QString &text) {
     m_statusText = text;
     emit statusTextChanged();
 }
 
-void Launcher::setProgress(int value)
-{
+void Launcher::setProgress(int value) {
     if (m_progress == value) return;
     m_progress = value;
     emit progressChanged();
 }
 
-void Launcher::appendLog(const QString &line)
-{
+void Launcher::appendLog(const QString &line) {
     // Log to Qt logging system
     static QLoggingCategory logCat("lpcl.game");
     qCInfo(logCat).noquote() << line;

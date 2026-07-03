@@ -8,26 +8,22 @@
 
 static Q_LOGGING_CATEGORY(logSettings, "lpcl.settings")
 
-Settings& Settings::instance()
-{
+Settings& Settings::instance() {
     static Settings s;
     return s;
 }
 
-Settings::Settings()
-{
+Settings::Settings() {
 }
 
-Settings::~Settings()
-{
+Settings::~Settings() {
     if (m_settings) {
         m_settings->sync();
         delete m_settings;
     }
 }
 
-void Settings::initialize(const QString &configPath)
-{
+void Settings::initialize(const QString &configPath) {
     auto &s = instance();
     if (s.m_settings) return; // Already initialized
 
@@ -52,8 +48,7 @@ void Settings::initialize(const QString &configPath)
     qCDebug(logSettings) << "Settings initialized at" << path;
 }
 
-void Settings::initDefaults()
-{
+void Settings::initDefaults() {
     // Set default values if not present
     if (!m_settings->contains("LoginType")) {
         m_settings->setValue("LoginType", static_cast<int>(2)); // Default: Nide/Auth? No — Original default is Legacy = 0
@@ -85,8 +80,7 @@ bool Settings::getBool(const QString &key, bool defaultValue) const
     return get<bool>(key, defaultValue);
 }
 
-void Settings::setBool(const QString &key, bool value)
-{
+void Settings::setBool(const QString &key, bool value) {
     set<bool>(key, value);
 }
 
@@ -95,8 +89,7 @@ int Settings::getInt(const QString &key, int defaultValue) const
     return get<int>(key, defaultValue);
 }
 
-void Settings::setInt(const QString &key, int value)
-{
+void Settings::setInt(const QString &key, int value) {
     set<int>(key, value);
 }
 
@@ -105,8 +98,7 @@ QString Settings::getString(const QString &key, const QString &defaultValue) con
     return get<QString>(key, defaultValue);
 }
 
-void Settings::setString(const QString &key, const QString &value)
-{
+void Settings::setString(const QString &key, const QString &value) {
     set<QString>(key, value);
 }
 
@@ -115,8 +107,7 @@ QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
     return m_settings->value(key, defaultValue);
 }
 
-void Settings::setValue(const QString &key, const QVariant &value)
-{
+void Settings::setValue(const QString &key, const QVariant &value) {
     m_settings->setValue(key, value);
     m_settings->sync();
     emit settingChanged(key);
@@ -131,8 +122,7 @@ QString Settings::getEncrypted(const QString &key, const QString &defaultValue) 
     return CryptoUtils::pclDecrypt(raw);
 }
 
-void Settings::setEncrypted(const QString &key, const QString &value)
-{
+void Settings::setEncrypted(const QString &key, const QString &value) {
     set<QString>(key, CryptoUtils::pclEncrypt(value));
 }
 
@@ -147,8 +137,7 @@ QString Settings::getInstance(const QString &instanceId, const QString &key,
     return val.isEmpty() ? defaultValue : val;
 }
 
-void Settings::setInstance(const QString &instanceId, const QString &key, const QString &value)
-{
+void Settings::setInstance(const QString &instanceId, const QString &key, const QString &value) {
     if (instanceId.isEmpty()) {
         setString(key, value);
     } else {

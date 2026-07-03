@@ -21,16 +21,14 @@ const QString Installer::FORGE_API = "https://files.minecraftforge.net/net/minec
 const QString Installer::FABRIC_API = "https://meta.fabricmc.net/v2";
 const QString Installer::NEOFORGE_API = "https://maven.neoforged.net/releases/net/neoforged/neoforge";
 
-Installer& Installer::instance()
-{
+Installer& Installer::instance() {
     static Installer i;
     return i;
 }
 
 // URL helpers
 
-QString Installer::getInstallerUrl(const QString &loaderType, const QString &mcVersion)
-{
+QString Installer::getInstallerUrl(const QString &loaderType, const QString &mcVersion) {
     if (loaderType == "forge") {
         // Forge installer pattern:
         // https://maven.minecraftforge.net/net/minecraftforge/forge/{mcVersion}-{forgeVersion}/forge-{mcVersion}-{forgeVersion}-installer.jar
@@ -51,8 +49,7 @@ QString Installer::getInstallerUrl(const QString &loaderType, const QString &mcV
 
 void Installer::downloadInstaller(const QString &loaderType, const QString &mcVersion,
                                     const QString &loaderVersion,
-                                    std::function<void(bool, QString)> onComplete)
-{
+                                    std::function<void(bool, QString)> onComplete) {
     QString jarName;
     QString url;
 
@@ -83,8 +80,7 @@ void Installer::downloadInstaller(const QString &loaderType, const QString &mcVe
 
 void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
                                   const QStringList &args,
-                                  std::function<void(bool, QString)> onComplete)
-{
+                                  std::function<void(bool, QString)> onComplete) {
     m_isRunning = true;
     emit runningChanged();
 
@@ -132,8 +128,7 @@ void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
 
 void Installer::installForge(const QString &mcVersionDir, const QString &mcVersion,
                                const QString &forgeVersion, const QString &javaPath,
-                               std::function<void(bool, QString)> onComplete)
-{
+                               std::function<void(bool, QString)> onComplete) {
     downloadInstaller("forge", mcVersion, forgeVersion,
         [this, mcVersionDir, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
@@ -149,8 +144,7 @@ void Installer::installForge(const QString &mcVersionDir, const QString &mcVersi
 
 void Installer::installFabric(const QString &mcVersionDir, const QString &mcVersion,
                                 const QString &loaderVersion, const QString &javaPath,
-                                std::function<void(bool, QString)> onComplete)
-{
+                                std::function<void(bool, QString)> onComplete) {
     downloadInstaller("fabric", mcVersion, loaderVersion,
         [this, mcVersionDir, mcVersion, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
@@ -163,8 +157,7 @@ void Installer::installFabric(const QString &mcVersionDir, const QString &mcVers
 
 void Installer::installNeoForge(const QString &mcVersionDir, const QString &mcVersion,
                                   const QString &neoVersion, const QString &javaPath,
-                                  std::function<void(bool, QString)> onComplete)
-{
+                                  std::function<void(bool, QString)> onComplete) {
     downloadInstaller("neoforge", mcVersion, neoVersion,
         [this, mcVersionDir, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
@@ -175,8 +168,7 @@ void Installer::installNeoForge(const QString &mcVersionDir, const QString &mcVe
 
 void Installer::installLoader(const QString &loaderType, const QString &mcVersionDir,
                                 const QString &loaderVersion, const QString &javaPath,
-                                std::function<void(bool, QString)> onComplete)
-{
+                                std::function<void(bool, QString)> onComplete) {
     // Extract MC version from directory name
     QString mcVersion;
     QRegularExpression re(R"(\d+\.\d+(?:\.\d+)?)");
@@ -191,8 +183,7 @@ void Installer::installLoader(const QString &loaderType, const QString &mcVersio
 
 // Version detection — fetch available versions from APIs
 
-void Installer::fetchForgeVersions(std::function<void(bool, QStringList)> onComplete)
-{
+void Installer::fetchForgeVersions(std::function<void(bool, QStringList)> onComplete) {
     QString url = FORGE_API + "/index.html";
     DownloadManager::instance().downloadToString(url, [onComplete](bool ok, QString html) {
         QStringList versions;
@@ -208,8 +199,7 @@ void Installer::fetchForgeVersions(std::function<void(bool, QStringList)> onComp
     });
 }
 
-void Installer::fetchFabricVersions(std::function<void(bool, QStringList)> onComplete)
-{
+void Installer::fetchFabricVersions(std::function<void(bool, QStringList)> onComplete) {
     QString url = FABRIC_API + "/versions/loader";
     DownloadManager::instance().downloadJson(url, [onComplete](bool ok, QString, json arr) {
         QStringList versions;
@@ -225,8 +215,7 @@ void Installer::fetchFabricVersions(std::function<void(bool, QStringList)> onCom
     });
 }
 
-void Installer::fetchNeoForgeVersions(std::function<void(bool, QStringList)> onComplete)
-{
+void Installer::fetchNeoForgeVersions(std::function<void(bool, QStringList)> onComplete) {
     // NeoForge uses Maven metadata
     QString url = NEOFORGE_API + "/maven-metadata.xml";
     DownloadManager::instance().downloadToString(url, [onComplete](bool ok, QString xml) {
@@ -242,8 +231,7 @@ void Installer::fetchNeoForgeVersions(std::function<void(bool, QStringList)> onC
     });
 }
 
-QString Installer::detectBestForgeVersion(const QString &mcVersion)
-{
+QString Installer::detectBestForgeVersion(const QString &mcVersion) {
     // Best-effort: return the recommended Forge version for this MC version
     // For production, this should call the Forge API
     // Known stable versions as fallback:
@@ -260,13 +248,11 @@ QString Installer::detectBestForgeVersion(const QString &mcVersion)
     return knownStable.value(mcVersion);
 }
 
-QString Installer::detectBestFabricVersion(const QString &)
-{
+QString Installer::detectBestFabricVersion(const QString &) {
     return "0.16.10"; // Latest stable Fabric loader
 }
 
-QString Installer::detectBestNeoForgeVersion(const QString &mcVersion)
-{
+QString Installer::detectBestNeoForgeVersion(const QString &mcVersion) {
     QMap<QString, QString> knownStable = {
         {"1.20.1", "47.1.109"},
         {"1.20.4", "68.1.66"},

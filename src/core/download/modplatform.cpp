@@ -12,8 +12,7 @@ static Q_LOGGING_CATEGORY(logMod, "lpcl.mod")
 const QString ModPlatform::CF_API = "https://api.curseforge.com/v1";
 const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
-ModPlatform& ModPlatform::instance()
-{
+ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
     return m;
 }
@@ -21,8 +20,7 @@ ModPlatform& ModPlatform::instance()
 // Public API — search
 
 void ModPlatform::searchMods(Platform platform, const QString &query, int page, int pageSize,
-                               std::function<void(bool, QList<ModResource>)> onComplete)
-{
+                               std::function<void(bool, QList<ModResource>)> onComplete) {
     switch (platform) {
     case CurseForge: searchCurseForge(query, page, pageSize, onComplete); break;
     case Modrinth:   searchModrinth(query, page, pageSize, onComplete); break;
@@ -30,16 +28,14 @@ void ModPlatform::searchMods(Platform platform, const QString &query, int page, 
 }
 
 void ModPlatform::searchByCategory(Platform platform, int category, int page,
-                                     std::function<void(bool, QList<ModResource>)> onComplete)
-{
+                                     std::function<void(bool, QList<ModResource>)> onComplete) {
     // Category search delegates to regular search with category filter
     Q_UNUSED(category)
     searchMods(platform, QString(), page, 25, onComplete);
 }
 
 void ModPlatform::getModDetails(Platform platform, const QString &modId,
-                                  std::function<void(bool, ModResource)> onComplete)
-{
+                                  std::function<void(bool, ModResource)> onComplete) {
     switch (platform) {
     case CurseForge: getCurseForgeModDetails(modId, onComplete); break;
     case Modrinth:   getModrinthModDetails(modId, onComplete); break;
@@ -47,8 +43,7 @@ void ModPlatform::getModDetails(Platform platform, const QString &modId,
 }
 
 void ModPlatform::getModFiles(Platform platform, const QString &modId,
-                                std::function<void(bool, QList<ModFileInfo>)> onComplete)
-{
+                                std::function<void(bool, QList<ModFileInfo>)> onComplete) {
     switch (platform) {
     case CurseForge: getCurseForgeFiles(modId, onComplete); break;
     case Modrinth:   getModrinthFiles(modId, onComplete); break;
@@ -56,8 +51,7 @@ void ModPlatform::getModFiles(Platform platform, const QString &modId,
 }
 
 QString ModPlatform::getFileDownloadUrl(Platform platform,
-                                          const QString &modId, const QString &fileId)
-{
+                                          const QString &modId, const QString &fileId) {
     switch (platform) {
     case CurseForge:
         return QString("%1/mods/%2/files/%3/download-url").arg(CF_API, modId, fileId);
@@ -70,8 +64,7 @@ QString ModPlatform::getFileDownloadUrl(Platform platform,
 void ModPlatform::downloadMod(Platform platform, const QString &modId,
                                 const QString &fileId, const QString &savePath,
                                 std::function<void(bool, QString)> onComplete,
-                                std::function<void(qint64, qint64)> onProgress)
-{
+                                std::function<void(qint64, qint64)> onProgress) {
     if (platform == CurseForge) {
         // CurseForge: first get the download URL, then download
         QString url = getFileDownloadUrl(platform, modId, fileId);
@@ -105,8 +98,7 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
 // CurseForge API implementation
 
 void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
-                                     std::function<void(bool, QList<ModResource>)> onComplete)
-{
+                                     std::function<void(bool, QList<ModResource>)> onComplete) {
     QUrl url(CF_API + "/mods/search");
     QUrlQuery q;
     q.addQueryItem("gameId", "432"); // Minecraft
@@ -153,8 +145,7 @@ void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
 }
 
 void ModPlatform::getCurseForgeModDetails(const QString &modId,
-                                            std::function<void(bool, ModResource)> onComplete)
-{
+                                            std::function<void(bool, ModResource)> onComplete) {
     QString url = CF_API + "/mods/" + modId;
     QNetworkRequest req(url);
     req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
@@ -174,8 +165,7 @@ void ModPlatform::getCurseForgeModDetails(const QString &modId,
 }
 
 void ModPlatform::getCurseForgeFiles(const QString &modId,
-                                       std::function<void(bool, QList<ModFileInfo>)> onComplete)
-{
+                                       std::function<void(bool, QList<ModFileInfo>)> onComplete) {
     QString url = CF_API + "/mods/" + modId + "/files";
     QNetworkRequest req(url);
     req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
@@ -206,8 +196,7 @@ void ModPlatform::getCurseForgeFiles(const QString &modId,
 // Modrinth API implementation
 
 void ModPlatform::searchModrinth(const QString &query, int page, int pageSize,
-                                   std::function<void(bool, QList<ModResource>)> onComplete)
-{
+                                   std::function<void(bool, QList<ModResource>)> onComplete) {
     QUrl url(MR_API + "/search");
     QUrlQuery q;
     if (!query.isEmpty()) q.addQueryItem("query", query);
@@ -241,8 +230,7 @@ void ModPlatform::searchModrinth(const QString &query, int page, int pageSize,
 }
 
 void ModPlatform::getModrinthModDetails(const QString &modId,
-                                          std::function<void(bool, ModResource)> onComplete)
-{
+                                          std::function<void(bool, ModResource)> onComplete) {
     QString url = MR_API + "/project/" + modId;
     DownloadManager::instance().downloadJson(
         url, [onComplete](bool ok, QString, json item) {
@@ -259,8 +247,7 @@ void ModPlatform::getModrinthModDetails(const QString &modId,
 }
 
 void ModPlatform::getModrinthFiles(const QString &modId,
-                                     std::function<void(bool, QList<ModFileInfo>)> onComplete)
-{
+                                     std::function<void(bool, QList<ModFileInfo>)> onComplete) {
     QString url = MR_API + "/project/" + modId + "/version";
     DownloadManager::instance().downloadJson(
         url, [onComplete](bool ok, QString, json result) {

@@ -10,30 +10,26 @@
 
 static Q_LOGGING_CATEGORY(logDl, "lpcl.download")
 
-DownloadManager& DownloadManager::instance()
-{
+DownloadManager& DownloadManager::instance() {
     static DownloadManager m;
     return m;
 }
 
-DownloadManager::DownloadManager()
-{
+DownloadManager::DownloadManager() {
     m_nam = new QNetworkAccessManager(this);
 }
 
 // Simple download
 
 QNetworkReply* DownloadManager::download(const QString &url, const QString &savePath,
-                                          int maxRetries)
-{
+                                          int maxRetries) {
     return download(url, savePath, nullptr, nullptr, maxRetries);
 }
 
 QNetworkReply* DownloadManager::download(const QString &url, const QString &savePath,
                                           ProgressCallback onProgress,
                                           CompletionCallback onComplete,
-                                          int maxRetries)
-{
+                                          int maxRetries) {
     return downloadInternal(url, savePath, onProgress, onComplete, maxRetries);
 }
 
@@ -41,8 +37,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
                                                   const QString &savePath,
                                                   ProgressCallback onProgress,
                                                   CompletionCallback onComplete,
-                                                  int retriesRemaining)
-{
+                                                  int retriesRemaining) {
     emit downloadStarted(url);
 
     QNetworkRequest request(url);
@@ -117,8 +112,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
 
 QNetworkReply* DownloadManager::downloadToString(const QString &url,
                                                    std::function<void(bool, QString)> onComplete,
-                                                   int maxRetries)
-{
+                                                   int maxRetries) {
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
@@ -152,8 +146,7 @@ QNetworkReply* DownloadManager::downloadToString(const QString &url,
 
 QNetworkReply* DownloadManager::downloadJson(const QString &url,
                                                std::function<void(bool, QString, nlohmann::json)> onComplete,
-                                               int maxRetries)
-{
+                                               int maxRetries) {
     return downloadToString(url, [onComplete](bool success, QString data) {
         if (!success) {
             if (onComplete) onComplete(false, data, nlohmann::json());
@@ -170,13 +163,11 @@ QNetworkReply* DownloadManager::downloadJson(const QString &url,
 
 // URL helpers
 
-QString DownloadManager::versionManifestUrl()
-{
+QString DownloadManager::versionManifestUrl() {
     return "https://launchermeta.mojang.com/mc/game/version_manifest.json";
 }
 
-QString DownloadManager::versionJsonUrl(const QString &versionId)
-{
+QString DownloadManager::versionJsonUrl(const QString &versionId) {
     // The version manifest gives us the per-version URL
     // This is a fallback — normally fetch manifest first, then use the returned URL
     // For known version IDs we construct the URL directly
@@ -186,8 +177,7 @@ QString DownloadManager::versionJsonUrl(const QString &versionId)
              versionId);
 }
 
-QString DownloadManager::assetsIndexUrl(const QString &assetsVersion)
-{
+QString DownloadManager::assetsIndexUrl(const QString &assetsVersion) {
     return QString("https://launchermeta.mojang.com/v1/packages/%1.json")
         .arg(assetsVersion);
 }

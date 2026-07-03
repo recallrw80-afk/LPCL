@@ -9,19 +9,16 @@
 
 static Q_LOGGING_CATEGORY(logBuild, "lpcl.launchbuilder")
 
-LaunchBuilder& LaunchBuilder::instance()
-{
+LaunchBuilder& LaunchBuilder::instance() {
     static LaunchBuilder b;
     return b;
 }
 
-void LaunchBuilder::setVersionJson(const json &versionJson)
-{
+void LaunchBuilder::setVersionJson(const json &versionJson) {
     m_versionJson = versionJson;
 }
 
-void LaunchBuilder::setLaunchOptions(const McLaunchOptions &options)
-{
+void LaunchBuilder::setLaunchOptions(const McLaunchOptions &options) {
     m_options = options;
 }
 
@@ -29,8 +26,7 @@ void LaunchBuilder::setLaunchOptions(const McLaunchOptions &options)
 
 bool LaunchBuilder::build(const McVersion &version,
                            const JavaEntry &java,
-                           const LoginResult &login)
-{
+                           const LoginResult &login) {
     m_jvmArgs.clear();
     m_gameArgs.clear();
     m_mainClass.clear();
@@ -77,8 +73,7 @@ QString LaunchBuilder::commandLine() const
 
 // JVM arguments
 
-QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntry &java)
-{
+QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntry &java) {
     QStringList args;
 
     // Read JVM args from version JSON (new format)
@@ -171,8 +166,7 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
 
 // Game arguments
 
-QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginResult &login)
-{
+QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginResult &login) {
     Q_UNUSED(login)
     QStringList args;
 
@@ -248,8 +242,7 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
 
 QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version,
                                                          const JavaEntry &java,
-                                                         const LoginResult &login)
-{
+                                                         const LoginResult &login) {
     QMap<QString, QString> r;
 
     // Auth
@@ -341,8 +334,7 @@ QStringList LaunchBuilder::applyReplacements(const QStringList &args,
 
 // Rule checking
 
-bool LaunchBuilder::checkRules(const json &rules)
-{
+bool LaunchBuilder::checkRules(const json &rules) {
     if (!rules.is_array() || rules.empty()) return true; // No rules = allow
 
     bool allowed = false;
@@ -381,8 +373,7 @@ bool LaunchBuilder::checkRules(const json &rules)
     return allowed;
 }
 
-bool LaunchBuilder::checkFeatures(const json &features)
-{
+bool LaunchBuilder::checkFeatures(const json &features) {
     // Check feature flags
     // For now, common features:
     // - "is_demo_user": false (we're not a demo user)

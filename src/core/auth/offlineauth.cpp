@@ -6,12 +6,10 @@
 static Q_LOGGING_CATEGORY(logAuth, "lpcl.auth.offline")
 
 OfflineAuth::OfflineAuth(const QString &username)
-    : m_username(username)
-{
+    : m_username(username) {
 }
 
-void OfflineAuth::login(Callback onComplete)
-{
+void OfflineAuth::login(Callback onComplete) {
     if (m_username.trimmed().isEmpty()) {
         emit loginFinished(false, LoginResult());
         if (onComplete) onComplete(false, LoginResult());
@@ -31,8 +29,7 @@ void OfflineAuth::login(Callback onComplete)
     if (onComplete) onComplete(true, result);
 }
 
-QString OfflineAuth::generateOfflineUuid(const QString &username)
-{
+QString OfflineAuth::generateOfflineUuid(const QString &username) {
     // Mojang offline UUID = MD5("OfflinePlayer:" + username)
     // Formatted as UUID with version 3 variant
     QString input = "OfflinePlayer:" + username;
@@ -52,7 +49,6 @@ QString OfflineAuth::generateOfflineUuid(const QString &username)
     return uuid;
 }
 
-QString OfflineAuth::generateClientToken()
-{
+QString OfflineAuth::generateClientToken() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }

@@ -17,15 +17,13 @@ static const QString XSTS_AUTH_URL = "https://xsts.auth.xboxlive.com/xsts/author
 static const QString MC_AUTH_URL = "https://api.minecraftservices.com/authentication/login_with_xbox";
 static const QString MC_PROFILE_URL = "https://api.minecraftservices.com/minecraft/profile";
 
-MsAuth::MsAuth()
-{
+MsAuth::MsAuth() {
     m_nam = new QNetworkAccessManager(this);
     m_pollTimer = new QTimer(this);
     m_pollTimer->setSingleShot(true);
 }
 
-void MsAuth::login(Callback onComplete)
-{
+void MsAuth::login(Callback onComplete) {
     m_callback = onComplete;
     m_cancelled = false;
     m_pollRetries = 0;
@@ -33,16 +31,14 @@ void MsAuth::login(Callback onComplete)
     requestDeviceCode();
 }
 
-void MsAuth::cancel()
-{
+void MsAuth::cancel() {
     m_cancelled = true;
     if (m_pollTimer) m_pollTimer->stop();
     emit loginFinished(false, LoginResult());
     if (m_callback) m_callback(false, LoginResult());
 }
 
-void MsAuth::requestDeviceCode()
-{
+void MsAuth::requestDeviceCode() {
     QNetworkRequest request(DEVICE_CODE_URL);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
@@ -84,8 +80,7 @@ void MsAuth::requestDeviceCode()
     });
 }
 
-void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds)
-{
+void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
     if (m_cancelled) return;
 
     QNetworkRequest request(TOKEN_URL);
@@ -146,8 +141,7 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds)
     });
 }
 
-void MsAuth::authenticateWithXbl(const QString &accessToken)
-{
+void MsAuth::authenticateWithXbl(const QString &accessToken) {
     QNetworkRequest request(XBL_AUTH_URL);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -188,8 +182,7 @@ void MsAuth::authenticateWithXbl(const QString &accessToken)
     });
 }
 
-void MsAuth::authenticateWithXsts(const QString &xblToken)
-{
+void MsAuth::authenticateWithXsts(const QString &xblToken) {
     QNetworkRequest request(XSTS_AUTH_URL);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -239,8 +232,7 @@ void MsAuth::authenticateWithXsts(const QString &xblToken)
     });
 }
 
-void MsAuth::authenticateWithMinecraft(const QString &xstsToken, const QString &userHash)
-{
+void MsAuth::authenticateWithMinecraft(const QString &xstsToken, const QString &userHash) {
     QNetworkRequest request(MC_AUTH_URL);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
@@ -275,8 +267,7 @@ void MsAuth::authenticateWithMinecraft(const QString &xstsToken, const QString &
     });
 }
 
-void MsAuth::getMinecraftProfile(const QString &mcAccessToken)
-{
+void MsAuth::getMinecraftProfile(const QString &mcAccessToken) {
     QNetworkRequest request(MC_PROFILE_URL);
     request.setRawHeader("Authorization", ("Bearer " + mcAccessToken).toUtf8());
 

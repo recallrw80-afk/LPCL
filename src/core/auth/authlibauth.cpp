@@ -13,8 +13,7 @@
 static Q_LOGGING_CATEGORY(logAl, "lpcl.auth.authlib")
 
 AuthlibAuth::AuthlibAuth(ServerType type)
-    : m_type(type)
-{
+    : m_type(type) {
     m_nam = new QNetworkAccessManager(this);
 }
 
@@ -23,8 +22,7 @@ LoginType AuthlibAuth::loginType() const
     return m_type == ServerType::AuthlibInjector ? LoginType::Auth : LoginType::Nide;
 }
 
-void AuthlibAuth::login(Callback onComplete)
-{
+void AuthlibAuth::login(Callback onComplete) {
     m_cancelled = false;
 
     if (m_username.trimmed().isEmpty() || m_password.isEmpty()) {
@@ -41,14 +39,12 @@ void AuthlibAuth::login(Callback onComplete)
     }
 }
 
-void AuthlibAuth::cancel()
-{
+void AuthlibAuth::cancel() {
     m_cancelled = true;
     emit loginFinished(false, LoginResult());
 }
 
-void AuthlibAuth::doAuthlibLogin(Callback onComplete)
-{
+void AuthlibAuth::doAuthlibLogin(Callback onComplete) {
     // Authlib-Injector uses Yggdrasil API
     // POST {server}/authserver/authenticate
     // Body: { agent: { name: "Minecraft", version: 1 }, username, password, clientToken, requestUser: true }
@@ -112,8 +108,7 @@ void AuthlibAuth::doAuthlibLogin(Callback onComplete)
     });
 }
 
-void AuthlibAuth::doNideLogin(Callback onComplete)
-{
+void AuthlibAuth::doNideLogin(Callback onComplete) {
     // Nide8 uses a simpler API
     // POST {server}/api/yggdrasil/authserver/authenticate
     // Similar to Authlib but at a different endpoint
@@ -178,8 +173,7 @@ void AuthlibAuth::doNideLogin(Callback onComplete)
 
 // AuthBase factory
 
-AuthBase* AuthBase::create(LoginType type)
-{
+AuthBase* AuthBase::create(LoginType type) {
     switch (type) {
     case LoginType::Legacy:
         return new OfflineAuth();

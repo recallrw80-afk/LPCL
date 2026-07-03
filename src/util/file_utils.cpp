@@ -5,13 +5,11 @@
 
 namespace FileUtils {
 
-QString assetPathFromHash(const QString &hash)
-{
+QString assetPathFromHash(const QString &hash) {
     return hash.left(2) + "/" + hash;
 }
 
-bool verifySha1(const QString &filePath, const QString &expectedHash)
-{
+bool verifySha1(const QString &filePath, const QString &expectedHash) {
     QFile file(filePath);
     if (!file.open(QIODevice::ReadOnly)) return false;
 

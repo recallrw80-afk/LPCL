@@ -4,8 +4,7 @@
 
 namespace ArgUtils {
 
-QStringList splitJavaArgs(const QString &str)
-{
+QStringList splitJavaArgs(const QString &str) {
     QStringList args;
     bool inQuote = false;
     QString current;
@@ -29,8 +28,7 @@ QStringList splitJavaArgs(const QString &str)
     return args;
 }
 
-QStringList deduplicateArgs(const QStringList &args)
-{
+QStringList deduplicateArgs(const QStringList &args) {
     QMap<QString, int> seen;
     for (int i = 0; i < args.size(); ++i) {
         QString prefix = args[i].section(QRegularExpression("[= ]"), 0, 0);

@@ -14,15 +14,12 @@
 #include "core/settings.h"
 #include "core/javamanager.h"
 #include "core/versionmanager.h"
-#include "core/launchbuilder.h"
 #include "core/launcher.h"
 #include "auth/offlineauth.h"
 #include "auth/msauth.h"
 #include "download/downloadmanager.h"
-#include "download/assetdownloader.h"
 
-int main(int argc, char *argv[])
-{
+int main(int argc, char *argv[]){
     // Enable multisample anti-aliasing for smooth rounded corners and shapes
     QSurfaceFormat fmt;
     fmt.setSamples(8);

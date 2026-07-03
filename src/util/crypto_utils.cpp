@@ -9,24 +9,21 @@
 
 namespace {
 
-QByteArray deriveDesKey(const QString &key)
-{
+QByteArray deriveDesKey(const QString &key) {
     // DES key = 8 bytes. Use first 8 bytes of MD5 hash of input key.
     QByteArray hash = QCryptographicHash::hash(
         key.toUtf8(), QCryptographicHash::Md5);
     return hash.left(8);
 }
 
-QByteArray padPkcs7(const QByteArray &data, int blockSize = 8)
-{
+QByteArray padPkcs7(const QByteArray &data, int blockSize = 8) {
     int padLen = blockSize - (data.size() % blockSize);
     QByteArray padded = data;
     padded.append(QByteArray(padLen, static_cast<char>(padLen)));
     return padded;
 }
 
-QByteArray unpadPkcs7(const QByteArray &data)
-{
+QByteArray unpadPkcs7(const QByteArray &data) {
     if (data.isEmpty()) return data;
     int padLen = static_cast<unsigned char>(data.at(data.size() - 1));
     if (padLen < 1 || padLen > 8) return data;
@@ -160,8 +157,7 @@ static const int SHIFTS[] = {
     1, 2, 2, 2, 2, 2, 2, 1
 };
 
-static quint64 permute(quint64 input, const int *table, int n, quint64 mask)
-{
+static quint64 permute(quint64 input, const int *table, int n, quint64 mask) {
     quint64 result = 0;
     for (int i = 0; i < n; ++i) {
         int bit = table[i] - 1;
@@ -171,8 +167,7 @@ static quint64 permute(quint64 input, const int *table, int n, quint64 mask)
     return result & mask;
 }
 
-static quint64 permute64to56(quint64 key)
-{
+static quint64 permute64to56(quint64 key) {
     quint64 result = 0;
     for (int i = 0; i < 56; ++i) {
         int bit = PC1[i] - 1;
@@ -182,8 +177,7 @@ static quint64 permute64to56(quint64 key)
     return result;
 }
 
-static quint64 permute56to48(quint64 key)
-{
+static quint64 permute56to48(quint64 key) {
     quint64 result = 0;
     for (int i = 0; i < 48; ++i) {
         int bit = PC2[i] - 1;
@@ -193,18 +187,15 @@ static quint64 permute56to48(quint64 key)
     return result;
 }
 
-static quint64 permuteIP(quint64 block)
-{
+static quint64 permuteIP(quint64 block) {
     return permute(block, IP, 64, 0xFFFFFFFFFFFFFFFFULL);
 }
 
-static quint64 permuteFP(quint64 block)
-{
+static quint64 permuteFP(quint64 block) {
     return permute(block, FP, 64, 0xFFFFFFFFFFFFFFFFULL);
 }
 
-static quint32 f(quint32 r, quint64 subkey48)
-{
+static quint32 f(quint32 r, quint64 subkey48) {
     // Expansion
     quint64 expanded = 0;
     for (int i = 0; i < 48; ++i) {
@@ -236,16 +227,14 @@ static quint32 f(quint32 r, quint64 subkey48)
     return permuted;
 }
 
-static QByteArray desEncryptBlock(QByteArray key)
-{
+static QByteArray desEncryptBlock(QByteArray key) {
     // Not used directly — encryptBlock/decryptBlock operate on 64-bit blocks
     Q_UNUSED(key);
     return {};
 }
 
 // Encrypt 8-byte block with DES key (8 bytes → 56-bit + parity)
-static quint64 desEncrypt64(quint64 block, const QByteArray &keyBytes)
-{
+static quint64 desEncrypt64(quint64 block, const QByteArray &keyBytes) {
     // Load key
     quint64 key = 0;
     for (int i = 0; i < 8; ++i)
@@ -284,8 +273,7 @@ static quint64 desEncrypt64(quint64 block, const QByteArray &keyBytes)
     return block;
 }
 
-static quint64 desDecrypt64(quint64 block, const QByteArray &keyBytes)
-{
+static quint64 desDecrypt64(quint64 block, const QByteArray &keyBytes) {
     quint64 key = 0;
     for (int i = 0; i < 8; ++i)
         key = (key << 8) | static_cast<unsigned char>(keyBytes.at(i));
@@ -317,8 +305,7 @@ static quint64 desDecrypt64(quint64 block, const QByteArray &keyBytes)
     return block;
 }
 
-QByteArray desEcb(const QByteArray &data, const QByteArray &keyBytes, bool encrypt)
-{
+QByteArray desEcb(const QByteArray &data, const QByteArray &keyBytes, bool encrypt) {
     QByteArray result;
     for (int i = 0; i < data.size(); i += 8) {
         QByteArray block = data.mid(i, 8);
@@ -342,8 +329,7 @@ QByteArray desEcb(const QByteArray &data, const QByteArray &keyBytes, bool encry
 
 namespace CryptoUtils {
 
-QString desEncrypt(const QString &plainText, const QString &key)
-{
+QString desEncrypt(const QString &plainText, const QString &key) {
     QByteArray keyBytes = deriveDesKey(key);
     QByteArray data = plainText.toUtf8();
     data = padPkcs7(data, 8);
@@ -352,8 +338,7 @@ QString desEncrypt(const QString &plainText, const QString &key)
     return encrypted.toBase64();
 }
 
-QString desDecrypt(const QString &cipherB64, const QString &key)
-{
+QString desDecrypt(const QString &cipherB64, const QString &key) {
     QByteArray keyBytes = deriveDesKey(key);
     QByteArray data = QByteArray::fromBase64(cipherB64.toUtf8());
     if (data.isEmpty()) return {};

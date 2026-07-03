@@ -19,16 +19,14 @@
 
 static Q_LOGGING_CATEGORY(logVer, "lpcl.version")
 
-VersionManager& VersionManager::instance()
-{
+VersionManager& VersionManager::instance() {
     static VersionManager m;
     return m;
 }
 
 // Minecraft folder
 
-void VersionManager::setMcFolder(const QString &path)
-{
+void VersionManager::setMcFolder(const QString &path) {
     QString normalized = QDir(path).absolutePath() + "/";
     if (m_mcFolder == normalized) return;
 
@@ -41,8 +39,7 @@ void VersionManager::setMcFolder(const QString &path)
     loadLocalVersions();
 }
 
-QList<McFolder> VersionManager::loadFolderList()
-{
+QList<McFolder> VersionManager::loadFolderList() {
     QList<McFolder> folders;
 
     // 1. Check exe folder (current launcher directory)
@@ -127,8 +124,7 @@ QList<McFolder> VersionManager::loadFolderList()
 
 // Version listing
 
-void VersionManager::loadLocalVersions()
-{
+void VersionManager::loadLocalVersions() {
     if (m_mcFolder.isEmpty()) return;
 
     m_isLoading = true;
@@ -188,8 +184,7 @@ void VersionManager::loadLocalVersions()
     qCInfo(logVer) << "Loaded" << m_versionList.size() << "local versions from" << versionsDir;
 }
 
-void VersionManager::fetchVersionManifest()
-{
+void VersionManager::fetchVersionManifest() {
     m_isLoading = true;
     emit loadingChanged();
     emit versionLoadProgress("Fetching remote version list...");
@@ -284,14 +279,12 @@ QStringList VersionManager::versionIds() const
 
 // Version parsing
 
-McVersion VersionManager::loadVersion(const QString &versionId)
-{
+McVersion VersionManager::loadVersion(const QString &versionId) {
     QString jsonPath = m_mcFolder + "versions/" + versionId + "/" + versionId + ".json";
     return parseVersionJson(jsonPath);
 }
 
-McVersion VersionManager::parseVersionJson(const QString &jsonPath)
-{
+McVersion VersionManager::parseVersionJson(const QString &jsonPath) {
     McVersion ver;
 
     QFile file(jsonPath);
@@ -329,8 +322,7 @@ McVersion VersionManager::parseVersionJson(const QString &jsonPath)
     return ver;
 }
 
-McVersion VersionManager::parseVersionJson(const json &j, const QString &versionId)
-{
+McVersion VersionManager::parseVersionJson(const json &j, const QString &versionId) {
     McVersion ver;
     ver.id = versionId;
     ver.isValid = true;
@@ -357,8 +349,7 @@ McVersion VersionManager::parseVersionJson(const json &j, const QString &version
 
 // Mod loader detection
 
-McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson)
-{
+McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson) {
     McModLoaderInfo info;
 
     // Forge: has "inheritsFrom" and has "forge" in the version ID
@@ -418,8 +409,7 @@ McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson)
     return info;
 }
 
-QString VersionManager::detectVanillaVersion(const json &versionJson, const QString &versionId)
-{
+QString VersionManager::detectVanillaVersion(const json &versionJson, const QString &versionId) {
     // For modded versions, the vanilla version is in the inheritsFrom or the ID
     if (versionJson.contains("inheritsFrom")) {
         QString inherit = QString::fromStdString(versionJson["inheritsFrom"].get<std::string>());
@@ -444,8 +434,7 @@ QString VersionManager::detectVanillaVersion(const json &versionJson, const QStr
 
 // Inheritance resolution
 
-json VersionManager::resolveInheritanceChain(const QString &jsonPath)
-{
+json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
     QFile file(jsonPath);
     if (!file.open(QIODevice::ReadOnly)) return json();
 

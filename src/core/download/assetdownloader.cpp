@@ -14,8 +14,7 @@
 
 static Q_LOGGING_CATEGORY(logAsset, "lpcl.asset")
 
-AssetDownloader& AssetDownloader::instance()
-{
+AssetDownloader& AssetDownloader::instance() {
     static AssetDownloader m;
     return m;
 }
@@ -23,8 +22,7 @@ AssetDownloader& AssetDownloader::instance()
 // Full pipeline
 
 void AssetDownloader::downloadVersion(const QString &versionId,
-                                       std::function<void(bool, QString)> onComplete)
-{
+                                       std::function<void(bool, QString)> onComplete) {
     emit downloadLog("Starting download for version: " + versionId);
     emit downloadProgress("Fetching version manifest...", 0, 5);
 
@@ -124,16 +122,14 @@ void AssetDownloader::downloadVersion(const QString &versionId,
 // Version JSON
 
 void AssetDownloader::downloadVersionJson(const QString &versionId,
-                                            std::function<void(bool, QString)> onComplete)
-{
+                                            std::function<void(bool, QString)> onComplete) {
     downloadVersion(versionId, onComplete);
 }
 
 // Client JAR
 
 void AssetDownloader::downloadClientJar(const McVersion &version,
-                                          std::function<void(bool, QString)> onComplete)
-{
+                                          std::function<void(bool, QString)> onComplete) {
     // The client JAR URL is derived from the version JSON's "downloads" -> "client" -> "url"
     // We need the version JSON. If it's already local, use it to get the download URL.
     QString jsonPath = version.pathVersion + version.id + ".json";
@@ -214,8 +210,7 @@ void AssetDownloader::downloadClientJar(const McVersion &version,
 
 void AssetDownloader::downloadLibraries(const McVersion &version,
                                           const json &versionJson,
-                                          std::function<void(bool, QString)> onComplete)
-{
+                                          std::function<void(bool, QString)> onComplete) {
     if (!versionJson.contains("libraries") || !versionJson["libraries"].is_array()) {
         emit downloadLog("No libraries to download");
         if (onComplete) onComplete(true, QString());
@@ -313,8 +308,7 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
 // Assets
 
 void AssetDownloader::downloadAssets(const McVersion &version,
-                                       std::function<void(bool, QString)> onComplete)
-{
+                                       std::function<void(bool, QString)> onComplete) {
     // First download the asset index JSON
     QString jsonPath = version.pathVersion + version.id + ".json";
     QFile f(jsonPath);
@@ -440,8 +434,7 @@ void AssetDownloader::downloadAssets(const McVersion &version,
 // Natives
 
 void AssetDownloader::downloadNatives(const McVersion &version,
-                                        std::function<void(bool, QString)> onComplete)
-{
+                                        std::function<void(bool, QString)> onComplete) {
     QString jsonPath = version.pathVersion + version.id + ".json";
     QFile f(jsonPath);
     if (!f.open(QIODevice::ReadOnly)) {

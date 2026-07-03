@@ -11,16 +11,14 @@
 
 static Q_LOGGING_CATEGORY(logJava, "lpcl.java")
 
-JavaManager& JavaManager::instance()
-{
+JavaManager& JavaManager::instance() {
     static JavaManager m;
     return m;
 }
 
 // Scanning
 
-QStringList JavaManager::javaSearchPaths()
-{
+QStringList JavaManager::javaSearchPaths() {
     QStringList paths;
 
     auto addIfExists = [&](const QString &path) {
@@ -93,8 +91,7 @@ bool JavaManager::isJavaBinary(const QString &path) const
     return name == "java" || name == "java.exe";
 }
 
-void JavaManager::scanSystemJava()
-{
+void JavaManager::scanSystemJava() {
     if (m_isScanning) return;
 
     m_isScanning = true;
@@ -122,8 +119,7 @@ void JavaManager::scanSystemJava()
     });
 }
 
-void JavaManager::scanPathVariable()
-{
+void JavaManager::scanPathVariable() {
     QString pathEnv = qEnvironmentVariable("PATH");
     if (pathEnv.isEmpty()) {
         pathEnv = qEnvironmentVariable("Path"); // Windows
@@ -159,8 +155,7 @@ void JavaManager::scanPathVariable()
     }
 }
 
-void JavaManager::scanJavaHome()
-{
+void JavaManager::scanJavaHome() {
     QString javaHome = qEnvironmentVariable("JAVA_HOME");
     if (javaHome.isEmpty()) return;
 
@@ -188,8 +183,7 @@ void JavaManager::scanJavaHome()
     }
 }
 
-void JavaManager::scanFolder(const QString &folder, bool isUserImport)
-{
+void JavaManager::scanFolder(const QString &folder, bool isUserImport) {
     QDir dir(folder);
     if (!dir.exists()) return;
 
@@ -272,8 +266,7 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport)
 
 // Java runtime checking
 
-bool JavaManager::checkJava(JavaEntry &entry)
-{
+bool JavaManager::checkJava(JavaEntry &entry) {
     if (!QFileInfo::exists(entry.pathJava)) {
         qCDebug(logJava) << "Java binary not found:" << entry.pathJava;
         return false;
@@ -339,8 +332,7 @@ bool JavaManager::checkJava(JavaEntry &entry)
     return true;
 }
 
-QList<JavaEntry> JavaManager::checkJavaList(const QList<JavaEntry> &list)
-{
+QList<JavaEntry> JavaManager::checkJavaList(const QList<JavaEntry> &list) {
     QList<JavaEntry> valid;
     for (auto entry : list) {
         if (checkJava(entry)) {
@@ -352,8 +344,7 @@ QList<JavaEntry> JavaManager::checkJavaList(const QList<JavaEntry> &list)
 
 // Version parsing
 
-QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output)
-{
+QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output) {
     // Try to find version string in output
     // Formats:
     //   java version "1.8.0_321"
@@ -404,8 +395,7 @@ QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output)
 // Java selection
 
 JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
-                                    const QVersionNumber &maxVersion)
-{
+                                    const QVersionNumber &maxVersion) {
     QList<JavaEntry*> candidates;
 
     for (auto &java : m_javaList) {
@@ -427,8 +417,7 @@ JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
     return candidates.first();
 }
 
-JavaEntry* JavaManager::selectJavaForVersion(const McVersion &version)
-{
+JavaEntry* JavaManager::selectJavaForVersion(const McVersion &version) {
     QVersionNumber minVer, maxVer;
     getJavaCompatibilityRange(version, minVer, maxVer);
     return selectJava(minVer, maxVer);
@@ -438,8 +427,7 @@ JavaEntry* JavaManager::selectJavaForVersion(const McVersion &version)
 
 void JavaManager::getJavaCompatibilityRange(const McVersion &version,
                                              QVersionNumber &outMin,
-                                             QVersionNumber &outMax)
-{
+                                             QVersionNumber &outMax) {
     // Default: no restrictions
     outMin = QVersionNumber();
     outMax = QVersionNumber();
@@ -526,8 +514,7 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
 
 // Java selection (getter/setter)
 
-void JavaManager::setSelectedJava(JavaEntry *entry)
-{
+void JavaManager::setSelectedJava(JavaEntry *entry) {
     m_selectedJava = entry;
     emit selectedJavaChanged();
 }
