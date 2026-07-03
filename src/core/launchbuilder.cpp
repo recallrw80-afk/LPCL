@@ -30,6 +30,7 @@ bool LaunchBuilder::build(const McVersion &version,
     m_jvmArgs.clear();
     m_gameArgs.clear();
     m_mainClass.clear();
+    m_commandLine.clear();
 
     if (m_versionJson.is_discarded() || m_versionJson.is_null()) {
         qCWarning(logBuild) << "No version JSON set";
@@ -48,6 +49,11 @@ bool LaunchBuilder::build(const McVersion &version,
     // Build replacements and apply
     QMap<QString, QString> repl = buildReplacements(version, java, login);
 
+    // Cache the fully substituted command line for display (commandLine()).
+    m_commandLine = applyReplacements(m_jvmArgs, repl);
+    m_commandLine.append(m_mainClass);
+    m_commandLine.append(applyReplacements(m_gameArgs, repl));
+
     qCInfo(logBuild) << "=== Launch Arguments Begin ===";
     for (const auto &arg : applyReplacements(m_jvmArgs, repl)) {
         qCInfo(logBuild).noquote() << "[JVM]" << arg;
@@ -63,12 +69,10 @@ bool LaunchBuilder::build(const McVersion &version,
 
 QString LaunchBuilder::commandLine() const
 {
-    auto repl = QMap<QString, QString>(); // No replacements for display
-    QStringList all;
-    all.append(applyReplacements(m_jvmArgs, repl));
-    all.append(m_mainClass);
-    all.append(applyReplacements(m_gameArgs, repl));
-    return all.join(' ');
+    // Returns the fully substituted argument list cached by build().
+    // Previously this used an empty replacement map, which left ${classpath},
+    // ${auth_player_name}, etc. as literal tokens in the display string.
+    return m_commandLine.join(' ');
 }
 
 // JVM arguments

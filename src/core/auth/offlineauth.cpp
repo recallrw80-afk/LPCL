@@ -16,12 +16,7 @@ void OfflineAuth::login(Callback onComplete) {
         return;
     }
 
-    LoginResult result;
-    result.name = m_username.trimmed();
-    result.uuid = generateOfflineUuid(result.name);
-    result.accessToken = "0"; // Offline mode doesn't need a real token
-    result.type = "Legacy";
-    result.clientToken = generateClientToken();
+    LoginResult result = createOfflineLogin(m_username);
 
     qCInfo(logAuth) << "Offline login for:" << result.name << "uuid:" << result.uuid;
 
@@ -51,4 +46,14 @@ QString OfflineAuth::generateOfflineUuid(const QString &username) {
 
 QString OfflineAuth::generateClientToken() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
+}
+
+LoginResult OfflineAuth::createOfflineLogin(const QString &username) {
+    LoginResult result;
+    result.name = username.trimmed();
+    result.uuid = generateOfflineUuid(result.name);
+    result.accessToken = "0"; // Offline mode doesn't need a real token
+    result.type = "Legacy";
+    result.clientToken = generateClientToken();
+    return result;
 }

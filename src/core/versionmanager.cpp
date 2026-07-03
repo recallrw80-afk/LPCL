@@ -133,7 +133,8 @@ void VersionManager::loadLocalVersions() {
 
     m_versionList.clear();
 
-    QString versionsDir = m_mcFolder + "versions/";
+    // m_mcFolder ends with "/", so use QDir::filePath to avoid a "//versions" path.
+    QString versionsDir = QDir(m_mcFolder).filePath("versions");
     QDir dir(versionsDir);
     if (!dir.exists()) {
         m_isLoading = false;
@@ -280,7 +281,8 @@ QStringList VersionManager::versionIds() const
 // Version parsing
 
 McVersion VersionManager::loadVersion(const QString &versionId) {
-    QString jsonPath = m_mcFolder + "versions/" + versionId + "/" + versionId + ".json";
+    // QDir::filePath keeps the path clean (no "//" from the trailing slash in m_mcFolder).
+    QString jsonPath = QDir(m_mcFolder).filePath("versions/" + versionId + "/" + versionId + ".json");
     return parseVersionJson(jsonPath);
 }
 

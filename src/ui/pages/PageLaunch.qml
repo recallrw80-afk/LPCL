@@ -18,6 +18,7 @@ Item {
     property string selectedVersion: ""
     property string accountName: ""
     property string accountUuid: ""
+    property var loginResult: null         // Last successful LoginResult (gadget)
     property string msDeviceCode: ""
     property string msVerifyUrl: ""
     property bool msPolling: false
@@ -651,6 +652,7 @@ Item {
             msPolling = false
             if (success) {
                 accountName = result.name; accountUuid = result.uuid
+                loginResult = result
                 statusText = "已登录: " + accountName
             } else {
                 loginType = 0
@@ -671,7 +673,12 @@ Item {
             accountName = "Player"
             accountUuid = OfflineAuth.generateOfflineUuid(accountName)
         }
-        Launcher.launchVersion(selectedVersion)
+        // Supply credentials to the launcher. Build an offline login if no
+        // prior login result exists (e.g. user never went through MS auth).
+        var login = loginResult
+        if (login === null)
+            login = OfflineAuth.createOfflineLogin(accountName)
+        Launcher.launchVersion(selectedVersion, login)
     }
 
     function startMsLogin() { msPolling = true; msAuth.startLogin() }

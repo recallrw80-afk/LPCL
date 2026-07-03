@@ -248,6 +248,66 @@ QNetworkReply* DownloadManager::downloadJson(const QString &url,
     }, maxRetries);
 }
 
+// ---- Memory download with custom headers ----
+
+QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
+                                                              const QMap<QByteArray, QByteArray> &headers,
+                                                              std::function<void(bool, QString)> onComplete,
+                                                              int maxRetries) {
+    QNetworkRequest request(url);
+    request.setRawHeader("User-Agent", "LPCL/0.1");
+    request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
+                         QNetworkRequest::NoLessSafeRedirectPolicy);
+    for (auto it = headers.constBegin(); it != headers.constEnd(); ++it) {
+        request.setRawHeader(it.key(), it.value());
+    }
+
+    QNetworkReply *reply = m_nam->get(request);
+
+    // Capture headers by value for retry recursion.
+    connect(reply, &QNetworkReply::finished, this, [=, this]() {
+        reply->deleteLater();
+        int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
+        bool success = (reply->error() == QNetworkReply::NoError && statusCode < 400);
+
+        if (!success && maxRetries > 0) {
+            QTimer::singleShot(500, this, [=, this]() {
+                downloadToStringWithHeaders(url, headers, onComplete, maxRetries - 1);
+            });
+            return;
+        }
+
+        if (!success) {
+            if (onComplete) onComplete(false, reply->errorString());
+            return;
+        }
+
+        QByteArray data = reply->readAll();
+        if (onComplete) onComplete(true, QString::fromUtf8(data));
+    });
+
+    return reply;
+}
+
+QNetworkReply* DownloadManager::downloadJsonWithHeaders(const QString &url,
+                                                          const QMap<QByteArray, QByteArray> &headers,
+                                                          std::function<void(bool, QString, nlohmann::json)> onComplete,
+                                                          int maxRetries) {
+    return downloadToStringWithHeaders(url, headers,
+        [onComplete](bool success, QString data) {
+            if (!success) {
+                if (onComplete) onComplete(false, data, nlohmann::json());
+                return;
+            }
+            try {
+                nlohmann::json j = nlohmann::json::parse(data.toStdString());
+                if (onComplete) onComplete(true, data, j);
+            } catch (const std::exception &e) {
+                if (onComplete) onComplete(false, QString("JSON parse error: ") + e.what(), nlohmann::json());
+            }
+        }, maxRetries);
+}
+
 // ---- URL helpers ----
 
 QString DownloadManager::versionManifestUrl() {

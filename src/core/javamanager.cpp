@@ -92,9 +92,13 @@ bool JavaManager::isJavaBinary(const QString &path) const
 }
 
 void JavaManager::scanSystemJava() {
-    if (m_isScanning) return;
-
-    m_isScanning = true;
+    // Check-and-set under the mutex so two near-simultaneous calls can't
+    // both pass the guard and spawn duplicate pool work.
+    {
+        QMutexLocker lock(&m_mutex);
+        if (m_isScanning) return;
+        m_isScanning = true;
+    }
     emit scanningChanged();
     emit javaScanProgress("Scanning for Java...");
 
@@ -114,7 +118,10 @@ void JavaManager::scanSystemJava() {
         }
 
         emit javaScanProgress("Java scan complete");
-        m_isScanning = false;
+        {
+            QMutexLocker lock(&m_mutex);
+            m_isScanning = false;
+        }
         emit scanningChanged();
     });
 }

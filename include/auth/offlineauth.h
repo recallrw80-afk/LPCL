@@ -28,6 +28,10 @@ public:
     /// Generate a random client token
     static QString generateClientToken();
 
+    /// Build a complete offline LoginResult for a username (QML-callable factory).
+    /// Used by the launch page to supply credentials to Launcher.launchVersion().
+    Q_INVOKABLE static LoginResult createOfflineLogin(const QString &username);
+
 private:
     QString m_username;
 };

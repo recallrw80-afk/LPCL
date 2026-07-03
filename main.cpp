@@ -135,8 +135,12 @@ int main(int argc, char *argv[]){
 
     // Close splash after main window renders + fade overlap
     //   Splash fades → 400ms, window fades in → 250ms (starts immediately)
-    //   Close splash at 450ms so crossfade completes cleanly
-    QTimer::singleShot(450, splashWin, &QQuickWindow::close);
+    //   Close splash at 450ms so crossfade completes cleanly.
+    //   deleteLater() frees the QQuickWindow — close() alone would leak it.
+    QTimer::singleShot(450, splashWin, [splashWin]() {
+        splashWin->close();
+        splashWin->deleteLater();
+    });
 
     return app.exec();
 }

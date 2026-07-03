@@ -51,7 +51,7 @@ void Settings::initialize(const QString &configPath) {
 void Settings::initDefaults() {
     // Set default values if not present
     if (!m_settings->contains("LoginType")) {
-        m_settings->setValue("LoginType", static_cast<int>(2)); // Default: Nide/Auth? No — Original default is Legacy = 0
+        m_settings->setValue("LoginType", static_cast<int>(0)); // Default: Legacy (offline)
     }
     if (!m_settings->contains("LaunchArgumentWindowType")) {
         m_settings->setValue("LaunchArgumentWindowType", 1); // Windowed

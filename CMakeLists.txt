@@ -16,6 +16,7 @@ endif()
 message(STATUS "Using Qt prefix: ${CMAKE_PREFIX_PATH}")
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
+find_package(ZLIB REQUIRED)  # file_utils.cpp uses zlib for raw DEFLATE (jar/native extraction)
 
 qt_standard_project_setup(REQUIRES 6.8)
 
@@ -164,6 +165,7 @@ target_link_libraries(LiunxPlainCraftLauncher
     PRIVATE Qt6::Network
     PRIVATE Qt6::Concurrent
     PRIVATE nlohmann_json::nlohmann_json
+    PRIVATE ZLIB::ZLIB
 )
 
 # ---- Version defines (injected at compile time, mirrors Windows PCL CI injection) ----

@@ -74,6 +74,7 @@ private:
     QStringList m_jvmArgs;
     QStringList m_gameArgs;
     QString m_mainClass;
+    QStringList m_commandLine; ///< Fully substituted JVM+main+game args, cached by build()
 };
 
 #endif // LPCL_LAUNCHBUILDER_H

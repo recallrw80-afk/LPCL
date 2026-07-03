@@ -3,7 +3,6 @@
 #include "core/versionmanager.h"
 #include "core/settings.h"
 #include "core/javamanager.h"
-#include "auth/offlineauth.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -25,6 +24,8 @@ Launcher::Launcher() {
             this, &Launcher::onGameStdout);
     connect(m_gameProcess, &QProcess::readyReadStandardError,
             this, &Launcher::onGameStderr);
+    connect(m_gameProcess, &QProcess::started,
+            this, &Launcher::onGameStarted);
     connect(m_gameProcess, QOverload<int, QProcess::ExitStatus>::of(&QProcess::finished),
             this, &Launcher::onGameFinished);
     connect(m_gameProcess, &QProcess::errorOccurred,
@@ -79,7 +80,7 @@ bool Launcher::launch(const McVersion &version,
     return true;
 }
 
-bool Launcher::launchVersion(const QString &versionId) {
+bool Launcher::launchVersion(const QString &versionId, const LoginResult &login) {
     if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
         qCWarning(logLaunch) << "Game already running or launching";
         return false;
@@ -126,17 +127,10 @@ bool Launcher::launchVersion(const QString &versionId) {
         }
     }
 
-    // 3. Create offline login
+    // 3. Login state is supplied by the caller — no hardcoded offline assumption.
     setState(LaunchState::LoggingIn);
     setStatus("正在设置登录...");
     setProgress(15);
-
-    LoginResult login;
-    login.name = "Player";
-    login.uuid = OfflineAuth::generateOfflineUuid("Player");
-    login.accessToken = "0";
-    login.type = "Legacy";
-    login.clientToken = OfflineAuth::generateClientToken();
 
     // 4. Build launch options from settings
     McLaunchOptions options;
@@ -204,15 +198,13 @@ void Launcher::doLaunch() {
     m_gameProcess->setProgram(javaExe);
     m_gameProcess->setArguments(allArgs);
 
-    // Start
+    // Start asynchronously. The Running state and gameStarted() signal are
+    // emitted from onGameStarted() (connected to QProcess::started) so we
+    // never block the Qt event loop. Start failures arrive via errorOccurred.
     m_gameProcess->start();
+}
 
-    if (!m_gameProcess->waitForStarted(10000)) {
-        setState(LaunchState::Failed);
-        emit launchFailed("Failed to start game process: " + m_gameProcess->errorString());
-        return;
-    }
-
+void Launcher::onGameStarted() {
     setState(LaunchState::Running);
     setStatus("Game running...");
     emit gameStarted();

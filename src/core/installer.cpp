@@ -132,10 +132,6 @@ void Installer::installForge(const QString &mcVersionDir, const QString &mcVersi
         [this, mcVersionDir, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
 
-            QStringList args;
-            args << "-jar" << jarPath;
-            args << "--installClient";
-            args << mcVersionDir;
             runInstallerJar(jarPath, javaPath, {"-jar", jarPath, "--installClient", mcVersionDir},
                             onComplete);
         });
@@ -231,10 +227,10 @@ void Installer::fetchNeoForgeVersions(std::function<void(bool, QStringList)> onC
     });
 }
 
-QString Installer::detectBestForgeVersion(const QString &mcVersion) {
-    // Best-effort: return the recommended Forge version for this MC version
-    // For production, this should call the Forge API
-    // Known stable versions as fallback:
+void Installer::detectBestForgeVersion(const QString &mcVersion,
+                                         std::function<void(QString)> onComplete) {
+    // Best-effort: return the recommended Forge version for this MC version.
+    // For production, this should call the Forge API. Known stable versions:
     QMap<QString, QString> knownStable = {
         {"1.20.1", "47.3.0"},
         {"1.20.4", "49.0.47"},
@@ -245,18 +241,19 @@ QString Installer::detectBestForgeVersion(const QString &mcVersion) {
         {"1.12.2", "14.23.5.2859"},
         {"1.8.9",  "11.15.1.2318"},
     };
-    return knownStable.value(mcVersion);
+    if (onComplete) onComplete(knownStable.value(mcVersion));
 }
 
 QString Installer::detectBestFabricVersion(const QString &) {
     return "0.16.10"; // Latest stable Fabric loader
 }
 
-QString Installer::detectBestNeoForgeVersion(const QString &mcVersion) {
+void Installer::detectBestNeoForgeVersion(const QString &mcVersion,
+                                            std::function<void(QString)> onComplete) {
     QMap<QString, QString> knownStable = {
         {"1.20.1", "47.1.109"},
         {"1.20.4", "68.1.66"},
         {"1.21",   "21.1.66"},
     };
-    return knownStable.value(mcVersion);
+    if (onComplete) onComplete(knownStable.value(mcVersion));
 }

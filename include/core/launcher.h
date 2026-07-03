@@ -44,8 +44,10 @@ public:
                              const LoginResult &login,
                              const McLaunchOptions &options = McLaunchOptions());
 
-    /// QML-friendly: launch by version ID (handles java/login internally)
-    Q_INVOKABLE bool launchVersion(const QString &versionId);
+    /// QML-friendly: launch by version ID. The caller supplies the login
+    /// credentials (e.g. from OfflineAuth.createOfflineLogin or an MS login
+    /// result) — the launcher no longer assumes offline "Player".
+    Q_INVOKABLE bool launchVersion(const QString &versionId, const LoginResult &login);
 
     /// Interrupt/cancel the launch
     Q_INVOKABLE void interrupt();
@@ -70,6 +72,7 @@ signals:
 private slots:
     void onGameStdout();
     void onGameStderr();
+    void onGameStarted();
     void onGameFinished(int exitCode, QProcess::ExitStatus exitStatus);
     void onGameError(QProcess::ProcessError error);
 

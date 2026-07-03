@@ -11,6 +11,7 @@
 #include <QJsonArray>
 #include <QLoggingCategory>
 #include <QNetworkReply>
+#include <QSharedPointer>
 
 static Q_LOGGING_CATEGORY(logAsset, "lpcl.asset")
 
@@ -273,9 +274,9 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
     }
 
     int total = toDownload.size();
-    int *completed = new int(0);
-    int *failed = new int(0);
-    int *totalPtr = new int(total);
+    auto completed = QSharedPointer<int>::create(0);
+    auto failed = QSharedPointer<int>::create(0);
+    auto totalPtr = QSharedPointer<int>::create(total);
 
     emit downloadLog(QString("Downloading %1 libraries...").arg(total));
     emit downloadProgress("Libraries", 0, total);
@@ -291,11 +292,11 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
 
                 if (*completed >= *totalPtr) {
                     int f = *failed;
-                    delete completed; delete failed; delete totalPtr;
+                    int t = *totalPtr;
                     if (f > 0) {
-                        QString msg = QString("%1/%2 libraries failed").arg(f).arg(*totalPtr);
+                        QString msg = QString("%1/%2 libraries failed").arg(f).arg(t);
                         emit downloadLog(msg);
-                        if (onComplete) onComplete(*totalPtr - f > 0, msg);
+                        if (onComplete) onComplete(t - f > 0, msg);
                     } else {
                         emit downloadLog("All libraries downloaded");
                         if (onComplete) onComplete(true, QString());
@@ -377,8 +378,8 @@ void AssetDownloader::downloadAssets(const McVersion &version,
         }
 
         int total = toDownload.size();
-        int *completed = new int(0);
-        int *failed = new int(0);
+        auto completed = QSharedPointer<int>::create(0);
+        auto failed = QSharedPointer<int>::create(0);
 
         emit downloadLog(QString("Downloading %1 assets...").arg(total));
         emit downloadProgress("Assets", 0, total);
@@ -395,7 +396,6 @@ void AssetDownloader::downloadAssets(const McVersion &version,
                     }
                     if (*completed >= total) {
                         int f = *failed;
-                        delete completed; delete failed;
                         if (f > 0) {
                             emit downloadLog(QString("%1/%2 assets failed").arg(f).arg(total));
                         } else {
@@ -520,8 +520,8 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     }
 
     int total = nativesToDownload.size();
-    int *completed = new int(0);
-    int *failed = new int(0);
+    auto completed = QSharedPointer<int>::create(0);
+    auto failed = QSharedPointer<int>::create(0);
 
     QString nativesDir = version.pathVersion + "natives/";
     QDir().mkpath(nativesDir);
@@ -529,7 +529,7 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     emit downloadLog(QString("Downloading %1 native libraries...").arg(total));
     emit downloadProgress("Natives", 0, total);
 
-    auto *downloadedJars = new QStringList();
+    auto downloadedJars = QSharedPointer<QStringList>::create();
 
     for (const auto &item : nativesToDownload) {
         DownloadManager::instance().download(
@@ -555,7 +555,6 @@ void AssetDownloader::downloadNatives(const McVersion &version,
                     }
                     emit downloadLog("Native libraries extracted to: " + nativesDir);
                     int f = *failed;
-                    delete completed; delete failed; delete downloadedJars;
                     if (onComplete) onComplete(f == 0, f > 0 ? QString("%1/%2 failed").arg(f).arg(total) : QString());
                 }
             });
