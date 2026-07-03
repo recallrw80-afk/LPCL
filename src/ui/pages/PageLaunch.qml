@@ -327,7 +327,7 @@ Item {
                             LPCLButton {
                                 id: msBtn
                                 Layout.preferredWidth: 100
-                                padding: 10
+                                padding: 5
                                 radius: height / 2
                                 colorType: loginType === 5 ? 1 : 0
                                 contentItem: Row {
@@ -353,7 +353,7 @@ Item {
                             LPCLButton {
                                 id: offlineBtn
                                 Layout.preferredWidth: 100
-                                padding: 10
+                                padding: 5
                                 radius: height / 2
                                 colorType: loginType === 0 ? 1 : 0
                                 contentItem: Row {
