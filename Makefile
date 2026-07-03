@@ -1,7 +1,7 @@
 # Quick build & run for LPCL
 
 BUILD_DIR  := cmake-build-debug
-QT_PREFIX  := $${HOME}/Qt/6.8.3/gcc_64
+QT_PREFIX  := $${HOME}/Qt/6.11.1/gcc_64
 NPROC      := $(shell nproc)
 
 .PHONY: all run

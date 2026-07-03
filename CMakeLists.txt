@@ -18,7 +18,7 @@ message(STATUS "Using Qt prefix: ${CMAKE_PREFIX_PATH}")
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
 find_package(ZLIB REQUIRED)  # file_utils.cpp uses zlib for raw DEFLATE (jar/native extraction)
 
-qt_standard_project_setup(REQUIRES 6.8)
+qt_standard_project_setup(REQUIRES 6.11)
 
 # Content of downloaded design from Figma to Qt or similar
 if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/importedcontent/CMakeLists.txt")
