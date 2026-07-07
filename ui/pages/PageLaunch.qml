@@ -405,14 +405,11 @@ Item {
                                 }
                                 clip: true
 
-                                Image {
+                                LPCLIcon {
                                     anchors.fill: parent
                                     anchors.margins: 4
-                                    source: "qrc:/assets/Steve.svg"
-                                    sourceSize: Qt.size(56, 56)
-                                    fillMode: Image.PreserveAspectFit
-                                    smooth: true
-                                    mipmap: true
+                                    assetsIcon: "Steve.svg"
+                                    iconColor: Theme.color2
                                 }
                             }
 

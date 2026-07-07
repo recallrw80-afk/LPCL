@@ -8,14 +8,24 @@ Item {
 
     // ---- Public API ----
     property string iconSource: ""     // QRC path (e.g. "qrc:/assets/icons/xxx.svg")
+    property string defaultIcon: ""
     property string lucideIcon: ""     // Lucide icon name (e.g. "play") → auto-resolves
+    property string assetsIcon: ""
     property color iconColor: Theme.color3
     property int size: 0               // When > 0, overrides width and height
 
     implicitWidth: size > 0 ? size : 28
     implicitHeight: size > 0 ? size : 28
 
-    readonly property url _resolvedSource: lucideIcon !== "" ? "qrc:/assets/icons/lucide/" + lucideIcon + ".svg" : iconSource
+    readonly property url _resolvedSource: {
+        if (lucideIcon !== "")
+            return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
+        if (assetsIcon !== "")
+            return "qrc:/assets/" + assetsIcon + ".svg";
+        if (defaultIcon !== "")
+            return "qrc:/assets/icons/" + defaultIcon + ".svg";
+        return iconSource;
+    }
 
     Image {
         id: iconImage
