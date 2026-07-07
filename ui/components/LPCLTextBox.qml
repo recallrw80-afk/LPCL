@@ -7,7 +7,6 @@ Item {
     id: wrapper
 
     property alias text: field.text
-    property alias enabled: field.enabled
     property alias placeholderText: field.placeholderText
     property alias readOnly: field.readOnly
     property alias validator: field.validator
@@ -63,6 +62,7 @@ Item {
     TextField {
         id: field
         anchors.fill: parent
+        enabled: wrapper.enabled   // follow Item.enabled instead of shadowing it
         anchors.leftMargin: 7
         anchors.rightMargin: 7
 

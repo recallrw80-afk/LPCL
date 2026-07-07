@@ -26,9 +26,10 @@ ApplicationWindow {
 
     // Center on screen (overlays splash icon position)
     Component.onCompleted: {
-        const screenGeo = Screen.virtualGeometry
-        x = (screenGeo.width - width) / 2
-        y = (screenGeo.height - height) / 2
+        // Screen.virtualGeometry can be undefined early on; Screen.width/height
+        // are the same attached object's scalar props and are reliably available.
+        x = (Screen.width - width) / 2
+        y = (Screen.height - height) / 2
     }
 
     visible: true

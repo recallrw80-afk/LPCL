@@ -9,7 +9,6 @@ Item {
 
     // ---- Public API ----
     property alias text: labText.text
-    property alias enabled: mouseArea.enabled
     property alias font: labText.font
     property alias contentItem: contentLoader.sourceComponent
     property int colorType: 0           // 0=Normal, 1=Highlight, 2=Red, 3=Disabled
@@ -130,6 +129,7 @@ Item {
     MouseArea {
         id: mouseArea
         anchors.fill: parent
+        enabled: wrapper.enabled   // follow Item.enabled instead of shadowing it
         hoverEnabled: true
         cursorShape: Qt.PointingHandCursor
 
