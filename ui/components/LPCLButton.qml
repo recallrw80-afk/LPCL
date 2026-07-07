@@ -10,6 +10,9 @@ Item {
     // ---- Public API ----
     property alias text: labText.text
     property alias font: labText.font
+    // enabled — inherited from Item; propagate to child MouseArea
+    onEnabledChanged: mouseArea.enabled = enabled
+    Component.onCompleted: mouseArea.enabled = enabled
     property alias contentItem: contentLoader.sourceComponent
     property int colorType: 0           // 0=Normal, 1=Highlight, 2=Red, 3=Disabled
     property int padding: 10

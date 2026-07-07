@@ -15,9 +15,7 @@ Item {
     implicitWidth: size > 0 ? size : 28
     implicitHeight: size > 0 ? size : 28
 
-    readonly property url _resolvedSource: lucideIcon !== ""
-        ? "qrc:/assets/icons/lucide/" + lucideIcon + ".svg"
-        : iconSource
+    readonly property url _resolvedSource: lucideIcon !== "" ? "qrc:/assets/icons/lucide/" + lucideIcon + ".svg" : iconSource
 
     Image {
         id: iconImage

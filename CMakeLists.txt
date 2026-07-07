@@ -138,7 +138,8 @@ endforeach()
 
 # Icon assets — auto-collect all SVGs (relative paths required by Qt resources)
 file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
-list(APPEND ICON_FILES assets/icons/icon.ico)
+file(GLOB ASSET_SVG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/*.svg)
+list(APPEND ICON_FILES ${ASSET_SVG_FILES} assets/icons/icon.ico)
 qt_add_resources(LiunxPlainCraftLauncher "assets"
     PREFIX "/"
     FILES ${ICON_FILES}

@@ -385,41 +385,53 @@ Item {
                         // Avatar + username
                         Item {
                             Layout.fillWidth: true
-                            Layout.preferredHeight: 70
+                            Layout.preferredHeight: 110
                             Layout.topMargin: 10
 
+                            // Avatar — Steve.svg
                             Rectangle {
+                                id: avatarFrame
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: parent.top
                                 }
-                                width: 40
-                                height: 40
-                                radius: 20
+                                width: 64
+                                height: 64
+                                radius: 32
                                 color: Theme.color7
                                 border {
                                     width: 1
                                     color: Theme.gray5
                                 }
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: accountName ? accountName.charAt(0).toUpperCase() : "?"
-                                    font.family: Theme.fontFamily
-                                    font.pixelSize: 18
-                                    font.bold: true
-                                    color: Theme.color2
+                                clip: true
+
+                                Image {
+                                    anchors.fill: parent
+                                    anchors.margins: 4
+                                    source: "qrc:/assets/Steve.svg"
+                                    sourceSize: Qt.size(56, 56)
+                                    fillMode: Image.PreserveAspectFit
+                                    smooth: true
+                                    mipmap: true
                                 }
                             }
-                            Text {
+
+                            // Username input
+                            LPCLTextBox {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
-                                    top: parent.top
-                                    topMargin: 44
+                                    top: avatarFrame.bottom
+                                    topMargin: 10
                                 }
+                                width: 180
+                                placeholderText: "输入用户名"
                                 text: accountName || ""
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.fontSizeSmall
-                                color: Theme.gray3
+                                onTextChanged: {
+                                    accountName = text;
+                                    if (!accountUuid && loginType === 0) {
+                                        accountUuid = OfflineAuth.generateOfflineUuid(accountName || "Player");
+                                    }
+                                }
                             }
                         }
 
@@ -471,7 +483,7 @@ Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 45
                             Layout.leftMargin: 20
-                            Layout.rightMargin: 10
+                            Layout.rightMargin: 20
 
                             LPCLButton {
                                 id: btnVersion

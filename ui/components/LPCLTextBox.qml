@@ -3,8 +3,8 @@ import QtQuick.Controls.Basic
 import "../styles"
 
 // MyTextBox — wraps TextField to avoid Qt6 FINAL property conflicts
-Item {
-    id: wrapper
+TextField {
+    id: field
 
     property alias text: field.text
     property alias placeholderText: field.placeholderText
@@ -13,11 +13,24 @@ Item {
     property alias echoMode: field.echoMode
 
     property string hintText: ""
+    property alias hintText: hintTextItem.text
     property bool hasError: false
     property string errorText: ""
 
+    // enabled — inherited from Control; no alias needed
+
     implicitWidth: 200
     implicitHeight: 28
+
+    font.family: Theme.fontFamily
+    font.pixelSize: Theme.fontSize
+    color: enabled ? Theme.color1 : Theme.gray4
+    verticalAlignment: TextInput.AlignVCenter
+    selectionColor: Theme.color3
+    selectedTextColor: Theme.pureWhite
+
+    leftPadding: 7
+    rightPadding: 7
 
     // Dynamic border color
     property color borderColor: {
@@ -35,26 +48,26 @@ Item {
     }
 
     // Background
-    Rectangle {
-        anchors.fill: parent
+    background: Rectangle {
         radius: Theme.inputRadius
         border.width: 1
-        border.color: wrapper.borderColor
-        color: wrapper.bgColor
+        border.color: field.borderColor
+        color: field.bgColor
 
-        Behavior on border.color { ColorAnimation { duration: wrapper.hasError || field.activeFocus ? 10 : 100 } }
+        Behavior on border.color { ColorAnimation { duration: field.hasError || field.activeFocus ? 10 : 100 } }
         Behavior on color { ColorAnimation { duration: 100 } }
 
         // Hint text (placeholder overlay)
         Text {
+            id: hintTextItem
             anchors.fill: parent
             anchors.leftMargin: 7
             verticalAlignment: Text.AlignVCenter
-            text: !field.text && !field.activeFocus ? wrapper.hintText : ""
+            text: ""
             font.family: Theme.fontFamily
             font.pixelSize: Theme.fontSize
             color: Theme.gray4
-            visible: !field.text && !field.activeFocus && wrapper.hintText !== ""
+            visible: !field.text && !field.activeFocus && text !== ""
         }
     }
 
