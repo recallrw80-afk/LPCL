@@ -386,7 +386,7 @@ Item {
                         Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 110
-                            Layout.topMargin: 10
+                            Layout.topMargin: 70
 
                             // Avatar
                             LPCLIcon {
