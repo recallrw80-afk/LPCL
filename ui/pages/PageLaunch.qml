@@ -408,8 +408,7 @@ Item {
                                 LPCLIcon {
                                     anchors.fill: parent
                                     anchors.margins: 4
-                                    assetsIcon: "Steve.svg"
-                                    iconColor: Theme.color2
+                                    assetsIcon: "Steve"
                                 }
                             }
 
