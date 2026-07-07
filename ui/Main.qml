@@ -3,9 +3,9 @@ import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import LPCL.Core
-import "src/ui/components"
-import "src/ui/pages"
-import "src/ui/styles"
+import "components"
+import "pages"
+import "styles"
 
 ApplicationWindow {
     id: window

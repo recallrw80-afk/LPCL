@@ -92,7 +92,7 @@ set(CORE_HEADERS
 )
 
 qt_add_executable(LiunxPlainCraftLauncher
-    main.cpp
+    src/main.cpp
     ${CORE_SOURCES}
     ${CORE_HEADERS}
 )
@@ -168,7 +168,7 @@ target_compile_definitions(LiunxPlainCraftLauncher PRIVATE
 
 # Mark Theme.qml as singleton — pragma Singleton in the file is not enough;
 # CMake must be told explicitly so the generated qmldir includes "singleton Theme"
-set_source_files_properties(src/ui/styles/Theme.qml PROPERTIES
+set_source_files_properties(ui/styles/Theme.qml PROPERTIES
     QT_QML_SINGLETON_TYPE TRUE
 )
 
@@ -176,20 +176,20 @@ qt_add_qml_module(LiunxPlainCraftLauncher
     URI LPCL
     VERSION 1.0
     QML_FILES
-        Main.qml
-        src/ui/pages/PageLaunch.qml
-        src/ui/pages/PageDownload.qml
-        src/ui/pages/PageSettings.qml
-        src/ui/pages/PageMore.qml
-        src/ui/pages/PageSelect.qml
-        src/ui/pages/LoginPage.qml
-        src/ui/components/LPCLButton.qml
-        src/ui/components/LPCLIcon.qml
-        src/ui/components/LPCLComboBox.qml
-        src/ui/components/LPCLProgressBar.qml
-        src/ui/components/LPCLTextBox.qml
-        src/ui/components/LPCLScrollBar.qml
-        src/ui/styles/Theme.qml
+        ui/Main.qml
+        ui/pages/PageLaunch.qml
+        ui/pages/PageDownload.qml
+        ui/pages/PageSettings.qml
+        ui/pages/PageMore.qml
+        ui/pages/PageSelect.qml
+        ui/pages/LoginPage.qml
+        ui/components/LPCLButton.qml
+        ui/components/LPCLIcon.qml
+        ui/components/LPCLComboBox.qml
+        ui/components/LPCLProgressBar.qml
+        ui/components/LPCLTextBox.qml
+        ui/components/LPCLScrollBar.qml
+        ui/styles/Theme.qml
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
