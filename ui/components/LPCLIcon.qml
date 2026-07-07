@@ -23,14 +23,13 @@ Item {
         if (lucideIcon !== "")
             return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
         if (assetsIcon !== "") {
-            iconColor = "transparent";
+            // assets use transparent by default, but don't overwrite user-set color
+            if (iconColor == Theme.color3)
+                iconColor = "transparent";
             return "qrc:/assets/" + assetsIcon + ".svg";
         }
         return iconSource;
     }
-
-    onLucideIconChanged: if (lucideIcon !== "")
-        iconColor = Theme.color3
 
     Image {
         id: iconImage
