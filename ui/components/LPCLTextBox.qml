@@ -2,22 +2,16 @@ import QtQuick
 import QtQuick.Controls.Basic
 import "../styles"
 
-// MyTextBox — wraps TextField to avoid Qt6 FINAL property conflicts
+// MyTextBox — directly inherits TextField, background provides visual style
 TextField {
     id: field
 
-    property alias text: field.text
-    property alias placeholderText: field.placeholderText
-    property alias readOnly: field.readOnly
-    property alias validator: field.validator
-    property alias echoMode: field.echoMode
-
-    property string hintText: ""
     property alias hintText: hintTextItem.text
     property bool hasError: false
     property string errorText: ""
 
-    // enabled — inherited from Control; no alias needed
+    // enabled / text / placeholderText / readOnly / validator / echoMode
+    // — all inherited from TextField, no aliases needed
 
     implicitWidth: 200
     implicitHeight: 28
@@ -69,24 +63,5 @@ TextField {
             color: Theme.gray4
             visible: !field.text && !field.activeFocus && text !== ""
         }
-    }
-
-    // The actual TextField (styled minimally)
-    TextField {
-        id: field
-        anchors.fill: parent
-        enabled: wrapper.enabled   // follow Item.enabled instead of shadowing it
-        anchors.leftMargin: 7
-        anchors.rightMargin: 7
-
-        font.family: Theme.fontFamily
-        font.pixelSize: Theme.fontSize
-        color: enabled ? Theme.color1 : Theme.gray4
-        verticalAlignment: TextInput.AlignVCenter
-        selectionColor: Theme.color3
-        selectedTextColor: Theme.pureWhite
-
-        // Transparent background — the wrapper Rectangle provides the visual style
-        background: Item {}
     }
 }
