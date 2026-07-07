@@ -18,14 +18,19 @@ Item {
     implicitHeight: size > 0 ? size : 28
 
     readonly property url _resolvedSource: {
-        if (lucideIcon !== "")
-            return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
-        if (assetsIcon !== "")
-            return "qrc:/assets/" + assetsIcon + ".svg";
         if (defaultIcon !== "")
             return "qrc:/assets/icons/" + defaultIcon + ".svg";
+        if (lucideIcon !== "")
+            return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
+        if (assetsIcon !== "") {
+            iconColor = "transparent";
+            return "qrc:/assets/" + assetsIcon + ".svg";
+        }
         return iconSource;
     }
+
+    onLucideIconChanged: if (lucideIcon !== "")
+        iconColor = Theme.color3
 
     Image {
         id: iconImage

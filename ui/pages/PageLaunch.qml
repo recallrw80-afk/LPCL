@@ -326,7 +326,7 @@ Item {
 
                             LPCLButton {
                                 id: msBtn
-                                Layout.preferredWidth: 100
+                                Layout.preferredWidth: 80
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 5 ? 1 : 0
@@ -352,7 +352,7 @@ Item {
                             }
                             LPCLButton {
                                 id: offlineBtn
-                                Layout.preferredWidth: 100
+                                Layout.preferredWidth: 80
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 0 ? 1 : 0
@@ -388,35 +388,22 @@ Item {
                             Layout.preferredHeight: 110
                             Layout.topMargin: 10
 
-                            // Avatar — Steve.svg
-                            Rectangle {
-                                id: avatarFrame
+                            // Avatar
+                            LPCLIcon {
+                                id: avatarIcon
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: parent.top
                                 }
-                                width: 64
-                                height: 64
-                                radius: 32
-                                color: Theme.color7
-                                border {
-                                    width: 1
-                                    color: Theme.gray5
-                                }
-                                clip: true
-
-                                LPCLIcon {
-                                    anchors.fill: parent
-                                    anchors.margins: 4
-                                    assetsIcon: "Steve"
-                                }
+                                size: 64
+                                assetsIcon: "Steve"
                             }
 
                             // Username input
                             LPCLTextBox {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
-                                    top: avatarFrame.bottom
+                                    top: avatarIcon.bottom
                                     topMargin: 10
                                 }
                                 width: 180

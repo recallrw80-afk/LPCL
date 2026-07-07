@@ -43,7 +43,7 @@ int main(int argc, char *argv[]){
     auto &downloadMgr = DownloadManager::instance();
 
     // Set up logging
-    QLoggingCategory::setFilterRules("lpcl.*.debug=true");
+    QLoggingCategory::setFilterRules("lpcl.*.debug=true\nlpcl.java.debug=false");
 
     // Initial Minecraft folder from settings
     QString savedFolder = Settings::instance().getString("LaunchFolderSelect");
