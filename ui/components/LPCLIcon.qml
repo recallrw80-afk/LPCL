@@ -22,14 +22,14 @@ Item {
             return "qrc:/assets/icons/" + defaultIcon + ".svg";
         if (lucideIcon !== "")
             return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
-        if (assetsIcon !== "") {
-            // assets use transparent by default, but don't overwrite user-set color
-            if (iconColor == Theme.color3)
-                iconColor = "transparent";
+        if (assetsIcon !== "")
             return "qrc:/assets/" + assetsIcon + ".svg";
-        }
         return iconSource;
     }
+
+    // assets-type icons are transparent by default, lucide gets Theme.color3
+    onAssetsIconChanged: if (assetsIcon !== "" && iconColor == Theme.color3)
+        iconColor = "transparent"
 
     Image {
         id: iconImage

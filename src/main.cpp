@@ -109,17 +109,23 @@ int main(int argc, char *argv[]){
         splashWin->setPosition((screenGeo.width() - 128) / 2,
                                (screenGeo.height() - 128) / 2);
     }
-    // PCL icon from original (icon.ico — same file used by WPF SplashScreen)
+    // PCL icon from original (icon — same file used by WPF SplashScreen)
     QQmlComponent splashComp(&engine);
     splashComp.setData(R"(
         import QtQuick
-        Image {
+        Rectangle {
             width: 128; height: 128
-            source: "qrc:/assets/icons/icon.ico"
-            sourceSize: Qt.size(128, 128)
-            smooth: true
-            mipmap: true
-            fillMode: Image.PreserveAspectFit
+            radius: 16
+            color: "transparent"
+            clip: true
+            Image {
+                anchors.fill: parent
+                source: "qrc:/assets/logo.svg"
+                sourceSize: Qt.size(256, 256)
+                smooth: true
+                mipmap: true
+                fillMode: Image.PreserveAspectFit
+            }
         }
     )", QUrl());
     if (auto *content = qobject_cast<QQuickItem*>(splashComp.create())) {
