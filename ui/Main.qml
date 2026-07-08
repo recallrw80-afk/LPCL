@@ -14,9 +14,9 @@ ApplicationWindow {
     property string appVersion: ""
 
     // ---- Window sizing: 850:500 ratio, 40% of screen short side ----active:
-    readonly property real baseRatio: 850 / 500  // 1.7
+    readonly property real baseRatio: 850 / 600
     readonly property real screenShort: Math.min(Screen.width, Screen.height)
-    readonly property real targetHeight: screenShort * 0.4
+    readonly property real targetHeight: screenShort * 0.56
     readonly property real targetWidth: targetHeight * baseRatio
 
     width: targetWidth
@@ -28,8 +28,8 @@ ApplicationWindow {
     Component.onCompleted: {
         // Screen.virtualGeometry can be undefined early on; Screen.width/height
         // are the same attached object's scalar props and are reliably available.
-        x = (Screen.width - width) / 2
-        y = (Screen.height - height) / 2
+        x = (Screen.width - width) / 2;
+        y = (Screen.height - height) / 2;
     }
 
     visible: true
