@@ -18,6 +18,7 @@
 #include "auth/offlineauth.h"
 #include "auth/msauth.h"
 #include "download/downloadmanager.h"
+#include "util/file_drop_handler.h"
 
 int main(int argc, char *argv[]){
     // Enable multisample anti-aliasing for smooth rounded corners and shapes
@@ -79,6 +80,11 @@ int main(int argc, char *argv[]){
             return new OfflineAuth();
         });
 
+    // Register FileDropHandler singleton — intercepts external file drag-and-drop
+    // at the window level and exposes dropped paths to QML.
+    FileDropHandler *dropHandler = new FileDropHandler(&app);
+    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "FileDropHandler", dropHandler);
+
     // Register MsAuth as creatable type for QML login flow
     qmlRegisterType<MsAuth>("LPCL.Core", 1, 0, "MsAuth");
 
@@ -93,6 +99,16 @@ int main(int argc, char *argv[]){
         &app,
         []() { QCoreApplication::exit(-1); },
         Qt::QueuedConnection);
+
+    // Wire up the drop handler once the root ApplicationWindow is created.
+    QObject::connect(
+        &engine,
+        &QQmlApplicationEngine::objectCreated,
+        dropHandler,
+        [dropHandler](QObject *obj, const QUrl &) {
+            if (auto *win = qobject_cast<QQuickWindow *>(obj))
+                dropHandler->setupWindow(win);
+        });
 
     
     // Splash screen — matches original FrmStart = SplashScreen("Images\icon.ico")

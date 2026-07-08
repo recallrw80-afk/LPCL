@@ -68,6 +68,7 @@ set(CORE_SOURCES
     src/util/file_utils.cpp
     src/util/arg_utils.cpp
     src/util/crypto_utils.cpp
+    src/util/file_drop_handler.cpp
 )
 
 set(CORE_HEADERS
@@ -87,6 +88,7 @@ set(CORE_HEADERS
     include/util/file_utils.h
     include/util/arg_utils.h
     include/util/crypto_utils.h
+    include/util/file_drop_handler.h
     include/download/modplatform.h
     include/core/installer.h
 )
@@ -109,6 +111,7 @@ set(LUCIDE_ICONS
     "minus"
     "shield-check"
     "unlink"
+    "file-plus"
 )
 set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/lucide")
 file(MAKE_DIRECTORY "${LUCIDE_DIR}")

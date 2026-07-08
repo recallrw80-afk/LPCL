@@ -23,6 +23,107 @@ Item {
     property string msVerifyUrl: ""
     property bool msPolling: false
 
+    // ---- External drag-and-drop state (received via C++ FileDropHandler) ----
+    property bool dragHovering: false
+    property string dragDropResult: ""
+
+    // ---- Identify dropped file type (only active when PageLaunch is visible) ----
+    function identifyFileType(filePath) {
+        var normalized = filePath.replace(/[\\/]/g, '/');
+        var lower = normalized.toLowerCase();
+        var leaf = normalized.split('/').pop();
+
+        // Directory (trailing slash or no file extension)
+        if (lower.endsWith('/') || (leaf.indexOf('.') === -1 && leaf.length > 0)) {
+            return {
+                kind: "folder",
+                label: "文件夹",
+                icon: "folder",
+                detail: leaf
+            };
+        }
+
+        var ext = leaf.split('.').pop().toLowerCase();
+
+        if (ext === "jar") {
+            return {
+                kind: "jar",
+                label: "Mod / Jar 文件",
+                icon: "file-archive",
+                detail: leaf
+            };
+        }
+        if (ext === "zip") {
+            return {
+                kind: "zip",
+                label: "压缩包",
+                icon: "file-archive",
+                detail: leaf
+            };
+        }
+        if (ext === "mrpack") {
+            return {
+                kind: "mrpack",
+                label: "Modrinth 整合包",
+                icon: "package",
+                detail: leaf
+            };
+        }
+        if (ext === "json") {
+            return {
+                kind: "json",
+                label: "JSON 配置文件",
+                icon: "file-code",
+                detail: leaf
+            };
+        }
+        if (ext === "png" || ext === "jpg" || ext === "jpeg" || ext === "svg") {
+            return {
+                kind: "image",
+                label: "图片文件",
+                icon: "image",
+                detail: leaf
+            };
+        }
+        if (ext === "txt" || ext === "log") {
+            return {
+                kind: "text",
+                label: "文本文件",
+                icon: "file-text",
+                detail: leaf
+            };
+        }
+
+        return {
+            kind: "unknown",
+            label: "未知文件 (." + ext + ")",
+            icon: "file",
+            detail: leaf
+        };
+    }
+
+    function handleFilesDropped(files) {
+        if (!isActive || !files || files.length === 0) {
+            dragHovering = false;
+            return;
+        }
+
+        var results = [];
+        for (var i = 0; i < files.length; i++) {
+            results.push(identifyFileType(files[i]));
+        }
+
+        var lines = [];
+        for (var j = 0; j < results.length; j++) {
+            var r = results[j];
+            lines.push("• [" + r.label + "] " + r.detail);
+        }
+        dragDropResult = lines.join("\n");
+        dragHovering = false;
+
+        console.log("[PageLaunch] Files dropped:\n" + dragDropResult);
+    }
+
     visible: opacity > 0
     opacity: isActive ? 1 : 0
     scale: isActive ? 1 : 0.96
@@ -249,6 +350,21 @@ Item {
             } else if (s === Launcher.Finished || s === Launcher.Failed || s === Launcher.Interrupted) {
                 pageChangeToLogin();
             }
+        }
+    }
+
+    // External file drag-and-drop (only acts when this page is active)
+    Connections {
+        target: FileDropHandler
+        function onDragEntered() {
+            if (page.isActive)
+                page.dragHovering = true;
+        }
+        function onDragExited() {
+            page.dragHovering = false;
+        }
+        function onFilesDropped(files) {
+            page.handleFilesDropped(files);
         }
     }
 
@@ -1020,5 +1136,98 @@ Item {
     // ---- Initialize ----
     Component.onCompleted: {
         refreshButtonsUI();
+    }
+
+    // ---- Persistent DropArea (secondary pathway for external file drag-and-drop) ----
+    DropArea {
+        id: pageDropArea
+        anchors.fill: parent
+        z: 998
+        keys: ["text/uri-list"]
+        onEntered: function (drag) {
+            if (page.isActive && drag.hasUrls) {
+                page.dragHovering = true;
+                drag.acceptProposedAction();
+            }
+        }
+        onExited: {
+            page.dragHovering = false;
+        }
+        onDropped: function (drop) {
+            if (!page.isActive)
+                return;
+            var urls = drop.urls;
+            var files = [];
+            for (var i = 0; i < urls.length; i++) {
+                files.push(urls[i].toString().replace(/^(file:\/\/)/i, ''));
+            }
+            if (files.length > 0) {
+                page.handleFilesDropped(files);
+            }
+            drop.acceptProposedAction();
+        }
+    }
+
+    // ---- Drag-and-drop visual overlay (appears when external files are dragged over this page) ----
+    Rectangle {
+        id: dragOverlay
+        anchors.fill: parent
+        z: 999
+        radius: Theme.buttonRadius
+        color: Qt.rgba(0, 0, 0, 0.08)
+        visible: dragHovering
+        opacity: dragHovering ? 1 : 0
+        Behavior on opacity {
+            NumberAnimation {
+                duration: 150
+            }
+        }
+
+        // Dashed-border effect via a second rounded rect slightly inset
+        Rectangle {
+            anchors.fill: parent
+            anchors.margins: 4
+            radius: Theme.buttonRadius - 2
+            color: "transparent"
+            border {
+                width: 2
+                color: Qt.rgba(0.2, 0.55, 0.95, 0.25)
+            }
+        }
+
+        ColumnLayout {
+            anchors.centerIn: parent
+            spacing: 10
+            LPCLIcon {
+                Layout.alignment: Qt.AlignHCenter
+                size: 48
+                lucideIcon: "file-plus"
+                iconColor: Theme.color2
+                opacity: 0.7
+            }
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "释放文件以识别"
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeLaunchName
+                font.bold: true
+                color: Theme.color2
+                opacity: 0.8
+            }
+            Text {
+                Layout.alignment: Qt.AlignHCenter
+                text: "支持 Mod、整合包、资源包等"
+                font.family: Theme.fontFamily
+                font.pixelSize: Theme.fontSizeSmall
+                color: Theme.gray3
+                opacity: 0.6
+            }
+        }
+
+        // Dismiss on click-through
+        MouseArea {
+            anchors.fill: parent
+            onClicked: dragHovering = false
+        }
     }
 }
