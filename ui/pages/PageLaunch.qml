@@ -118,10 +118,9 @@ Item {
             var r = results[j];
             lines.push("• [" + r.label + "] " + r.detail);
         }
-        dragDropResult = lines.join("\n");
         dragHovering = false;
 
-        console.log("[PageLaunch] Files dropped:\n" + dragDropResult);
+        console.log(files);
     }
 
     visible: opacity > 0
@@ -1174,7 +1173,7 @@ Item {
         anchors.fill: parent
         z: 999
         radius: Theme.buttonRadius
-        color: Qt.rgba(0, 0, 0, 0.08)
+        color: Qt.rgba(0, 0, 0, 0.2)
         visible: dragHovering
         opacity: dragHovering ? 1 : 0
         Behavior on opacity {
