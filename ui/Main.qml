@@ -237,7 +237,7 @@ ApplicationWindow {
                             Text {
                                 id: lpclText
                                 text: "LPCL"
-                                color: "white"
+                                color: Theme.pureWhite
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeLogo
                                 font.bold: true
@@ -249,7 +249,7 @@ ApplicationWindow {
                                 anchors.leftMargin: 3
                                 anchors.baseline: lpclText.baseline
                                 text: window.appVersion ? window.appVersion : ""
-                                color: "white"
+                                color: Theme.pureWhite
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeSmall
                                 visible: window.appVersion !== ""
@@ -300,7 +300,7 @@ ApplicationWindow {
                                     Rectangle {
                                         anchors.fill: parent
                                         radius: tabRowContent.width
-                                        color: navTabs.currentIndex === modelData.tag ? "#ffffff" : parent.hovered ? "#33ffffff" : "transparent"
+                                        color: navTabs.currentIndex === modelData.tag ? Theme.pureWhite : parent.hovered ? "#33ffffff" : "transparent"
                                         Behavior on color {
                                             ColorAnimation {
                                                 duration: 100
@@ -318,12 +318,12 @@ ApplicationWindow {
                                                 size: 16
                                                 anchors.verticalCenter: parent.verticalCenter
                                                 lucideIcon: modelData.icon
-                                                iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : "#ffffff"
+                                                iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                             }
 
                                             Text {
                                                 text: modelData.text
-                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : "white"
+                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                                 font.family: Theme.fontFamily
                                                 font.pixelSize: Theme.fontSize
                                                 height: 27
@@ -370,7 +370,7 @@ ApplicationWindow {
                                 size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "minus"
-                                iconColor: "#ffffff"
+                                iconColor: Theme.pureWhite
                             }
                             MouseArea {
                                 anchors.fill: parent
@@ -401,7 +401,7 @@ ApplicationWindow {
                                 size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "x"
-                                iconColor: "#ffffff"
+                                iconColor: Theme.pureWhite
                             }
                             MouseArea {
                                 anchors.fill: parent

@@ -64,7 +64,7 @@ Item {
         }
         return Theme.halfWhite
     }
-    readonly property color labelColor: colorType === 1 ? "white" : borderColor
+    readonly property color labelColor: colorType === 1 ? Theme.pureWhite : borderColor
     property bool hovered: false
 
     // ---- Press scale animation (exact match original ScaleTransform) ----
