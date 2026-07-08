@@ -445,6 +445,7 @@ Item {
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 5 ? 1 : 0
+                                hasBorder: loginType === 5 ? 1 : 0
                                 contentItem: Row {
                                     spacing: 6
                                     LPCLIcon {
@@ -471,6 +472,7 @@ Item {
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 0 ? 1 : 0
+                                hasBorder: loginType === 0 ? 1 : 0
                                 contentItem: Row {
                                     spacing: 6
                                     LPCLIcon {
@@ -489,19 +491,18 @@ Item {
                                 }
                                 onClicked: {
                                     loginType = 0;
-                                    if (!accountName) {
-                                        accountName = "Player";
-                                        accountUuid = OfflineAuth.generateOfflineUuid("Player");
-                                    }
                                 }
                             }
+                        }
+
+                        Item {
+                            Layout.fillHeight: true
                         }
 
                         // Avatar + username
                         Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 110
-                            Layout.topMargin: 70
 
                             // Avatar
                             LPCLIcon {
@@ -510,7 +511,7 @@ Item {
                                     horizontalCenter: parent.horizontalCenter
                                     top: parent.top
                                 }
-                                size: 64
+                                size: 50
                                 assetsIcon: "Steve"
                             }
 
@@ -522,13 +523,10 @@ Item {
                                     topMargin: 10
                                 }
                                 width: 180
-                                placeholderText: "输入用户名"
+                                placeholderText: "游戏用户名"
                                 text: accountName || ""
                                 onTextChanged: {
                                     accountName = text;
-                                    if (!accountUuid && loginType === 0) {
-                                        accountUuid = OfflineAuth.generateOfflineUuid(accountName || "Player");
-                                    }
                                 }
                             }
                         }
@@ -536,7 +534,6 @@ Item {
                         // Spacer
                         Item {
                             Layout.fillHeight: true
-                            Layout.minimumHeight: 10
                         }
 
                         // Launch button + version status
@@ -1086,10 +1083,6 @@ Item {
     function doLaunch() {
         if (!selectedVersion)
             return;
-        if (!accountName) {
-            accountName = "Player";
-            accountUuid = OfflineAuth.generateOfflineUuid(accountName);
-        }
         // Supply credentials to the launcher. Build an offline login if no
         // prior login result exists (e.g. user never went through MS auth).
         var login = loginResult;

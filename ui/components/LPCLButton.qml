@@ -19,6 +19,7 @@ Item {
     property bool down: false
     property bool pressed: false
     property real radius: Theme.buttonRadius
+    property bool hasBorder: true        // false → borderless (background only)
 
     // state: -1=auto (mouse-driven), 0=Normal, 1=Hover, 2=Pressed, 3=Disabled
     // Set >= 0 to lock state externally; in auto mode the MouseArea updates it.
@@ -26,43 +27,50 @@ Item {
     readonly property int effectiveState: state >= 0 ? state : internalState
     property int internalState: 0
 
-    signal clicked()
-    signal pressAndHold()
+    signal clicked
+    signal pressAndHold
 
     implicitWidth: {
-        let contentW = contentLoader.item ? contentLoader.item.implicitWidth : 0
-        let base = Math.max(labText.implicitWidth, contentW) + padding * 2
-        return Math.max(60, base)
+        let contentW = contentLoader.item ? contentLoader.item.implicitWidth : 0;
+        let base = Math.max(labText.implicitWidth, contentW) + padding * 2;
+        return Math.max(60, base);
     }
     implicitHeight: 28
 
     // ---- Color logic (exact match original code-behind) ----
     property color borderColor: {
-        if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray4
+        if (effectiveState === 3 || colorType === 3 || !enabled)
+            return Theme.gray4;
         if (colorType === 1) {
             // Filled (Highlight): border = fill color
-            if (hovered) return Theme.color3
-            return Theme.color2
+            if (hovered)
+                return Theme.color3;
+            return Theme.color2;
         }
         if (hovered) {
-            if (colorType === 2) return Theme.redLight
-            return Theme.color3
+            if (colorType === 2)
+                return Theme.redLight;
+            return Theme.color3;
         }
-        if (colorType === 2) return Theme.redDark
-        return Theme.color2
+        if (colorType === 2)
+            return Theme.redDark;
+        return Theme.color2;
     }
     property color backgroundColor: {
-        if (effectiveState === 3 || colorType === 3 || !enabled) return Theme.gray6
+        if (effectiveState === 3 || colorType === 3 || !enabled)
+            return Theme.gray6;
         if (colorType === 1) {
             // Filled style — solid blue, white text
-            if (hovered) return Theme.color3
-            return Theme.color2
+            if (hovered)
+                return Theme.color3;
+            return Theme.color2;
         }
         if (hovered) {
-            if (colorType === 2) return Theme.redBack
-            return Theme.color7
+            if (colorType === 2)
+                return Theme.redBack;
+            return Theme.color7;
         }
-        return Theme.halfWhite
+        return Theme.halfWhite;
     }
     readonly property color labelColor: colorType === 1 ? Theme.pureWhite : borderColor
     property bool hovered: false
@@ -71,7 +79,10 @@ Item {
     property real btnScale: effectiveState === 2 ? 0.95 : 1.0
 
     Behavior on btnScale {
-        NumberAnimation { duration: 300; easing.type: Easing.OutBack }
+        NumberAnimation {
+            duration: 300
+            easing.type: Easing.OutBack
+        }
     }
 
     transform: Scale {
@@ -93,12 +104,20 @@ Item {
             id: panFore
             anchors.fill: parent
             radius: wrapper.radius
-            border.width: 1
+            border.width: hasBorder ? 1 : 0
             border.color: wrapper.borderColor
             color: wrapper.backgroundColor
 
-            Behavior on border.color { ColorAnimation { duration: 100 } }
-            Behavior on color { ColorAnimation { duration: 100 } }
+            Behavior on border.color {
+                ColorAnimation {
+                    duration: 100
+                }
+            }
+            Behavior on color {
+                ColorAnimation {
+                    duration: 100
+                }
+            }
 
             // ---- Content area (inset by padding) ----
             Item {
@@ -137,29 +156,29 @@ Item {
         cursorShape: Qt.PointingHandCursor
 
         onEntered: {
-            wrapper.hovered = true
-            wrapper.internalState = 1
+            wrapper.hovered = true;
+            wrapper.internalState = 1;
         }
         onExited: {
-            wrapper.hovered = false
-            wrapper.down = false
-            wrapper.pressed = false
-            wrapper.internalState = 0
+            wrapper.hovered = false;
+            wrapper.down = false;
+            wrapper.pressed = false;
+            wrapper.internalState = 0;
         }
         onPressed: {
-            wrapper.down = true
-            wrapper.pressed = true
-            wrapper.internalState = 2
+            wrapper.down = true;
+            wrapper.pressed = true;
+            wrapper.internalState = 2;
         }
         onReleased: {
-            wrapper.down = false
-            wrapper.pressed = false
-            wrapper.internalState = wrapper.hovered ? 1 : 0
+            wrapper.down = false;
+            wrapper.pressed = false;
+            wrapper.internalState = wrapper.hovered ? 1 : 0;
         }
         onCanceled: {
-            wrapper.down = false
-            wrapper.pressed = false
-            wrapper.internalState = 0
+            wrapper.down = false;
+            wrapper.pressed = false;
+            wrapper.internalState = 0;
         }
         onClicked: wrapper.clicked()
         onPressAndHold: wrapper.pressAndHold()
