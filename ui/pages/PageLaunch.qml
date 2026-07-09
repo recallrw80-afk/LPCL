@@ -520,9 +520,9 @@ Item {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: avatarIcon.bottom
-                                    topMargin: 10
+                                    topMargin: 20
                                 }
-                                width: 180
+                                width: parent.width - 40
                                 placeholderText: "游戏用户名"
                                 text: accountName || ""
                                 onTextChanged: {
@@ -556,20 +556,6 @@ Item {
                                 enabled: btnLaunchState >= 2
                                 padding: 0
                                 onClicked: launchButtonClick()
-                            }
-                            Text {
-                                anchors {
-                                    horizontalCenter: parent.horizontalCenter
-                                    bottom: parent.bottom
-                                }
-                                anchors.bottomMargin: 10
-                                text: statusText
-                                font.family: Theme.fontFamily
-                                font.pixelSize: Theme.fontSizeXSmall
-                                color: Theme.gray3
-                                horizontalAlignment: Text.AlignHCenter
-                                width: parent.width - 70
-                                elide: Text.ElideRight
                             }
                         }
 
@@ -633,6 +619,7 @@ Item {
                         }
 
                         Text {
+                            id: launchTitleText
                             text: panLaunchingTitle
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeLaunchTitle
@@ -641,11 +628,12 @@ Item {
                             Layout.topMargin: 10
                             transform: Rotation {
                                 angle: -3
-                                origin.x: parent.width / 2
-                                origin.y: parent.height / 2
+                                origin.x: launchTitleText.width / 2
+                                origin.y: launchTitleText.height / 2
                             }
                         }
                         Text {
+                            id: launchNameText
                             text: selectedVersion
                             font.family: Theme.fontFamily
                             font.pixelSize: Theme.fontSizeLaunchName
@@ -655,8 +643,8 @@ Item {
                             Layout.bottomMargin: 12
                             transform: Rotation {
                                 angle: -3
-                                origin.x: parent.width / 2
-                                origin.y: parent.height / 2
+                                origin.x: launchNameText.width / 2
+                                origin.y: launchNameText.height / 2
                             }
                         }
 
@@ -721,7 +709,7 @@ Item {
                                 Layout.preferredWidth: 80
                             }
                             Text {
-                                text: loginType === 5 ? "正版登录" : "离线登录"
+                                text: loginType === 5 ? "登录" : "离线登录"
                                 font: infoFont
                                 color: Theme.color3
                                 Layout.preferredWidth: 100
@@ -1181,10 +1169,6 @@ Item {
             anchors.margins: 4
             radius: Theme.buttonRadius - 2
             color: "transparent"
-            border {
-                width: 2
-                color: Qt.rgba(0.2, 0.55, 0.95, 0.25)
-            }
         }
 
         ColumnLayout {
@@ -1205,14 +1189,6 @@ Item {
                 font.bold: true
                 color: Theme.color2
                 opacity: 0.8
-            }
-            Text {
-                Layout.alignment: Qt.AlignHCenter
-                text: "支持 Mod、整合包、资源包等"
-                font.family: Theme.fontFamily
-                font.pixelSize: Theme.fontSizeSmall
-                color: Theme.gray3
-                opacity: 0.6
             }
         }
 
