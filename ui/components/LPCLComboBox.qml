@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import "../styles"
 
 // Exact replica of original MyComboBox (Controls/MyComboBox.vb)
 ComboBox {

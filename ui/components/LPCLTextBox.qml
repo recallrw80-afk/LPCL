@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import "../styles"
 
 // MyTextBox — directly inherits TextField, background provides visual style
 TextField {

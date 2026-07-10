@@ -2,6 +2,8 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import LPCL.Core
+import "../components"
+import "../styles"
 
 // Exact replica of PageLaunchLeft.xaml + PageLaunchRight.xaml layout + interaction logic
 // Single file: left sidebar (300px) + right content

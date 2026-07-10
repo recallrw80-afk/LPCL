@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import "../styles"
 
 // Exact replica of original MyButton (Controls/MyButton.xaml + .xaml.vb)
 // Structure: PanBack(semiTransparent) > PanFore(border+halfWhite bg) > LabText
