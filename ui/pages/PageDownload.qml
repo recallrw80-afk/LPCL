@@ -1,8 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import "../components"
-import "../styles"
 
 // Download tab — resource browser
 // Sidebar: categories + filters | Right: scrollable resource grid
