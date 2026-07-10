@@ -129,7 +129,7 @@ int main(int argc, char *argv[]){
     QQmlComponent splashComp(&engine);
     splashComp.setData(R"(
         import QtQuick
-        Rectangle {
+        Rectangle { 
             width: 128; height: 128
             radius: 16
             color: "transparent"
@@ -143,7 +143,8 @@ int main(int argc, char *argv[]){
                 fillMode: Image.PreserveAspectFit
             }
         }
-    )", QUrl());
+    )",
+                       QUrl());
     if (auto *content = qobject_cast<QQuickItem*>(splashComp.create())) {
         content->setParentItem(splashWin->contentItem());
     }
