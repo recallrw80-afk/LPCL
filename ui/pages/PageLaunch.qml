@@ -2,8 +2,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import LPCL.Core
-import "../components"
-import "../styles"
 
 // Exact replica of PageLaunchLeft.xaml + PageLaunchRight.xaml layout + interaction logic
 // Single file: left sidebar (300px) + right content
@@ -445,7 +443,7 @@ Item {
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 5 ? 1 : 0
-                                hasBorder: loginType === 5 ? 1 : 0
+                                hasBorder: false
                                 contentItem: Row {
                                     spacing: 6
                                     LPCLIcon {
@@ -472,7 +470,7 @@ Item {
                                 padding: 5
                                 radius: height / 2
                                 colorType: loginType === 0 ? 1 : 0
-                                hasBorder: loginType === 0 ? 1 : 0
+                                hasBorder: false
                                 contentItem: Row {
                                     spacing: 6
                                     LPCLIcon {

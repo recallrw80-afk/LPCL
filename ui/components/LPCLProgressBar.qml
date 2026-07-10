@@ -1,6 +1,5 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import "../styles"
 
 // Original PCL progress bar: 4px height, gradient fill
 ProgressBar {

@@ -2,8 +2,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import LPCL.Core
-import "../components"
-import "../styles"
 
 // Settings tab — left sidebar + right content
 Item {

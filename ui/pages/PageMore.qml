@@ -1,8 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import "../components"
-import "../styles"
 
 // More tab — about, tools, help links
 Item {

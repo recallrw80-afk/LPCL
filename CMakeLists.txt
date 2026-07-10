@@ -185,8 +185,7 @@ qt_add_qml_module(LiunxPlainCraftLauncher
         ui/pages/PageDownload.qml
         ui/pages/PageSettings.qml
         ui/pages/PageMore.qml
-        ui/pages/PageSelect.qml
-        ui/pages/LoginPage.qml
+        ui/pages/launch/PageSelect.qml
         ui/components/LPCLButton.qml
         ui/components/LPCLIcon.qml
         ui/components/LPCLComboBox.qml

@@ -2,8 +2,6 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import LPCL.Core
-import "../components"
-import "../styles"
 
 // Replica of PageSelectLeft.xaml — Minecraft folder selection sidebar
 // AnimatedControl="PanList" with staggered slide-in
