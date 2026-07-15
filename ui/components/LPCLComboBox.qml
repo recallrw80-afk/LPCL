@@ -79,8 +79,8 @@ ComboBox {
         contentItem: ListView {
             clip: true
             implicitHeight: Math.min(contentHeight, 320)
-            control.model: control.popup.visible ? control.delegateModel : null
-            control.currentIndex: control.highlightedIndex
+            model: control.popup.visible ? control.delegateModel : null
+            currentIndex: control.highlightedIndex
             ScrollIndicator.vertical: ScrollIndicator {}
         }
 

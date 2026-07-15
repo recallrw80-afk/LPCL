@@ -34,7 +34,7 @@ ApplicationWindow {
 
     // Opacity driven by custom property for reliable animation (entrance fade-in)
     property real winOpacity: 0
-    opacity: window.winOpacity
+    opacity: winOpacity
 
     // Frameless + transparent for custom chrome (WindowStyle="None" AllowsTransparency="True" Topmost="True")
     flags: Qt.FramelessWindowHint | Qt.Window
@@ -298,7 +298,7 @@ ApplicationWindow {
                                         anchors.fill: parent
                                         radius: tabRowContent.width
                                             // qmllint disable unqualified
-                                        color: window.navTabs.currentIndex === modelData.tag ? Theme.pureWhite : parent.hovered ? "#33ffffff" : "transparent"
+                                        color: navTabs.currentIndex === modelData.tag ? Theme.pureWhite : parent.hovered ? "#33ffffff" : "transparent"
                                         Behavior on color {
                                             ColorAnimation {
                                                 duration: 100
@@ -318,14 +318,14 @@ ApplicationWindow {
                                             // qmllint disable unqualified
                                                 lucideIcon: modelData.icon
                                             // qmllint disable unqualified
-                                                iconColor: window.navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
+                                                iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                             }
 
                                             Text {
                                             // qmllint disable unqualified
                                                 text: modelData.text
                                             // qmllint disable unqualified
-                                                color: window.navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
+                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                                 font.family: Theme.fontFamily
                                                 font.pixelSize: Theme.fontSize
                                                 height: 27
@@ -342,7 +342,7 @@ ApplicationWindow {
                                         onExited: parent.hovered = false
                                         onClicked: {
                                             // qmllint disable unqualified
-                                            window.navTabs.currentIndex = modelData.tag;
+                                            navTabs.currentIndex = modelData.tag;
                                         }
                                     }
                                 }
@@ -502,7 +502,7 @@ ApplicationWindow {
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: btnExtraDownload.hovered = true
                                 onExited: btnExtraDownload.hovered = false
-                                onClicked: window.navTabs.currentIndex = 1
+                                onClicked: navTabs.currentIndex = 1
                             }
                         }
                     }
@@ -516,7 +516,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: window.navTabs.currentIndex === 0
+                    isActive: navTabs.currentIndex === 0
                 }
                 PageDownload {
                     anchors {
@@ -525,7 +525,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: window.navTabs.currentIndex === 1
+                    isActive: navTabs.currentIndex === 1
                 }
                 PageSettings {
                     anchors {
@@ -534,7 +534,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: window.navTabs.currentIndex === 2
+                    isActive: navTabs.currentIndex === 2
                 }
                 PageMore {
                     anchors {
@@ -543,7 +543,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: window.navTabs.currentIndex === 3
+                    isActive: navTabs.currentIndex === 3
                 }
             }  // borderForm
         }  // panBack
@@ -566,7 +566,7 @@ ApplicationWindow {
         NumberAnimation {
             id: fadeInAnim
             target: window
-            property: "window.winOpacity"
+            property: "winOpacity"
             to: 1.0
             duration: 250
             easing.type: Easing.OutCubic

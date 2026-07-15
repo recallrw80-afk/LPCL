@@ -97,13 +97,13 @@ Item {
         id: panBack
         anchors.fill: parent
         color: Theme.semiTransparent
-        wrapper.radius: wrapper.radius
+        radius: wrapper.radius
 
         // ---- PanFore (inner border, colored border + halfWhite background) ----
         Rectangle {
             id: panFore
             anchors.fill: parent
-            wrapper.radius: wrapper.radius
+            radius: wrapper.radius
             border.width: wrapper.hasBorder ? 1 : 0
             border.color: wrapper.borderColor
             color: wrapper.backgroundColor

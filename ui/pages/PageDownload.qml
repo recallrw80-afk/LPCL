@@ -6,6 +6,7 @@ import LPCL
 // Download tab — resource browser
 // Sidebar: categories + filters | Right: scrollable resource grid
 Item {
+    id: page
     property bool isActive: false
     visible: opacity > 0
     opacity: isActive ? 1 : 0
