@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import LPCL
 
 // Exact replica of original MyButton (Controls/MyButton.xaml + .xaml.vb)
 // Structure: PanBack(semiTransparent) > PanFore(border+halfWhite bg) > LabText
@@ -31,47 +32,47 @@ Item {
 
     implicitWidth: {
         let contentW = contentLoader.item ? contentLoader.item.implicitWidth : 0;
-        let base = Math.max(labText.implicitWidth, contentW) + padding * 2;
+        let base = Math.max(labText.implicitWidth, contentW) + wrapper.padding * 2;
         return Math.max(60, base);
     }
     implicitHeight: 28
 
     // ---- Color logic (exact match original code-behind) ----
     property color borderColor: {
-        if (effectiveState === 3 || colorType === 3 || !enabled)
+        if (effectiveState === 3 || wrapper.colorType === 3 || !enabled)
             return Theme.gray4;
-        if (colorType === 1) {
+        if (wrapper.colorType === 1) {
             // Filled (Highlight): border = fill color
             if (hovered)
                 return Theme.color3;
             return Theme.color2;
         }
         if (hovered) {
-            if (colorType === 2)
+            if (wrapper.colorType === 2)
                 return Theme.redLight;
             return Theme.color3;
         }
-        if (colorType === 2)
+        if (wrapper.colorType === 2)
             return Theme.redDark;
         return Theme.color2;
     }
     property color backgroundColor: {
-        if (effectiveState === 3 || colorType === 3 || !enabled)
+        if (effectiveState === 3 || wrapper.colorType === 3 || !enabled)
             return Theme.gray6;
-        if (colorType === 1) {
+        if (wrapper.colorType === 1) {
             // Filled style — solid blue, white text
             if (hovered)
                 return Theme.color3;
             return Theme.color2;
         }
         if (hovered) {
-            if (colorType === 2)
+            if (wrapper.colorType === 2)
                 return Theme.redBack;
             return Theme.color7;
         }
         return Theme.halfWhite;
     }
-    readonly property color labelColor: colorType === 1 ? Theme.pureWhite : borderColor
+    readonly property color labelColor: colorType === 1 ? Theme.pureWhite : wrapper.borderColor
     property bool hovered: false
 
     // ---- Press scale animation (exact match original ScaleTransform) ----
@@ -96,14 +97,14 @@ Item {
         id: panBack
         anchors.fill: parent
         color: Theme.semiTransparent
-        radius: wrapper.radius
+        wrapper.radius: wrapper.radius
 
         // ---- PanFore (inner border, colored border + halfWhite background) ----
         Rectangle {
             id: panFore
             anchors.fill: parent
-            radius: wrapper.radius
-            border.width: hasBorder ? 1 : 0
+            wrapper.radius: wrapper.radius
+            border.width: wrapper.hasBorder ? 1 : 0
             border.color: wrapper.borderColor
             color: wrapper.backgroundColor
 

@@ -95,8 +95,6 @@ set(CORE_HEADERS
 
 qt_add_executable(LiunxPlainCraftLauncher
     src/main.cpp
-    ${CORE_SOURCES}
-    ${CORE_HEADERS}
 )
 
 # Lucide icons — download on demand from GitHub
@@ -148,19 +146,22 @@ qt_add_resources(LiunxPlainCraftLauncher "assets"
     FILES ${ICON_FILES}
 )
 
-target_include_directories(LiunxPlainCraftLauncher PRIVATE
+target_include_directories(LiunxPlainCraftLauncher PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/core
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/auth
+    ${CMAKE_CURRENT_SOURCE_DIR}/include/download
     ${CMAKE_CURRENT_SOURCE_DIR}/include/util
     ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include
 )
 
 target_link_libraries(LiunxPlainCraftLauncher
-    PRIVATE Qt6::Quick
-    PRIVATE Qt6::Network
-    PRIVATE Qt6::Concurrent
-    PRIVATE nlohmann_json::nlohmann_json
-    PRIVATE ZLIB::ZLIB
+    PUBLIC Qt6::Quick
+    PUBLIC Qt6::Network
+    PUBLIC Qt6::Concurrent
+    PUBLIC nlohmann_json::nlohmann_json
+    PUBLIC ZLIB::ZLIB
 )
 
 # ---- Version defines (injected at compile time, mirrors Windows PCL CI injection) ----
@@ -193,6 +194,9 @@ qt_add_qml_module(LiunxPlainCraftLauncher
         ui/components/LPCLTextBox.qml
         ui/components/LPCLScrollBar.qml
         ui/styles/Theme.qml
+    SOURCES
+        ${CORE_SOURCES}
+        ${CORE_HEADERS}
 )
 
 # Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.

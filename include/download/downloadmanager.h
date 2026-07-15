@@ -6,6 +6,8 @@
 #include <QNetworkReply>
 #include <QMap>
 #include <QQueue>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 #include <functional>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
@@ -18,9 +20,16 @@
 class DownloadManager : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
 
 public:
     static DownloadManager& instance();
+    static DownloadManager *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
 
     /// Progress callback: (bytesReceived, bytesTotal)
     using ProgressCallback = std::function<void(qint64, qint64)>;

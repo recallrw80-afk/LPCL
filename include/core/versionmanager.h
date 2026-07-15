@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QList>
 #include <QMap>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
 
@@ -19,6 +21,8 @@ using json = nlohmann::json;
 class VersionManager : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
     Q_PROPERTY(QString mcFolder READ mcFolder WRITE setMcFolder NOTIFY mcFolderChanged)
     Q_PROPERTY(QStringList versionIds READ versionIds NOTIFY versionListChanged)
     Q_PROPERTY(int versionCount READ versionCount NOTIFY versionListChanged)
@@ -26,6 +30,11 @@ class VersionManager : public QObject
 
 public:
     static VersionManager& instance();
+    static VersionManager *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
 
     // ---- Minecraft folder ----
 

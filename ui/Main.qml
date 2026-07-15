@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import LPCL.Core
+import LPCL
 
 ApplicationWindow {
     id: window
@@ -13,11 +13,11 @@ ApplicationWindow {
     // ---- Window sizing: 850:500 ratio, 40% of screen short side ----active:
     readonly property real baseRatio: 850 / 600
     readonly property real screenShort: Math.min(Screen.width, Screen.height)
-    readonly property real targetHeight: screenShort * 0.56
-    readonly property real targetWidth: targetHeight * baseRatio
+    readonly property real targetHeight: window.screenShort * 0.56
+    readonly property real targetWidth: targetHeight * window.baseRatio
 
-    width: targetWidth
-    height: targetHeight
+    width: window.targetWidth
+    height: window.targetHeight
     minimumWidth: 850
     minimumHeight: 500
 
@@ -34,7 +34,7 @@ ApplicationWindow {
 
     // Opacity driven by custom property for reliable animation (entrance fade-in)
     property real winOpacity: 0
-    opacity: winOpacity
+    opacity: window.winOpacity
 
     // Frameless + transparent for custom chrome (WindowStyle="None" AllowsTransparency="True" Topmost="True")
     flags: Qt.FramelessWindowHint | Qt.Window
@@ -297,7 +297,8 @@ ApplicationWindow {
                                     Rectangle {
                                         anchors.fill: parent
                                         radius: tabRowContent.width
-                                        color: navTabs.currentIndex === modelData.tag ? Theme.pureWhite : parent.hovered ? "#33ffffff" : "transparent"
+                                            // qmllint disable unqualified
+                                        color: window.navTabs.currentIndex === modelData.tag ? Theme.pureWhite : parent.hovered ? "#33ffffff" : "transparent"
                                         Behavior on color {
                                             ColorAnimation {
                                                 duration: 100
@@ -314,13 +315,17 @@ ApplicationWindow {
                                             LPCLIcon {
                                                 size: 16
                                                 anchors.verticalCenter: parent.verticalCenter
+                                            // qmllint disable unqualified
                                                 lucideIcon: modelData.icon
-                                                iconColor: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
+                                            // qmllint disable unqualified
+                                                iconColor: window.navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                             }
 
                                             Text {
+                                            // qmllint disable unqualified
                                                 text: modelData.text
-                                                color: navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
+                                            // qmllint disable unqualified
+                                                color: window.navTabs.currentIndex === modelData.tag ? Theme.color2 : Theme.pureWhite
                                                 font.family: Theme.fontFamily
                                                 font.pixelSize: Theme.fontSize
                                                 height: 27
@@ -336,7 +341,8 @@ ApplicationWindow {
                                         onEntered: parent.hovered = true
                                         onExited: parent.hovered = false
                                         onClicked: {
-                                            navTabs.currentIndex = modelData.tag;
+                                            // qmllint disable unqualified
+                                            window.navTabs.currentIndex = modelData.tag;
                                         }
                                     }
                                 }
@@ -496,7 +502,7 @@ ApplicationWindow {
                                 cursorShape: Qt.PointingHandCursor
                                 onEntered: btnExtraDownload.hovered = true
                                 onExited: btnExtraDownload.hovered = false
-                                onClicked: navTabs.currentIndex = 1
+                                onClicked: window.navTabs.currentIndex = 1
                             }
                         }
                     }
@@ -510,7 +516,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: navTabs.currentIndex === 0
+                    isActive: window.navTabs.currentIndex === 0
                 }
                 PageDownload {
                     anchors {
@@ -519,7 +525,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: navTabs.currentIndex === 1
+                    isActive: window.navTabs.currentIndex === 1
                 }
                 PageSettings {
                     anchors {
@@ -528,7 +534,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: navTabs.currentIndex === 2
+                    isActive: window.navTabs.currentIndex === 2
                 }
                 PageMore {
                     anchors {
@@ -537,7 +543,7 @@ ApplicationWindow {
                         top: panTitle.bottom
                         bottom: parent.bottom
                     }
-                    isActive: navTabs.currentIndex === 3
+                    isActive: window.navTabs.currentIndex === 3
                 }
             }  // borderForm
         }  // panBack
@@ -560,7 +566,7 @@ ApplicationWindow {
         NumberAnimation {
             id: fadeInAnim
             target: window
-            property: "winOpacity"
+            property: "window.winOpacity"
             to: 1.0
             duration: 250
             easing.type: Easing.OutCubic

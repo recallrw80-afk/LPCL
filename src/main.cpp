@@ -15,8 +15,6 @@
 #include "core/javamanager.h"
 #include "core/versionmanager.h"
 #include "core/launcher.h"
-#include "auth/offlineauth.h"
-#include "auth/msauth.h"
 #include "download/downloadmanager.h"
 #include "util/file_drop_handler.h"
 
@@ -60,33 +58,16 @@ int main(int argc, char *argv[]){
     // Create QML engine
     QQmlApplicationEngine engine;
 
-    // Register C++ singletons for QML access
-    // These become available in QML as: import LPCL.Core 1.0
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "JavaManager", &javaMgr);
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "VersionManager", &verMgr);
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "Launcher", &launcher);
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "DownloadManager", &downloadMgr);
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "Settings", &Settings::instance());
-
-    // Register types for enums
-    qmlRegisterUncreatableType<Launcher>("LPCL.Core", 1, 0, "LaunchState",
-                                         "LaunchState enum only");
-    qmlRegisterUncreatableType<VersionManager>("LPCL.Core", 1, 0, "VersionMgr",
-                                               "VersionManager singleton only");
-
-    // Register OfflineAuth singleton (provides generateOfflineUuid)
-    qmlRegisterSingletonType<OfflineAuth>("LPCL.Core", 1, 0, "OfflineAuth",
-        [](QQmlEngine *, QJSEngine *) -> QObject* {
-            return new OfflineAuth();
-        });
+    // C++ types are now auto-registered via QML_ELEMENT / QML_SINGLETON macros.
+    // They are available in QML via `import LPCL` (the main QML module).
+    // Only FileDropHandler is still manually registered — it needs setupWindow().
+    // Explicit call to ensure the static registration object is pulled in by the linker.
+    extern void qml_register_types_LPCL();
+    qml_register_types_LPCL();
 
     // Register FileDropHandler singleton — intercepts external file drag-and-drop
-    // at the window level and exposes dropped paths to QML.
     FileDropHandler *dropHandler = new FileDropHandler(&app);
-    qmlRegisterSingletonInstance("LPCL.Core", 1, 0, "FileDropHandler", dropHandler);
-
-    // Register MsAuth as creatable type for QML login flow
-    qmlRegisterType<MsAuth>("LPCL.Core", 1, 0, "MsAuth");
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "FileDropHandler", dropHandler);
 
     // Connect status text changes
     QObject::connect(&launcher, &Launcher::statusTextChanged, []() {

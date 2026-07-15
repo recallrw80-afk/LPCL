@@ -4,6 +4,7 @@
 #include "auth/authbase.h"
 #include <QNetworkAccessManager>
 #include <QTimer>
+#include <QtQml/qqmlregistration.h>
 
 /**
  * Microsoft OAuth login (Device Code Flow).
@@ -20,6 +21,7 @@
 class MsAuth : public AuthBase
 {
     Q_OBJECT
+    QML_ELEMENT
 
 public:
     MsAuth();

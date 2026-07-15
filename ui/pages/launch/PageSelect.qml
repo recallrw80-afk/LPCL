@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import LPCL.Core
+import LPCL
 
 // Replica of PageSelectLeft.xaml — Minecraft folder selection sidebar
 // AnimatedControl="PanList" with staggered slide-in
@@ -37,7 +37,7 @@ Item {
 
             // Folder items (height=40)
             Repeater {
-                model: folderItems
+                model: page.folderItems
 
                 Rectangle {
                     Layout.fillWidth: true
@@ -53,6 +53,7 @@ Item {
                         spacing: 10
 
                         Text {
+                                            // qmllint disable unqualified
                             text: modelData.name
                             color: Theme.color1
                             font.family: Theme.fontFamily
@@ -74,6 +75,7 @@ Item {
                         anchors.fill: parent
                         hoverEnabled: true
                         onClicked: {
+                                            // qmllint disable unqualified
                             VersionManager.mcFolder = modelData.location
                         }
                     }

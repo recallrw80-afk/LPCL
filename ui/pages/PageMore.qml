@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import LPCL
 
 // More tab — about, tools, help links
 Item {
@@ -66,8 +67,10 @@ Item {
 
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                            // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
+                                            // qmllint disable unqualified
                                     text: modelData.name; color: Theme.color1
                                     font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
                                     Layout.fillWidth: true; elide: Text.ElideRight
@@ -103,8 +106,10 @@ Item {
 
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                            // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
+                                            // qmllint disable unqualified
                                     text: modelData.name; color: Theme.color1
                                     font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
                                     Layout.fillWidth: true; elide: Text.ElideRight
@@ -204,12 +209,14 @@ Item {
                                         anchors.centerIn: parent
                                         spacing: 2
                                         Text {
+                                            // qmllint disable unqualified
                                             text: modelData.text
                                             color: Theme.color3; font.family: Theme.fontFamily
                                             font.pixelSize: Theme.fontSize; font.bold: true
                                             Layout.alignment: Qt.AlignHCenter
                                         }
                                         Text {
+                                            // qmllint disable unqualified
                                             text: modelData.desc
                                             color: Theme.gray3; font.family: Theme.fontFamily
                                             font.pixelSize: Theme.fontSizeXSmall

@@ -4,6 +4,8 @@
 #include <QObject>
 #include <QProcess>
 #include <QTimer>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 #include "core/types.h"
 
 /**
@@ -14,6 +16,8 @@
 class Launcher : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
     Q_PROPERTY(LaunchState launchState READ state NOTIFY stateChanged)
     Q_PROPERTY(QString statusText READ statusText NOTIFY statusTextChanged)
     Q_PROPERTY(int progress READ progress NOTIFY progressChanged)
@@ -35,6 +39,11 @@ public:
     Q_ENUM(LaunchState)
 
     static Launcher& instance();
+    static Launcher *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
 
     // ---- Launch ----
 

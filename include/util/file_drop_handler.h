@@ -9,6 +9,7 @@ class QWindow;
 /// Intercepts external file drag-and-drop at the window level and exposes
 /// dropped file paths to QML. Install with setupWindow() once the root
 /// QQuickWindow is available.
+// Manually registered in main.cpp via qmlRegisterSingletonInstance (needs setupWindow).
 class FileDropHandler : public QObject {
     Q_OBJECT
 

@@ -5,6 +5,8 @@
 #include <QList>
 #include <QVersionNumber>
 #include <QMutex>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 #include "core/types.h"
 
 /**
@@ -14,6 +16,8 @@
 class JavaManager : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
     Q_PROPERTY(QStringList javaNames READ javaNames NOTIFY javaListChanged)
     Q_PROPERTY(int javaCount READ javaCount NOTIFY javaListChanged)
     Q_PROPERTY(bool isScanning READ isScanning NOTIFY scanningChanged)
@@ -21,6 +25,11 @@ class JavaManager : public QObject
 
 public:
     static JavaManager& instance();
+    static JavaManager *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
 
     // ---- Scanning ----
 

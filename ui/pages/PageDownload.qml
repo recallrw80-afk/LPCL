@@ -1,6 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
+import LPCL
 
 // Download tab — resource browser
 // Sidebar: categories + filters | Right: scrollable resource grid
@@ -79,8 +80,10 @@ Item {
                                 anchors.fill: parent
                                 anchors.leftMargin: 12
                                 spacing: 10
+                                            // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
+                                            // qmllint disable unqualified
                                     text: modelData.name
                                     color: Theme.color1
                                     font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
@@ -119,6 +122,7 @@ Item {
 
                             Text {
                                 anchors { left: parent.left; top: parent.top; leftMargin: 30; topMargin: 8 }
+                                            // qmllint disable unqualified
                                 text: modelData.name
                                 color: Theme.color1
                                 font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
@@ -126,7 +130,8 @@ Item {
                             MouseArea {
                                 id: tagMouse; anchors.fill: parent; hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
-                                onClicked: { selectedCategory = modelData.tag }
+                                            // qmllint disable unqualified
+                                onClicked: { page.selectedCategory = modelData.tag }
                             }
                         }
                     }
@@ -156,7 +161,7 @@ Item {
                     }
                     Item { Layout.fillWidth: true }
                     Text {
-                        text: selectedCategory || "全部"
+                        text: page.selectedCategory || "全部"
                         color: Theme.gray3
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                     }
@@ -208,6 +213,7 @@ Item {
                                         Layout.fillWidth: true
                                         spacing: 4
                                         Text {
+                                            // qmllint disable unqualified
                                             text: modelData.name
                                             color: Theme.color1
                                             font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
@@ -215,6 +221,7 @@ Item {
                                             Layout.fillWidth: true
                                         }
                                         Text {
+                                            // qmllint disable unqualified
                                             text: modelData.desc
                                             color: Theme.gray3
                                             font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall

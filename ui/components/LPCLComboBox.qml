@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
+import LPCL
 
 // Exact replica of original MyComboBox (Controls/MyComboBox.vb)
 ComboBox {
@@ -15,12 +16,12 @@ ComboBox {
     property color borderColor: {
         if (!enabled) return Theme.gray5
         if (down || popup.visible) return Theme.color3
-        if (hovered) return Theme.color4
+        if (control.hovered) return Theme.color4
         return Theme.colorBg0
     }
     property color bgColor: {
         if (!enabled) return Theme.gray6
-        if (down || popup.visible || hovered) return Theme.color7
+        if (down || popup.visible || control.hovered) return Theme.color7
         return Theme.halfWhite
     }
 
@@ -78,8 +79,8 @@ ComboBox {
         contentItem: ListView {
             clip: true
             implicitHeight: Math.min(contentHeight, 320)
-            model: control.popup.visible ? control.delegateModel : null
-            currentIndex: control.highlightedIndex
+            control.model: control.popup.visible ? control.delegateModel : null
+            control.currentIndex: control.highlightedIndex
             ScrollIndicator.vertical: ScrollIndicator {}
         }
 
@@ -92,9 +93,11 @@ ComboBox {
     }
 
     delegate: ItemDelegate {
+        // qmllint disable unqualified
         width: control.width
         height: 30
         contentItem: Text {
+                                            // qmllint disable unqualified
             text: modelData
             font: control.font
             color: Theme.color1
@@ -103,7 +106,7 @@ ComboBox {
             leftPadding: 8.5
         }
         background: Rectangle {
-            color: hovered ? Theme.color7 : "transparent"
+            color: control.hovered ? Theme.color7 : "transparent"
         }
     }
 }

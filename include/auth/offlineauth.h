@@ -3,6 +3,8 @@
 
 #include "auth/authbase.h"
 #include <QCryptographicHash>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 
 /**
  * Offline / legacy login.
@@ -11,9 +13,12 @@
 class OfflineAuth : public AuthBase
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
 
 public:
     OfflineAuth(const QString &username = QString());
+    static OfflineAuth *create(QQmlEngine *, QJSEngine *) { return new OfflineAuth(); }
 
     void login(Callback onComplete) override;
     void cancel() override {}

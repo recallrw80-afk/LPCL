@@ -6,6 +6,8 @@
 #include <QVariant>
 #include <QString>
 #include <QMap>
+#include <QtQml/qqmlregistration.h>
+#include <QQmlEngine>
 
 /**
  * Cross-platform settings manager.
@@ -17,9 +19,16 @@
 class Settings : public QObject
 {
     Q_OBJECT
+    QML_ELEMENT
+    QML_SINGLETON
 
 public:
     static Settings& instance();
+    static Settings *create(QQmlEngine *, QJSEngine *) {
+        auto *inst = &instance();
+        QQmlEngine::setObjectOwnership(inst, QQmlEngine::CppOwnership);
+        return inst;
+    }
     static void initialize(const QString &configPath = QString());
 
     // Typed getters
