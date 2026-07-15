@@ -110,6 +110,31 @@ QtObject {
     readonly property int actionItemHeight: 34
     readonly property int progressBarHeight: 4
 
+    // Title bar
+    readonly property int titleBtnSize: 28
+    readonly property int titleBtnCloseMargin: 12
+    readonly property int titleBtnMinMargin: 44
+
+    // Resizers
+    readonly property int resizerThickness: 8
+    readonly property int resizerCorner: 13
+
+    // Layout
+    readonly property int sidebarWidth: 300
+    readonly property int contentMargin: 25
+    readonly property int cardPadding: 20
+    readonly property int sectionSpacing: 15
+    readonly property int itemSpacing: 10
+    readonly property int tightSpacing: 5
+
+    // Shadow
+    readonly property int shadowWidth: 4
+    readonly property real shadowOpacity: 0.04
+
+    // Text opacity
+    readonly property real textOpacityDim: 0.5
+    readonly property real textOpacityHint: 0.6
+
     
     // Animation easings (mirroring ModAnimation)
     

@@ -24,7 +24,7 @@ Item {
 
             Rectangle {
                 anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-                width: 4; opacity: 0.04
+                width: Theme.shadowWidth; opacity: Theme.shadowOpacity
                 gradient: Gradient {
                     GradientStop { position: 0; color: "#000000" }
                     GradientStop { position: 1; color: "#00000000" }
@@ -47,7 +47,7 @@ Item {
                     // Section: 工具
                     Text {
                         text: "工具"
-                        color: Theme.color1; opacity: 0.6
+                        color: Theme.color1; opacity: Theme.textOpacityHint
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                         Layout.leftMargin: 15; Layout.topMargin: 18; Layout.bottomMargin: 4
                     }
@@ -66,7 +66,7 @@ Item {
                             Layout.leftMargin: 8; Layout.rightMargin: 8
 
                             RowLayout {
-                                anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                anchors.fill: parent; anchors.leftMargin: 12; spacing: Theme.itemSpacing
                                             // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
@@ -86,7 +86,7 @@ Item {
                     // Section: 关于
                     Text {
                         text: "关于"
-                        color: Theme.color1; opacity: 0.6
+                        color: Theme.color1; opacity: Theme.textOpacityHint
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                         Layout.leftMargin: 15; Layout.topMargin: 18; Layout.bottomMargin: 4
                     }
@@ -105,7 +105,7 @@ Item {
                             Layout.leftMargin: 8; Layout.rightMargin: 8
 
                             RowLayout {
-                                anchors.fill: parent; anchors.leftMargin: 12; spacing: 10
+                                anchors.fill: parent; anchors.leftMargin: 12; spacing: Theme.itemSpacing
                                             // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
@@ -143,8 +143,8 @@ Item {
                 ColumnLayout {
                     id: panContent
                     anchors { left: parent.left; right: parent.right; top: parent.top }
-                    anchors.margins: 25
-                    spacing: 15
+                    anchors.margins: Theme.contentMargin
+                    spacing: Theme.sectionSpacing
 
                     // About LPCL card
                     Rectangle {
@@ -188,7 +188,7 @@ Item {
                         ColumnLayout {
                             id: helpInner
                             anchors { left: parent.left; right: parent.right; top: parent.top }
-                            anchors.margins: 20; spacing: 10
+                            anchors.margins: 20; spacing: Theme.itemSpacing
                             Text {
                                 text: "相关链接"
                                 color: Theme.color1; font.family: Theme.fontFamily

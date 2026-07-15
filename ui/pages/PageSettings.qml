@@ -17,12 +17,12 @@ Item {
         spacing: 0
 
     Rectangle {
-        Layout.preferredWidth: 300
+        Layout.preferredWidth: Theme.sidebarWidth
         Layout.fillHeight: true
         color: Theme.sidebarBg
         Rectangle {
             anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-            width: 4; opacity: 0.04
+            width: Theme.shadowWidth; opacity: Theme.shadowOpacity
             gradient: Gradient {
                 GradientStop { position: 0; color: "#000000" }
                 GradientStop { position: 1; color: "#00000000" }
@@ -54,8 +54,8 @@ Item {
             ColumnLayout {
                 id: panContent
                 anchors { left: parent.left; right: parent.right; top: parent.top }
-                anchors.margins: 25
-                spacing: 15
+                anchors.margins: Theme.contentMargin
+                spacing: Theme.sectionSpacing
 
                 Text {
                     text: "Settings"
@@ -74,8 +74,8 @@ Item {
                     border.color: Theme.gray5
                     ColumnLayout {
                         anchors { left: parent.left; right: parent.right; top: parent.top }
-                        anchors.margins: 25; anchors.topMargin: 40
-                        spacing: 10
+                        anchors.margins: Theme.contentMargin; anchors.topMargin: 40
+                        spacing: Theme.itemSpacing
                         Text { text: "Launch Settings"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         GridLayout {
                             id: launchGrid
@@ -103,8 +103,8 @@ Item {
                     ColumnLayout {
                         id: javaContent
                         anchors { left: parent.left; right: parent.right; top: parent.top }
-                        anchors.margins: 25; anchors.topMargin: 40
-                        spacing: 10
+                        anchors.margins: Theme.contentMargin; anchors.topMargin: 40
+                        spacing: Theme.itemSpacing
                         Text { text: "Java Runtime"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         RowLayout {
                             Text { text: "Selected: " + JavaManager.selectedJavaName; color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; Layout.fillWidth: true }
@@ -123,8 +123,8 @@ Item {
                     ColumnLayout {
                         id: uiContent
                         anchors { left: parent.left; right: parent.right; top: parent.top }
-                        anchors.margins: 25; anchors.topMargin: 40
-                        spacing: 10
+                        anchors.margins: Theme.contentMargin; anchors.topMargin: 40
+                        spacing: Theme.itemSpacing
                         Text { text: "UI Settings"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         RowLayout {
                             Text { text: "Theme Color:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
@@ -146,7 +146,7 @@ Item {
                     ColumnLayout {
                         id: aboutContent
                         anchors { left: parent.left; right: parent.right; top: parent.top }
-                        anchors.margins: 25; anchors.topMargin: 40
+                        anchors.margins: Theme.contentMargin; anchors.topMargin: 40
                         spacing: 8
                         Text { text: "About LPCL"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         Text {

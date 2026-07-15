@@ -69,10 +69,10 @@ ApplicationWindow {
                 left: parent.left
                 right: parent.right
                 top: parent.top
-                leftMargin: 13
-                rightMargin: 13
+                leftMargin: Theme.resizerCorner
+                rightMargin: Theme.resizerCorner
             }
-            height: 8
+            height: Theme.resizerThickness
             cursorShape: Qt.SizeVerCursor
             onPressed: mouse => window.startSystemResize(Qt.TopEdge)
         }
@@ -83,10 +83,10 @@ ApplicationWindow {
                 left: parent.left
                 right: parent.right
                 bottom: parent.bottom
-                leftMargin: 13
-                rightMargin: 13
+                leftMargin: Theme.resizerCorner
+                rightMargin: Theme.resizerCorner
             }
-            height: 8
+            height: Theme.resizerThickness
             cursorShape: Qt.SizeVerCursor
             onPressed: mouse => window.startSystemResize(Qt.BottomEdge)
         }
@@ -97,10 +97,10 @@ ApplicationWindow {
                 left: parent.left
                 top: parent.top
                 bottom: parent.bottom
-                topMargin: 13
-                bottomMargin: 13
+                topMargin: Theme.resizerCorner
+                bottomMargin: Theme.resizerCorner
             }
-            width: 8
+            width: Theme.resizerThickness
             cursorShape: Qt.SizeHorCursor
             onPressed: mouse => window.startSystemResize(Qt.LeftEdge)
         }
@@ -111,10 +111,10 @@ ApplicationWindow {
                 right: parent.right
                 top: parent.top
                 bottom: parent.bottom
-                topMargin: 13
-                bottomMargin: 13
+                topMargin: Theme.resizerCorner
+                bottomMargin: Theme.resizerCorner
             }
-            width: 8
+            width: Theme.resizerThickness
             cursorShape: Qt.SizeHorCursor
             onPressed: mouse => window.startSystemResize(Qt.RightEdge)
         }
@@ -125,8 +125,8 @@ ApplicationWindow {
                 left: parent.left
                 top: parent.top
             }
-            width: 13
-            height: 13
+            width: Theme.resizerCorner
+            height: Theme.resizerCorner
             cursorShape: Qt.SizeFDiagCursor
             onPressed: mouse => window.startSystemResize(Qt.LeftEdge | Qt.TopEdge)
         }
@@ -137,8 +137,8 @@ ApplicationWindow {
                 right: parent.right
                 top: parent.top
             }
-            width: 13
-            height: 13
+            width: Theme.resizerCorner
+            height: Theme.resizerCorner
             cursorShape: Qt.SizeBDiagCursor
             onPressed: mouse => window.startSystemResize(Qt.RightEdge | Qt.TopEdge)
         }
@@ -149,8 +149,8 @@ ApplicationWindow {
                 left: parent.left
                 bottom: parent.bottom
             }
-            width: 13
-            height: 13
+            width: Theme.resizerCorner
+            height: Theme.resizerCorner
             cursorShape: Qt.SizeBDiagCursor
             onPressed: mouse => window.startSystemResize(Qt.LeftEdge | Qt.BottomEdge)
         }
@@ -161,8 +161,8 @@ ApplicationWindow {
                 right: parent.right
                 bottom: parent.bottom
             }
-            width: 13
-            height: 13
+            width: Theme.resizerCorner
+            height: Theme.resizerCorner
             cursorShape: Qt.SizeFDiagCursor
             onPressed: mouse => window.startSystemResize(Qt.RightEdge | Qt.BottomEdge)
         }
@@ -220,7 +220,7 @@ ApplicationWindow {
 
                     RowLayout {
                         anchors.fill: parent
-                        anchors.leftMargin: 13
+                        anchors.leftMargin: Theme.resizerCorner
                         anchors.rightMargin: 8
                         spacing: 0
 
@@ -309,7 +309,7 @@ ApplicationWindow {
                                             id: tabRowContent
                                             anchors.centerIn: parent
                                             height: 27
-                                            spacing: 5
+                                            spacing: Theme.tightSpacing
 
                                             // SVG icon from assets (external file, no inline code)
                                             LPCLIcon {
@@ -357,15 +357,15 @@ ApplicationWindow {
                         // Minimize button
                         Item {
                             id: btnTitleMin
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
+                            Layout.preferredWidth: Theme.titleBtnSize
+                            Layout.preferredHeight: Theme.titleBtnSize
                             Layout.alignment: Qt.AlignVCenter
                             property bool hovered: false
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 28
-                                height: 28
+                                width: Theme.titleBtnSize
+                                height: Theme.titleBtnSize
                                 radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
@@ -388,15 +388,15 @@ ApplicationWindow {
                         // Close button
                         Item {
                             id: btnTitleClose
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
+                            Layout.preferredWidth: Theme.titleBtnSize
+                            Layout.preferredHeight: Theme.titleBtnSize
                             Layout.alignment: Qt.AlignVCenter
                             property bool hovered: false
 
                             Rectangle {
                                 anchors.centerIn: parent
-                                width: 28
-                                height: 28
+                                width: Theme.titleBtnSize
+                                height: Theme.titleBtnSize
                                 radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
@@ -423,8 +423,8 @@ ApplicationWindow {
                         anchors {
                             left: parent.left
                             bottom: parent.bottom
-                            leftMargin: 20
-                            bottomMargin: 20
+                            leftMargin: Theme.cardPadding
+                            bottomMargin: Theme.cardPadding
                         }
                         // Hint messages appear here
                     }
@@ -451,8 +451,8 @@ ApplicationWindow {
                         // Back to top
                         Item {
                             id: btnExtraBack
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
+                            Layout.preferredWidth: Theme.titleBtnSize
+                            Layout.preferredHeight: Theme.titleBtnSize
                             property bool hovered: false
                             visible: false
 
@@ -480,8 +480,8 @@ ApplicationWindow {
                         // Download manager
                         Item {
                             id: btnExtraDownload
-                            Layout.preferredWidth: 28
-                            Layout.preferredHeight: 28
+                            Layout.preferredWidth: Theme.titleBtnSize
+                            Layout.preferredHeight: Theme.titleBtnSize
                             property bool hovered: false
                             visible: false
 

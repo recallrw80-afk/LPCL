@@ -26,7 +26,7 @@ Item {
 
             Rectangle {
                 anchors { right: parent.right; top: parent.top; bottom: parent.bottom }
-                width: 4; opacity: 0.04
+                width: Theme.shadowWidth; opacity: Theme.shadowOpacity
                 gradient: Gradient {
                     GradientStop { position: 0; color: "#000000" }
                     GradientStop { position: 1; color: "#00000000" }
@@ -61,7 +61,7 @@ Item {
                     // Section: Source
                     Text {
                         text: "资源来源"
-                        color: Theme.color1; opacity: 0.6
+                        color: Theme.color1; opacity: Theme.textOpacityHint
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                         Layout.leftMargin: 15; Layout.topMargin: 10; Layout.bottomMargin: 4
                     }
@@ -80,7 +80,7 @@ Item {
                             RowLayout {
                                 anchors.fill: parent
                                 anchors.leftMargin: 12
-                                spacing: 10
+                                spacing: Theme.itemSpacing
                                             // qmllint disable unqualified
                                 LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
@@ -101,7 +101,7 @@ Item {
                     // Section: Categories
                     Text {
                         text: "分类浏览"
-                        color: Theme.color1; opacity: 0.6
+                        color: Theme.color1; opacity: Theme.textOpacityHint
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                         Layout.leftMargin: 15; Layout.topMargin: 18; Layout.bottomMargin: 4
                     }
@@ -150,8 +150,8 @@ Item {
 
             ColumnLayout {
                 anchors.fill: parent
-                anchors.margins: 25
-                spacing: 15
+                anchors.margins: Theme.contentMargin
+                spacing: Theme.sectionSpacing
 
                 // Header
                 RowLayout {

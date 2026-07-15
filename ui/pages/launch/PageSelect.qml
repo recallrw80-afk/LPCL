@@ -27,7 +27,7 @@ Item {
             Text {
                 text: "Minecraft Folders"
                 color: Theme.color1
-                opacity: 0.6
+                opacity: Theme.textOpacityHint
                 font.family: Theme.fontFamily
                 font.pixelSize: Theme.fontSizeSmall
                 Layout.leftMargin: 13
@@ -50,7 +50,7 @@ Item {
                     RowLayout {
                         anchors.fill: parent
                         anchors.leftMargin: 12
-                        spacing: 10
+                        spacing: Theme.itemSpacing
 
                         Text {
                                             // qmllint disable unqualified

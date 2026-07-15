@@ -327,6 +327,7 @@ Item {
     // Sub-page navigation (version selection)
     property bool isSubPage: false
     property string subPageTitle: ""
+    property string currentAvatar: "Steve"  // 点击头像在 Steve ↔ Alex 间切换
 
     function pushSubPage(title) {
         page.subPageTitle = title;
@@ -387,7 +388,7 @@ Item {
 
         // ---- Left sidebar ----
         Rectangle {
-            Layout.preferredWidth: 300
+            Layout.preferredWidth: Theme.sidebarWidth
             Layout.fillHeight: true
             color: Theme.sidebarBg
 
@@ -399,7 +400,7 @@ Item {
                     bottom: parent.bottom
                 }
                 width: 4
-                opacity: 0.04
+                opacity: Theme.shadowOpacity
                 gradient: Gradient {
                     GradientStop {
                         position: 0
@@ -498,35 +499,108 @@ Item {
                             Layout.fillHeight: true
                         }
 
-                        // 正版
+                        // 正版 — 微软登录（device code flow）
                         Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 110
                             visible: page.loginType === 5
 
-                            // Avatar
-                            LPCLIcon {
-                                id: pageIconOne
-                                anchors {
-                                    horizontalCenter: parent.horizontalCenter
-                                    top: parent.top
+                            // 未登录：登录按钮
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: Theme.itemSpacing
+                                visible: !page.loginResult && !page.msPolling
+
+                                LPCLIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    size: 48
+                                    lucideIcon: "shield-check"
+                                    iconColor: Theme.gray3
+                                    opacity: Theme.textOpacityDim
                                 }
-                                size: 50
-                                assetsIcon: "Steve"
+                                LPCLButton {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.preferredWidth: 150
+                                    text: "登录 Microsoft 账户"
+                                    colorType: 1
+                                    onClicked: page.startMsLogin()
+                                }
                             }
 
-                            // Username input
-                            LPCLTextBox {
-                                anchors {
-                                    horizontalCenter: parent.horizontalCenter
-                                    top: pageIconOne.bottom
-                                    topMargin: 20
+                            // 轮询中：设备代码 + 验证链接
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: 6
+                                visible: page.msPolling
+
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: "请在浏览器中打开："
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeSmall
+                                    color: Theme.gray3
                                 }
-                                width: parent.width - 40
-                                placeholderText: "游戏用户名"
-                                text: page.accountName || ""
-                                onTextChanged: {
-                                    page.accountName = text;
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: page.msVerifyUrl || ""
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSize
+                                    color: Theme.color2
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: "输入代码：" + (page.msDeviceCode || "")
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSize
+                                    color: Theme.color1
+                                }
+                                LPCLButton {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.preferredWidth: 60
+                                    text: "取消"
+                                    colorType: 2
+                                    onClicked: {
+                                        page.msPolling = false;
+                                        page.loginType = 0;
+                                    }
+                                }
+                            }
+
+                            // 已登录：头像 + 名称 + 切换
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: 12
+                                visible: page.loginResult !== null && !page.msPolling
+
+                                LPCLIcon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    size: 48
+                                    assetsIcon: page.currentAvatar
+                                    MouseArea {
+                                        anchors.fill: parent
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: page.currentAvatar = (page.currentAvatar === "Steve") ? "Alex" : "Steve"
+                                    }
+                                }
+                                Text {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    text: page.loginResult ? page.loginResult.name : ""
+                                    font.family: Theme.fontFamily
+                                    font.pixelSize: Theme.fontSizeLaunchName
+                                    font.bold: true
+                                    color: Theme.color1
+                                }
+                                LPCLButton {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    Layout.preferredWidth: 100
+                                    text: "切换账户"
+                                    colorType: 0
+                                    onClicked: {
+                                        page.loginResult = null;
+                                        page.accountName = "";
+                                        page.accountUuid = "";
+                                        page.startMsLogin();
+                                    }
                                 }
                             }
                         }
@@ -545,7 +619,12 @@ Item {
                                     top: parent.top
                                 }
                                 size: 50
-                                assetsIcon: "Steve"
+                                assetsIcon: page.currentAvatar
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: page.currentAvatar = (page.currentAvatar === "Steve") ? "Alex" : "Steve"
+                                }
                             }
 
                             // Username input
@@ -553,7 +632,7 @@ Item {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: pageIcoTwo.bottom
-                                    topMargin: 20
+                                    topMargin: Theme.cardPadding
                                 }
                                 width: parent.width - 40
                                 placeholderText: "游戏用户名"
@@ -690,7 +769,7 @@ Item {
                             Layout.bottomMargin: 27
                             radius: 0
                             color: Theme.gray6
-                            opacity: 0.6
+                            opacity: Theme.textOpacityHint
                             Rectangle {
                                 width: parent.width * (page.showProgress / 100.0)
                                 height: parent.height
@@ -722,7 +801,7 @@ Item {
                                 text: "当前步骤"
                                 font: page.infoFont
                                 color: Theme.gray3
-                                opacity: 0.5
+                                opacity: Theme.textOpacityDim
                                 horizontalAlignment: Text.AlignRight
                                 Layout.preferredWidth: 80
                             }
@@ -736,7 +815,7 @@ Item {
                                 text: "登录方式"
                                 font: page.infoFont
                                 color: Theme.gray3
-                                opacity: 0.5
+                                opacity: Theme.textOpacityDim
                                 horizontalAlignment: Text.AlignRight
                                 Layout.preferredWidth: 80
                             }
@@ -750,7 +829,7 @@ Item {
                                 text: "启动进度"
                                 font: page.infoFont
                                 color: Theme.gray3
-                                opacity: 0.5
+                                opacity: Theme.textOpacityDim
                                 horizontalAlignment: Text.AlignRight
                                 Layout.preferredWidth: 80
                             }
@@ -764,7 +843,7 @@ Item {
                                 text: "下载速度"
                                 font: page.infoFont
                                 color: Theme.gray3
-                                opacity: 0.5
+                                opacity: Theme.textOpacityDim
                                 horizontalAlignment: Text.AlignRight
                                 Layout.preferredWidth: 80
                                 visible: false
@@ -859,7 +938,7 @@ Item {
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeSmall
                                 color: Theme.gray3
-                                opacity: 0.6
+                                opacity: Theme.textOpacityHint
                                 Layout.leftMargin: 15
                                 Layout.topMargin: 12
                                 Layout.bottomMargin: 4
@@ -880,7 +959,7 @@ Item {
                                         anchors.fill: parent
                                         anchors.leftMargin: 12
                                         anchors.rightMargin: 8
-                                        spacing: 10
+                                        spacing: Theme.itemSpacing
 
                                         Rectangle {
                                             implicitWidth: 24
@@ -965,8 +1044,8 @@ Item {
                         right: parent.right
                         top: parent.top
                     }
-                    anchors.margins: 25
-                    spacing: 15
+                    anchors.margins: Theme.contentMargin
+                    spacing: Theme.sectionSpacing
 
                     // Quick launch card
                     Rectangle {
@@ -1027,7 +1106,7 @@ Item {
                                     anchors {
                                         left: parent.left
                                         top: parent.top
-                                        leftMargin: 20
+                                        leftMargin: Theme.cardPadding
                                         topMargin: 18
                                     }
                                     text: "启动日志"
@@ -1097,23 +1176,31 @@ Item {
         if (page.btnLaunchState === 2) { /* TODO: Navigate to download page */
             return;
         }
-        if (page.btnLaunchState !== 3)
+        if (page.btnLaunchState !== 3 && page.btnLaunchState !== 1)
             return;
+        // 在线模式未登录 → 触发登录
+        if (page.loginType === 5 && !page.loginResult) {
+            page.startMsLogin();
+            return;
+        }
         page.doLaunch();
     }
 
     function doLaunch() {
         if (!page.selectedVersion)
             return;
-        // Supply credentials to the launcher. Build an offline login if no
-        // prior login result exists (e.g. user never went through MS auth).
         var login = page.loginResult;
+        // 在线模式未登录 → 不允许启动（双重保险）
+        if (page.loginType === 5 && !login)
+            return;
+        // 离线模式 → 用输入的用户名生成离线登录
         if (login === null)
             login = OfflineAuth.createOfflineLogin(page.accountName);
         Launcher.launchVersion(page.selectedVersion, login);
     }
 
     function startMsLogin() {
+        page.loginResult = null;
         page.msPolling = true;
         msAuth.startLogin();
     }
@@ -1207,7 +1294,7 @@ Item {
 
         ColumnLayout {
             anchors.centerIn: parent
-            spacing: 10
+            spacing: Theme.itemSpacing
             LPCLIcon {
                 Layout.alignment: Qt.AlignHCenter
                 size: 48
