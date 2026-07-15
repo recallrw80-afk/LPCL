@@ -498,14 +498,15 @@ Item {
                             Layout.fillHeight: true
                         }
 
-                        // Avatar + username
+                        // 正版
                         Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 110
+                            visible: page.loginType === 5
 
                             // Avatar
                             LPCLIcon {
-                                id: avatarIcon
+                                id: pageIconOne
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: parent.top
@@ -518,7 +519,40 @@ Item {
                             LPCLTextBox {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
-                                    top: avatarIcon.bottom
+                                    top: pageIconOne.bottom
+                                    topMargin: 20
+                                }
+                                width: parent.width - 40
+                                placeholderText: "游戏用户名"
+                                text: page.accountName || ""
+                                onTextChanged: {
+                                    page.accountName = text;
+                                }
+                            }
+                        }
+
+                        // 离线模式
+                        Item {
+                            Layout.fillWidth: true
+                            Layout.preferredHeight: 110
+                            visible: page.loginType === 0
+
+                            // Avatar
+                            LPCLIcon {
+                                id: pageIcoTwo
+                                anchors {
+                                    horizontalCenter: parent.horizontalCenter
+                                    top: parent.top
+                                }
+                                size: 50
+                                assetsIcon: "Steve"
+                            }
+
+                            // Username input
+                            LPCLTextBox {
+                                anchors {
+                                    horizontalCenter: parent.horizontalCenter
+                                    top: pageIcoTwo.bottom
                                     topMargin: 20
                                 }
                                 width: parent.width - 40
@@ -572,7 +606,6 @@ Item {
                                 colorType: 0
                                 text: "版本选择"   // Original always shows "版本选择"
                                 enabled: page.btnLaunchState !== 0
-                                onClicked: page.pushSubPage("版本选择")
                             }
                             LPCLButton {
                                 id: btnMore
