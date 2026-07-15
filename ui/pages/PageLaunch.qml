@@ -1069,16 +1069,9 @@ Item {
                             spacing: 12
 
                             Text {
-                                text: "快速启动"
+                                text: "添加"
                                 font: page.boldFont
                                 color: Theme.color1
-                            }
-                            Text {
-                                text: "版本: " + (page.selectedVersion || "未选择") + "\n目录: " + VersionManager.mcFolder
-                                font: page.smallFont
-                                color: Theme.gray3
-                                Layout.fillWidth: true
-                                wrapMode: Text.WordWrap
                             }
                         }
                     }
