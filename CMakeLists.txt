@@ -1,49 +1,33 @@
 cmake_minimum_required(VERSION 3.16)
 
 project(LPCL VERSION 0.1 LANGUAGES CXX)
-
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
-find_package(ZLIB REQUIRED)  # file_utils.cpp uses zlib for raw DEFLATE (jar/native extraction)
+find_package(ZLIB REQUIRED)
 
 qt_standard_project_setup(REQUIRES 6.11)
 
-# Content of downloaded design from Figma to Qt or similar
-if (EXISTS "${CMAKE_CURRENT_LIST_DIR}/importedcontent/CMakeLists.txt")
-    add_subdirectory(${CMAKE_CURRENT_LIST_DIR}/importedcontent)
-endif()
-
-# nlohmann-json header-only library (system package preferred)
+# nlohmann-json
 find_package(nlohmann_json 3.11 QUIET)
 if(NOT nlohmann_json_FOUND)
     include(FetchContent)
-    FetchContent_Declare(
-        nlohmann_json
+    FetchContent_Declare(nlohmann_json
         GIT_REPOSITORY https://github.com/nlohmann/json.git
-        GIT_TAG v3.11.3
-    )
+        GIT_TAG v3.11.3)
     FetchContent_MakeAvailable(nlohmann_json)
 endif()
 
-# ---- Git version info (mirrors Windows PCL's CommitHash injection) ----
-execute_process(
-    COMMAND git describe --tags --always --dirty
+# Git version
+execute_process(COMMAND git describe --tags --always --dirty
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_DESCRIBE
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
-execute_process(
-    COMMAND git rev-parse --short=7 HEAD
+    OUTPUT_VARIABLE GIT_DESCRIBE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
+execute_process(COMMAND git rev-parse --short=7 HEAD
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
-    OUTPUT_VARIABLE GIT_COMMIT_HASH
-    OUTPUT_STRIP_TRAILING_WHITESPACE
-    ERROR_QUIET
-)
+    OUTPUT_VARIABLE GIT_COMMIT_HASH OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 if(GIT_DESCRIBE STREQUAL "")
     set(GIT_DESCRIBE "v${PROJECT_VERSION}-unknown")
 endif()
@@ -52,35 +36,17 @@ if(GIT_COMMIT_HASH STREQUAL "")
 endif()
 message(STATUS "Build version: ${GIT_DESCRIBE} (${GIT_COMMIT_HASH})")
 
-# Source files — only GUI-specific .cpp.
-# Core logic is in cli/liblpclcore (shared library).
-set(CORE_SOURCES
-    src/util/file_drop_handler.cpp
-)
+# ---- QML GUI App (gui/) ----
 
-set(CORE_HEADERS
-    include/util/file_drop_handler.h
-)
+set(CORE_SOURCES gui/src/util/file_drop_handler.cpp)
+set(CORE_HEADERS gui/include/util/file_drop_handler.h)
 
-qt_add_executable(LiunxPlainCraftLauncher
-    src/main.cpp
-)
+qt_add_executable(LiunxPlainCraftLauncher gui/src/main.cpp)
 
-# Lucide icons — download on demand from GitHub
-# Add icon names to LUCIDE_ICONS list (e.g. "play" "settings" "x")
-# SVGs are downloaded at configure time and cached in assets/icons/lucide/
-set(LUCIDE_ICONS
-    "play"
-    "bolt"
-    "arrow-down-to-line"
-    "layout-grid"
-    "x"
-    "minus"
-    "shield-check"
-    "unlink"
-    "file-plus"
-)
-set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/assets/icons/lucide")
+# Lucide icons
+set(LUCIDE_ICONS "play" "bolt" "arrow-down-to-line" "layout-grid" "x" "minus"
+    "shield-check" "unlink" "file-plus")
+set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gui/assets/icons/lucide")
 file(MAKE_DIRECTORY "${LUCIDE_DIR}")
 
 function(fetch_lucide_icon icon_name)
@@ -91,11 +57,10 @@ function(fetch_lucide_icon icon_name)
         file(DOWNLOAD "${lucide_url}" "${out_path}" STATUS dl_status TIMEOUT 10)
         list(GET dl_status 0 status_code)
         if(NOT status_code EQUAL 0)
-            message(WARNING "Failed to download lucide:${icon_name} (HTTP ${status_code})")
+            message(WARNING "Failed to download lucide:${icon_name}")
             file(REMOVE "${out_path}")
             return()
         endif()
-        # Rewrite stroke="currentColor" → stroke="#ffffff" for ColorOverlay tinting
         file(READ "${out_path}" svg_content)
         string(REPLACE "stroke=\"currentColor\"" "stroke=\"#ffffff\"" svg_content "${svg_content}")
         file(WRITE "${out_path}" "${svg_content}")
@@ -106,87 +71,60 @@ foreach(icon ${LUCIDE_ICONS})
     fetch_lucide_icon(${icon})
 endforeach()
 
-# Icon assets — auto-collect all SVGs (relative paths required by Qt resources)
-file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/icons/*.svg)
-file(GLOB ASSET_SVG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} assets/*.svg)
+# Icon assets
+file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/icons/*.svg)
+file(GLOB ASSET_SVG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/*.svg)
 list(APPEND ICON_FILES ${ASSET_SVG_FILES})
-qt_add_resources(LiunxPlainCraftLauncher "assets"
-    PREFIX "/"
-    FILES ${ICON_FILES}
-)
+qt_add_resources(LiunxPlainCraftLauncher "assets" PREFIX "/" FILES ${ICON_FILES})
 
 target_include_directories(LiunxPlainCraftLauncher PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/src
-    ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/util
-    ${CMAKE_CURRENT_SOURCE_DIR}/cli/liblpclcore/include
-    ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include
-)
+    ${CMAKE_CURRENT_SOURCE_DIR}/gui/src
+    ${CMAKE_CURRENT_SOURCE_DIR}/gui/include
+    ${CMAKE_CURRENT_SOURCE_DIR}/gui/include/util
+    ${CMAKE_CURRENT_SOURCE_DIR}/sdk/include
+    ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include)
 
 target_link_libraries(LiunxPlainCraftLauncher
-    PUBLIC Qt6::Quick
-    PUBLIC Qt6::Network
-    PUBLIC Qt6::Concurrent
-    PUBLIC nlohmann_json::nlohmann_json
-    PUBLIC ZLIB::ZLIB
-    PUBLIC lpclcore
-)
+    PUBLIC Qt6::Quick Qt6::Network Qt6::Concurrent
+    PUBLIC nlohmann_json::nlohmann_json ZLIB::ZLIB lpclcore)
 
-# ---- Version defines (injected at compile time, mirrors Windows PCL CI injection) ----
 target_compile_definitions(LiunxPlainCraftLauncher PRIVATE
     APP_VERSION="${PROJECT_VERSION}"
     GIT_DESCRIBE="${GIT_DESCRIBE}"
-    GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
-)
+    GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
 
-# Mark Theme.qml as singleton — pragma Singleton in the file is not enough;
-# CMake must be told explicitly so the generated qmldir includes "singleton Theme"
-set_source_files_properties(ui/styles/Theme.qml PROPERTIES
-    QT_QML_SINGLETON_TYPE TRUE
-)
+# Theme.qml singleton
+set_source_files_properties(gui/ui/styles/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
-qt_add_qml_module(LiunxPlainCraftLauncher
-    URI LPCL
-    VERSION 1.0
+qt_add_qml_module(LiunxPlainCraftLauncher URI LPCL VERSION 1.0
     QML_FILES
-        ui/Main.qml
-        ui/pages/PageLaunch.qml
-        ui/pages/PageDownload.qml
-        ui/pages/PageSettings.qml
-        ui/pages/PageMore.qml
-        ui/pages/launch/PageSelect.qml
-        ui/components/LPCLButton.qml
-        ui/components/LPCLIcon.qml
-        ui/components/LPCLComboBox.qml
-        ui/components/LPCLProgressBar.qml
-        ui/components/LPCLTextBox.qml
-        ui/components/LPCLScrollBar.qml
-        ui/styles/Theme.qml
-    SOURCES
-        ${CORE_SOURCES}
-        ${CORE_HEADERS}
-)
+        gui/ui/Main.qml
+        gui/ui/pages/PageLaunch.qml
+        gui/ui/pages/PageDownload.qml
+        gui/ui/pages/PageSettings.qml
+        gui/ui/pages/PageMore.qml
+        gui/ui/pages/launch/PageSelect.qml
+        gui/ui/components/LPCLButton.qml
+        gui/ui/components/LPCLIcon.qml
+        gui/ui/components/LPCLComboBox.qml
+        gui/ui/components/LPCLProgressBar.qml
+        gui/ui/components/LPCLTextBox.qml
+        gui/ui/components/LPCLScrollBar.qml
+        gui/ui/styles/Theme.qml
+    SOURCES ${CORE_SOURCES} ${CORE_HEADERS})
 
-# Qt for iOS sets MACOSX_BUNDLE_GUI_IDENTIFIER automatically since Qt 6.1.
-# If you are developing for iOS or macOS you should consider setting an
-# explicit, fixed bundle identifier manually though.
 set_target_properties(LiunxPlainCraftLauncher PROPERTIES
-#    MACOSX_BUNDLE_GUI_IDENTIFIER com.example.LPCL
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
-    MACOSX_BUNDLE TRUE
-    WIN32_EXECUTABLE TRUE
-)
+    MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE)
 
 include(GNUInstallDirs)
 install(TARGETS LiunxPlainCraftLauncher
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
-    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
-)
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 
-# ---- CLI SDK (liblpclcore + lpcl-cli) ----
-# cli/ 内含 liblpclcore（纯 C++ 核心库，无 QML/GUI）+ CLI 可执行文件。
-# 现有 QML App 后续将改为链接 cli/liblpclcore 而非直接编译 src/。
+# ---- sdk + CLI ----
 set(CMAKE_AUTOMOC ON)
+add_subdirectory(sdk)
 add_subdirectory(cli)
