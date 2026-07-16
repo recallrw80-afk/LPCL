@@ -43,24 +43,25 @@ set(LPCLCORE_SOURCES
 )
 
 set(LPCLCORE_HEADERS
-    include/lpclcore/types.h
-    include/lpclcore/settings.h
-    include/lpclcore/javamanager.h
-    include/lpclcore/versionmanager.h
-    include/lpclcore/launchbuilder.h
-    include/lpclcore/launcher.h
-    include/lpclcore/installer.h
-    include/lpclcore/authbase.h
-    include/lpclcore/offlineauth.h
-    include/lpclcore/msauth.h
-    include/lpclcore/authlibauth.h
-    include/lpclcore/downloadmanager.h
-    include/lpclcore/assetdownloader.h
-    include/lpclcore/modplatform.h
-    include/lpclcore/arg_utils.h
-    include/lpclcore/crypto_utils.h
-    include/lpclcore/file_utils.h
-    include/lpclcore/platform_utils.h
+    include/core/types.h
+    include/core/settings.h
+    include/core/javamanager.h
+    include/core/versionmanager.h
+    include/core/launchbuilder.h
+    include/core/launcher.h
+    include/core/installer.h
+    include/core/lpclcore_export.h
+    include/auth/authbase.h
+    include/auth/offlineauth.h
+    include/auth/msauth.h
+    include/auth/authlibauth.h
+    include/download/downloadmanager.h
+    include/download/assetdownloader.h
+    include/download/modplatform.h
+    include/util/arg_utils.h
+    include/util/crypto_utils.h
+    include/util/file_utils.h
+    include/util/platform_utils.h
 )
 
 add_library(lpclcore SHARED ${LPCLCORE_SOURCES} ${LPCLCORE_HEADERS})
@@ -76,7 +77,6 @@ set_target_properties(lpclcore PROPERTIES
 
 target_include_directories(lpclcore PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/include/lpclcore
 )
 
 # Propagate nlohmann-json include path from parent build

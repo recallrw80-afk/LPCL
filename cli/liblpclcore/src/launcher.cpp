@@ -1,8 +1,8 @@
-#include "lpclcore/launcher.h"
-#include "lpclcore/launchbuilder.h"
-#include "lpclcore/versionmanager.h"
-#include "lpclcore/settings.h"
-#include "lpclcore/javamanager.h"
+#include "core/launcher.h"
+#include "core/launchbuilder.h"
+#include "core/versionmanager.h"
+#include "core/settings.h"
+#include "core/javamanager.h"
 
 #include <QDir>
 #include <QFileInfo>

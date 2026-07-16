@@ -1,6 +1,6 @@
-#include "lpclcore/authlibauth.h"
-#include "lpclcore/msauth.h"
-#include "lpclcore/offlineauth.h"
+#include "auth/authlibauth.h"
+#include "auth/msauth.h"
+#include "auth/offlineauth.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

@@ -1,4 +1,4 @@
-#include "lpclcore/downloadmanager.h"
+#include "download/downloadmanager.h"
 
 #include <QFile>
 #include <QFileInfo>

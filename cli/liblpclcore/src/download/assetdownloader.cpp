@@ -1,6 +1,6 @@
-#include "lpclcore/assetdownloader.h"
-#include "lpclcore/downloadmanager.h"
-#include "lpclcore/file_utils.h"
+#include "download/assetdownloader.h"
+#include "download/downloadmanager.h"
+#include "util/file_utils.h"
 
 #include <QDir>
 #include <QFile>

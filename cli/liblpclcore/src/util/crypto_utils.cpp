@@ -1,4 +1,4 @@
-#include "lpclcore/crypto_utils.h"
+#include "util/crypto_utils.h"
 
 #include <QByteArray>
 #include <QCryptographicHash>

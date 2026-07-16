@@ -1,7 +1,7 @@
-#include "lpclcore/installer.h"
-#include "lpclcore/downloadmanager.h"
-#include "lpclcore/settings.h"
-#include "lpclcore/platform_utils.h"
+#include "core/installer.h"
+#include "download/downloadmanager.h"
+#include "core/settings.h"
+#include "util/platform_utils.h"
 
 #include <QDir>
 #include <QFile>

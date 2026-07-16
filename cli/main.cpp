@@ -6,12 +6,12 @@
 #include <QDir>
 #include <iostream>
 
-#include "lpclcore/settings.h"
-#include "lpclcore/javamanager.h"
-#include "lpclcore/versionmanager.h"
-#include "lpclcore/launcher.h"
-#include "lpclcore/downloadmanager.h"
-#include "lpclcore/offlineauth.h"
+#include "core/settings.h"
+#include "core/javamanager.h"
+#include "core/versionmanager.h"
+#include "core/launcher.h"
+#include "download/downloadmanager.h"
+#include "auth/offlineauth.h"
 
 static void cmdListVersions() {
     auto &vm = VersionManager::instance();

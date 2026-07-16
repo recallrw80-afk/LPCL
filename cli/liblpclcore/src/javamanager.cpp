@@ -1,5 +1,5 @@
-#include "lpclcore/javamanager.h"
-#include "lpclcore/settings.h"
+#include "core/javamanager.h"
+#include "core/settings.h"
 
 #include <QDir>
 #include <QFileInfo>

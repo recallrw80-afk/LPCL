@@ -1,7 +1,7 @@
-#include "lpclcore/launchbuilder.h"
-#include "lpclcore/settings.h"
-#include "lpclcore/versionmanager.h"
-#include "lpclcore/arg_utils.h"
+#include "core/launchbuilder.h"
+#include "core/settings.h"
+#include "core/versionmanager.h"
+#include "util/arg_utils.h"
 
 #include <QDir>
 #include <QLoggingCategory>

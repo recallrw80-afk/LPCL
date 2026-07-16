@@ -1,7 +1,7 @@
-#include "lpclcore/modplatform.h"
-#include "lpclcore/downloadmanager.h"
-#include "lpclcore/settings.h"
-#include "lpclcore/crypto_utils.h"
+#include "download/modplatform.h"
+#include "download/downloadmanager.h"
+#include "core/settings.h"
+#include "util/crypto_utils.h"
 
 #include <QJsonDocument>
 #include <QJsonObject>

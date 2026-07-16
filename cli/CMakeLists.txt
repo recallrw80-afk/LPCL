@@ -23,7 +23,6 @@ add_executable(lpcl-cli main.cpp)
 
 target_include_directories(lpcl-cli PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/liblpclcore/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/liblpclcore/include/lpclcore
 )
 
 target_link_libraries(lpcl-cli PRIVATE lpclcore Qt6::Core)

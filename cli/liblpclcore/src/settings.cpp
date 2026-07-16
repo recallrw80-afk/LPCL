@@ -1,5 +1,5 @@
-#include "lpclcore/settings.h"
-#include "lpclcore/crypto_utils.h"
+#include "core/settings.h"
+#include "util/crypto_utils.h"
 
 #include <QCoreApplication>
 #include <QDir>
