@@ -16,6 +16,8 @@
 #include "core/versionmanager.h"
 #include "core/launcher.h"
 #include "download/downloadmanager.h"
+#include "auth/offlineauth.h"
+#include "auth/msauth.h"
 #include "util/file_drop_handler.h"
 
 int main(int argc, char *argv[]){
@@ -58,14 +60,20 @@ int main(int argc, char *argv[]){
     // Create QML engine
     QQmlApplicationEngine engine;
 
-    // C++ types are now auto-registered via QML_ELEMENT / QML_SINGLETON macros.
-    // They are available in QML via `import LPCL` (the main QML module).
-    // Only FileDropHandler is still manually registered — it needs setupWindow().
-    // Explicit call to ensure the static registration object is pulled in by the linker.
-    extern void qml_register_types_LPCL();
-    qml_register_types_LPCL();
+    // ---- QML type registrations (manual, since liblpclcore has no QML macros) ----
+    // Singletons
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "Settings", &Settings::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "JavaManager", &JavaManager::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "VersionManager", &VersionManager::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "Launcher", &Launcher::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "DownloadManager", &DownloadManager::instance());
+    // OfflineAuth is a singleton (created on demand)
+    qmlRegisterSingletonType<OfflineAuth>("LPCL", 1, 0, "OfflineAuth",
+        [](QQmlEngine *, QJSEngine *) -> QObject* { return new OfflineAuth(); });
+    // MsAuth is a regular type (instantiated per login)
+    qmlRegisterType<MsAuth>("LPCL", 1, 0, "MsAuth");
 
-    // Register FileDropHandler singleton — intercepts external file drag-and-drop
+    // FileDropHandler — manual registration because it needs setupWindow()
     FileDropHandler *dropHandler = new FileDropHandler(&app);
     qmlRegisterSingletonInstance("LPCL", 1, 0, "FileDropHandler", dropHandler);
 

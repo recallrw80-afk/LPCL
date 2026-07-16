@@ -1,16 +1,3 @@
-#ifndef LPCL_ARG_UTILS_H
-#define LPCL_ARG_UTILS_H
-
-#include <QStringList>
-
-namespace ArgUtils {
-
-/// Split Java argument string respecting quotes
-QStringList splitJavaArgs(const QString &str);
-
-/// Deduplicate Java arguments (last occurrence wins for same prefix)
-QStringList deduplicateArgs(const QStringList &args);
-
-} // namespace ArgUtils
-
-#endif // LPCL_ARG_UTILS_H
+#pragma once
+// 薄包装 — 类定义来自 liblpclcore，QML 注册由 main.cpp 手动完成
+#include <lpclcore/arg_utils.h>

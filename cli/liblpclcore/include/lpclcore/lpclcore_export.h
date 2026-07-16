@@ -1,0 +1,12 @@
+#ifndef LPCLCORE_EXPORT_H
+#define LPCLCORE_EXPORT_H
+
+#include <QtCore/QtGlobal>
+
+#ifdef LPCLCORE_LIBRARY
+#  define LPCLCORE_EXPORT Q_DECL_EXPORT
+#else
+#  define LPCLCORE_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // LPCLCORE_EXPORT_H

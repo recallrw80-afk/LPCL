@@ -4,6 +4,7 @@ project(LPCL VERSION 0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 set(QT_QML_GENERATE_QMLLS_INI ON)
 
 find_package(Qt6 REQUIRED COMPONENTS Quick Network Concurrent)
@@ -51,23 +52,9 @@ if(GIT_COMMIT_HASH STREQUAL "")
 endif()
 message(STATUS "Build version: ${GIT_DESCRIBE} (${GIT_COMMIT_HASH})")
 
-# Source files
+# Source files — only GUI-specific .cpp.
+# Core logic is in cli/liblpclcore (shared library).
 set(CORE_SOURCES
-    src/core/settings.cpp
-    src/core/javamanager.cpp
-    src/core/versionmanager.cpp
-    src/core/launchbuilder.cpp
-    src/core/launcher.cpp
-    src/core/download/downloadmanager.cpp
-    src/core/download/assetdownloader.cpp
-    src/core/auth/offlineauth.cpp
-    src/core/auth/msauth.cpp
-    src/core/auth/authlibauth.cpp
-    src/core/installer.cpp
-    src/core/download/modplatform.cpp
-    src/util/file_utils.cpp
-    src/util/arg_utils.cpp
-    src/util/crypto_utils.cpp
     src/util/file_drop_handler.cpp
 )
 
@@ -162,6 +149,7 @@ target_link_libraries(LiunxPlainCraftLauncher
     PUBLIC Qt6::Concurrent
     PUBLIC nlohmann_json::nlohmann_json
     PUBLIC ZLIB::ZLIB
+    PUBLIC lpclcore
 )
 
 # ---- Version defines (injected at compile time, mirrors Windows PCL CI injection) ----
@@ -216,3 +204,9 @@ install(TARGETS LiunxPlainCraftLauncher
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
+
+# ---- CLI SDK (liblpclcore + lpcl-cli) ----
+# cli/ 内含 liblpclcore（纯 C++ 核心库，无 QML/GUI）+ CLI 可执行文件。
+# 现有 QML App 后续将改为链接 cli/liblpclcore 而非直接编译 src/。
+set(CMAKE_AUTOMOC ON)
+add_subdirectory(cli)
