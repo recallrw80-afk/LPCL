@@ -60,4 +60,12 @@ void importModpack(const QString &filePath,
     installModpack(filePath, instanceName, onProgress, onComplete);
 }
 
+bool removeInstance(const QString &name) {
+    if (name.isEmpty() || name.contains('/') || name.contains('\\') || name.contains(".."))
+        return false;
+    QString instanceDir = Settings::instance().getString("LaunchFolderSelect") + "/" + name;
+    if (!QDir(instanceDir).exists()) return false;
+    return QDir(instanceDir).removeRecursively();
+}
+
 } // namespace lpcl

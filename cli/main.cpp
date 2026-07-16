@@ -22,17 +22,19 @@ static auto T(const char *cn, const char *en) { return QString::fromUtf8(g_lang 
 
 // ---- helper ----
 
-// 从 args 列表中提取 --folder <path>，返回 path，并从列表中移除这两个元素
-static QString extractFolder(QStringList &args) {
-    int idx = args.indexOf("--folder");
+// 从 args 列表中提取 --flag <value>，返回 value，并从列表中移除两个元素
+static QString extractFlag(QStringList &args, const QString &flag) {
+    int idx = args.indexOf(flag);
     if (idx >= 0 && idx + 1 < args.size()) {
-        QString path = args.at(idx + 1);
+        QString value = args.at(idx + 1);
         args.removeAt(idx + 1);
         args.removeAt(idx);
-        return path;
+        return value;
     }
     return {};
 }
+static QString extractFolder(QStringList &args) { return extractFlag(args, "--folder"); }
+static QString extractRename(QStringList &args)   { return extractFlag(args, "--r"); }
 
 // ---- main ----
 
@@ -79,7 +81,8 @@ int main(int argc, char *argv[]) {
             {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
             {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
             {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
-            {"inpack <文件>",     "inpack <file>",     "导入整合包",           "Import modpack"},
+            {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
+            {"rm <名称|*>",       "rm <name|*>",       "删除实例（* 清空全部）", "Remove instance (* for all)"},
         };
         const Item opts[] = {
             {"--cn",      "--cn",      "使用中文输出",          "Use Chinese output"},
@@ -221,14 +224,15 @@ int main(int argc, char *argv[]) {
     // ---- inpack ----
     if (cmd == "inpack") {
         if (args.size() < 2) {
-            std::cerr << _("error:  lpcl-cli inpack <文件> [--folder <路径>]\n",
-                           "error:  lpcl-cli inpack <file> [--folder <path>]\n");
+            std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
+                           "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
             return 1;
         }
+        QString rename = extractRename(args);
         std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
         bool inpackDone = false;
         int  inpackResult = 1;
-        lpcl::importModpack(args[1], "",
+        lpcl::importModpack(args[1], rename,
             [&](const QString &status, int progress) {
                 int bars = progress / 5;
                 std::cout << "\r  [";
@@ -253,6 +257,38 @@ int main(int argc, char *argv[]) {
         if (inpackDone) return inpackResult;
         app.exec();
         return inpackResult;
+    }
+
+    // ---- rm ----
+    if (cmd == "rm") {
+        if (args.size() < 2) {
+            std::cerr << _("error:  lpcl-cli rm <名称|*>\n",
+                           "error:  lpcl-cli rm <name|*>\n");
+            return 1;
+        }
+        if (args[1] == "*") {
+            // 删除所有实例
+            auto ids = lpcl::listVersions();
+            if (ids.isEmpty()) {
+                std::cout << _("没有可删除的实例\n", "No instances to remove\n");
+                return 0;
+            }
+            int removed = 0;
+            for (const auto &id : ids) {
+                if (lpcl::removeInstance(id)) removed++;
+            }
+            std::cout << _(QString("已删除 %1 个实例\n").arg(removed).toStdString(),
+                           QString("Removed %1 instance(s)\n").arg(removed).toStdString());
+            return 0;
+        }
+        if (lpcl::removeInstance(args[1])) {
+            std::cout << "success" << std::endl;
+            return 0;
+        } else {
+            std::cerr << _("error: 实例不存在或删除失败\n",
+                           "error: instance not found or removal failed\n");
+            return 1;
+        }
     }
 
     // ---- unknown ----

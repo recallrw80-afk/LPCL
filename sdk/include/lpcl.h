@@ -36,6 +36,10 @@ LPCLCORE_EXPORT void importModpack(const QString &filePath,
                                     std::function<void(const QString &, int)> onProgress,
                                     std::function<void(bool, const QString &)> onComplete);
 
+/// 删除实例（移除 {mcFolder}/{name}/ 整个目录）
+/// @return 成功返回 true
+LPCLCORE_EXPORT bool removeInstance(const QString &name);
+
 } // namespace lpcl
 
 #endif // LPCLCORE_LPCL_H

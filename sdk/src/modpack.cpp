@@ -1,8 +1,11 @@
 #include "modpack.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
+#include "core/javamanager.h"
 #include "core/installer.h"
 #include "download/downloadmanager.h"
+#include "download/assetdownloader.h"
+#include "download/modplatform.h"
 #include "util/file_utils.h"
 #include <QDir>
 #include <QFile>
@@ -193,6 +196,56 @@ static QString findMcRoot(const QStringList &entries) {
     return "";
 }
 
+// 校验实例名：拒绝空名、路径分隔符、路径穿越
+static bool validateInstanceName(const QString &name) {
+    if (name.isEmpty()) return false;
+    if (name.contains('/') || name.contains('\\')) return false;
+    if (name.contains("..")) return false;
+    if (name == ".") return false;
+    return true;
+}
+
+// 获取导入临时工作目录
+static QString importWorkDir() {
+    return VersionManager::instance().mcFolder() + "tmp/import/";
+}
+
+// Mod 下载条目
+struct ModDownloadEntry {
+    QString url;       // 直接下载 URL（Modrinth）
+    QString savePath;  // 保存到 workDir + savePath
+    QString cfModId;   // CurseForge project ID
+    QString cfFileId;  // CurseForge file ID
+};
+
+static void downloadAndFinalize(const QString &mcVersion,
+                                 const QString &forgeVer, const QString &neoVer, const QString &fabricVer,
+                                 const QString &workDir, const QString &finalDir, const QString &name,
+                                 const QList<ModDownloadEntry> &mods,
+                                 PackProgressCallback onProgress,
+                                 PackCompleteCallback onComplete);
+
+static bool checkNameConflict(const QString &targetDir, const QString &name,
+                               bool explicitName, PackCompleteCallback onComplete) {
+    if (!validateInstanceName(name)) {
+        if (onComplete)
+            onComplete(false, "实例名无效: \"" + name + "\"");
+        return false;
+    }
+    if (QDir(targetDir).exists()) {
+        if (explicitName) {
+            // --r 指定的名字也冲突，不允许覆盖
+            if (onComplete)
+                onComplete(false, "实例 \"" + name + "\" 已存在，请使用其他名称");
+            return false;
+        }
+        if (onComplete)
+            onComplete(false, "实例 \"" + name + "\" 已存在，请使用 --r <名称> 重命名");
+        return false;
+    }
+    return true;
+}
+
 // ---- Type 0: CurseForge ----
 
 static void installCurseForge(const QString &filePath, const QString &packDir,
@@ -227,31 +280,40 @@ static void installCurseForge(const QString &filePath, const QString &packDir,
         }
     }
 
+    QString finalDir = VersionManager::instance().mcFolder() + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    // 在 tmp 下工作，下载完成前不放入游戏目录
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
+
     // 复制 overrides
     QString overridesDir = QString::fromStdString(manifest.value("overrides", "overrides"));
-    QString targetDir = VersionManager::instance().mcFolder() + "/" + name + "/";
-    QDir().mkpath(targetDir);
-
     QString srcOverride = packDir + "/" + overridesDir;
     if (QDir(srcOverride).exists()) {
         if (onProgress) onProgress("复制整合包文件...", 20);
-        copyDir(srcOverride, targetDir);
+        copyDir(srcOverride, workDir);
     }
 
-    // TODO Phase 4: 从 CurseForge API 下载模组文件
-    if (onProgress) onProgress("（模组下载功能将在 Phase 4 实现）", 30);
+    // 提取 mod 列表
+    QList<ModDownloadEntry> mods;
+    if (manifest.contains("files")) {
+        for (const auto &f : manifest["files"]) {
+            ModDownloadEntry m;
+            m.cfModId = QString::fromStdString(f.value("projectID", json()).dump());
+            // projectID is a number, clean up the dump
+            m.cfModId = QString::number(f.value("projectID", 0));
+            m.cfFileId = QString::number(f.value("fileID", 0));
+            m.savePath = "mods/" + m.cfModId + "_" + m.cfFileId + ".jar";
+            mods.append(m);
+        }
+    }
 
-    // 写 Setup.ini
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);
-    ini.setValue("VersionArgumentIndie", 1);
-    ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    // 下载 MC + modloader → 移入最终位置
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
+                        workDir, finalDir, name, mods, onProgress, onComplete);
 }
 
 // ---- Type 1: HMCL ----
@@ -275,26 +337,22 @@ static void installHMCL(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("检测到 HMCL 整合包: " + name, 15);
 
-    QString targetDir = VersionManager::instance().mcFolder() + "/" + name + "/";
-    QDir().mkpath(targetDir);
+    QString finalDir = VersionManager::instance().mcFolder() + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
 
     // 复制 minecraft/ 文件夹
     QString mcSrc = packDir + "/minecraft/";
     if (QDir(mcSrc).exists()) {
         if (onProgress) onProgress("复制整合包文件...", 20);
-        copyDir(mcSrc, targetDir);
+        copyDir(mcSrc, workDir);
     }
 
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);
-    ini.setValue("VersionArgumentIndie", 1);
-    ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, {}, {}, {}, workDir, finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 2: MultiMC ----
@@ -326,26 +384,23 @@ static void installMultiMC(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("检测到 MultiMC 整合包: " + name, 15);
 
-    QString targetDir = VersionManager::instance().mcFolder() + "/" + name + "/";
-    QDir().mkpath(targetDir);
+    QString finalDir = VersionManager::instance().mcFolder() + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
 
     // 复制 .minecraft/ 文件夹
     QString mcSrc = packDir + "/.minecraft/";
     if (QDir(mcSrc).exists()) {
         if (onProgress) onProgress("复制整合包文件...", 20);
-        copyDir(mcSrc, targetDir);
+        copyDir(mcSrc, workDir);
     }
 
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);
-    ini.setValue("VersionArgumentIndie", 1);
-    ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
+                        workDir, finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 3: MCBBS ----
@@ -389,26 +444,23 @@ static void installMCBBS(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("检测到 MCBBS 整合包: " + name, 15);
 
-    QString targetDir = VersionManager::instance().mcFolder() + "/" + name + "/";
-    QDir().mkpath(targetDir);
+    QString finalDir = VersionManager::instance().mcFolder() + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
 
     // 复制 overrides
     QString srcOverride = packDir + "/" + overridesDir;
     if (QDir(srcOverride).exists()) {
         if (onProgress) onProgress("复制整合包文件...", 20);
-        copyDir(srcOverride, targetDir);
+        copyDir(srcOverride, workDir);
     }
 
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);
-    ini.setValue("VersionArgumentIndie", 1);
-    ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
+                        workDir, finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 4: Modrinth ----
@@ -440,30 +492,37 @@ static void installModrinth(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("检测到 Modrinth 整合包: " + name, 15);
 
-    QString targetDir = VersionManager::instance().mcFolder() + "/" + name + "/";
-    QDir().mkpath(targetDir);
+    QString finalDir = VersionManager::instance().mcFolder() + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
 
     // 复制 overrides 和 client-overrides
     for (const auto &sub : {"overrides", "client-overrides"}) {
         QString src = packDir + "/" + sub;
         if (QDir(src).exists()) {
-            copyDir(src, targetDir);
+            copyDir(src, workDir);
         }
     }
 
-    // TODO Phase 4: 从 downloads 下载模组文件
-    if (onProgress) onProgress("（模组下载功能将在 Phase 4 实现）", 30);
+    // 提取 mod 列表（Modrinth 有直接下载 URL）
+    QList<ModDownloadEntry> mods;
+    if (index.contains("files")) {
+        for (const auto &f : index["files"]) {
+            ModDownloadEntry m;
+            m.savePath = QString::fromStdString(f.value("path", "mods/unknown.jar"));
+            if (f.contains("downloads") && f["downloads"].is_array() && !f["downloads"].empty()) {
+                m.url = QString::fromStdString(f["downloads"][0].get<std::string>());
+            }
+            if (!m.url.isEmpty()) mods.append(m);
+        }
+    }
 
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);
-    ini.setValue("VersionArgumentIndie", 1);
-    ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
+                        workDir, finalDir, name, mods, onProgress, onComplete);
 }
 
 // ---- forward declaration ----
@@ -480,7 +539,7 @@ static void installLauncherPack(const QString &filePath, const QString &packDir,
                                  PackProgressCallback onProgress,
                                  PackCompleteCallback onComplete) {
     QString mcFolder = VersionManager::instance().mcFolder();
-    QString tmpRoot = mcFolder + "/tmp/";
+    QString tmpRoot = mcFolder + "tmp/";
 
     // 查找 modpack.zip 或 modpack.mrpack（root 或一级子目录）
     QString innerPack;
@@ -565,6 +624,18 @@ static QPair<QString, bool> findMcOrPclRoot(const QString &dir) {
     return {{}, false};
 }
 
+// 从 .minecraft/versions/ 目录提取 MC 版本名
+static QString detectMcVersion(const QString &rootDir) {
+    QString base = QDir(rootDir + "/.minecraft").exists() ? rootDir + "/.minecraft" : rootDir;
+    QDir vd(base + "/versions");
+    if (!vd.exists()) return {};
+    for (const auto &entry : vd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json"))
+            return entry.fileName();
+    }
+    return {};
+}
+
 // 处理已找到的 .minecraft / PCL 根目录
 static void processCompressedRoot(const QString &rootDir, bool isPclPack,
                                    const QString &filePath, const QString &instanceName,
@@ -584,51 +655,49 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
         isPclPack ? "检测到 PCL 启动器整合包: " + name
                   : "检测到压缩版 .minecraft: " + name, 15);
 
+    // 检测 MC 版本（用于下载正确的平台文件）
+    QString mcVersion = detectMcVersion(rootDir);
+    if (mcVersion.isEmpty() && isPclPack)
+        mcVersion = parseVersionFromBat(rootDir + "/PCL/LatestLaunch.bat");
+
     // 定位 .minecraft 内容源
     QString mcSource = rootDir;
     bool hasMcFolder = QDir(rootDir + "/.minecraft").exists();
     if (hasMcFolder)
         mcSource = rootDir + "/.minecraft/";
 
-    // 每个实例独立目录：{mcFolder}/{name}/
-    QString instanceDir = mcFolder + "/" + name + "/";
-    QDir().mkpath(instanceDir);
+    // tmp 工作目录，下载完成前不放入游戏目录
+    QString finalDir = mcFolder + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    if (onProgress) onProgress("复制游戏文件...", 20);
-    copyDir(mcSource, instanceDir);
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
 
-    // 如果 PCL/ 在 .minecraft 同级，也复制到实例根目录
+    if (onProgress) onProgress("复制整合包文件...", 20);
+    copyDir(mcSource, workDir);
+
+    // 如果 PCL/ 在 .minecraft 同级，也复制到工作目录
     if (hasMcFolder && QDir(rootDir + "/PCL").exists())
-        copyDir(rootDir + "/PCL/", instanceDir + "PCL/");
+        copyDir(rootDir + "/PCL/", workDir + "PCL/");
 
-    // 写版本隔离配置
-    QDir(instanceDir + "PCL/").mkpath(".");
-
-    // 如果根目录有散落的 mod jar，复制到 mods/
+    // 如果根目录有散落的 mod jar，复制到工作目录 mods/
     QDir rd(rootDir);
     bool hasLooseJars = false;
     for (const auto &entry : rd.entryInfoList(QDir::Files | QDir::NoDotAndDotDot)) {
         if (entry.fileName().endsWith(".jar", Qt::CaseInsensitive)) {
-            QDir(instanceDir + "mods/").mkpath(".");
-            QFile::copy(entry.absoluteFilePath(), instanceDir + "mods/" + entry.fileName());
+            QDir(workDir + "mods/").mkpath(".");
+            QFile::copy(entry.absoluteFilePath(), workDir + "mods/" + entry.fileName());
             hasLooseJars = true;
         }
     }
     if (hasLooseJars && onProgress)
         onProgress("已复制附加模组...", 22);
 
-    // 写版本隔离配置
-    QSettings ini(instanceDir + "PCL/Setup.ini", QSettings::IniFormat);
-    ini.beginGroup("Setup");
-    ini.setValue("Name", name);  // 实例名，供 list 展示
-    if (!ini.contains("VersionArgumentIndie"))
-        ini.setValue("VersionArgumentIndie", 1);
-    if (!ini.contains("VersionArgumentIndieV2"))
-        ini.setValue("VersionArgumentIndieV2", true);
-    ini.endGroup();
-    ini.sync();
-
-    if (onComplete) onComplete(true, name);
+    // 下载 MC 版本文件（确保 libraries/natives/assets 匹配当前平台）
+    if (onProgress) onProgress("准备下载...", 30);
+    downloadAndFinalize(mcVersion, {}, {}, {},
+                        workDir, finalDir, name, {}, onProgress, onComplete);
 }
 
 static void installCompressed(const QString &filePath, const QString &packDir,
@@ -646,7 +715,7 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     }
 
     // Step 2: 递归解压内层 zip（最多二级），查找 .minecraft
-    QString tmpRoot = mcFolder + "/tmp/";
+    QString tmpRoot = mcFolder + "tmp/";
     QList<QPair<QString, int>> zipQueue;
     int innerSeq = 0;
 
@@ -725,30 +794,171 @@ static void installCompressed(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("检测到压缩版 .minecraft: " + name, 15);
 
-    QString targetDir = mcFolder + "/" + name + "/";
-    QDir().mkpath(targetDir);
+    QString finalDir = mcFolder + name + "/";
+    if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
+
+    // Compressed 已含全部文件，直接在 tmp 解压后移入
+    QString workDir = importWorkDir() + name + "/";
+    QDir(workDir).removeRecursively();
+    QDir().mkpath(workDir);
     if (onProgress) onProgress("解压中...", 20);
-    extractZip(filePath, targetDir, onProgress, 25);
+    extractZip(filePath, workDir, onProgress, 25);
 
     // 如有 mcRoot 包装层，把内容提出来
     if (!mcRoot.isEmpty()) {
-        QString innerDir = targetDir + mcRoot;
-        if (QDir(innerDir).exists() && innerDir != targetDir) {
-            copyDir(innerDir, targetDir);
+        QString innerDir = workDir + mcRoot;
+        if (QDir(innerDir).exists() && innerDir != workDir) {
+            copyDir(innerDir, workDir);
             QDir(innerDir).removeRecursively();
         }
     }
 
-    QDir(targetDir + "PCL/").mkpath(".");
-    QSettings ini(targetDir + "PCL/Setup.ini", QSettings::IniFormat);
+    QDir().mkpath(QFileInfo(finalDir).absolutePath());
+    copyDir(workDir, finalDir);
+    QDir(workDir).removeRecursively();
+
+    QDir(finalDir + "PCL/").mkpath(".");
+    QSettings ini(finalDir + "PCL/Setup.ini", QSettings::IniFormat);
     ini.beginGroup("Setup");
     ini.setValue("Name", name);
     ini.setValue("VersionArgumentIndie", 1);
     ini.setValue("VersionArgumentIndieV2", true);
     ini.endGroup();
     ini.sync();
-
     if (onComplete) onComplete(true, name);
+}
+
+// ---- download pipeline ----
+
+static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
+                               const QString &workDir, const QString &finalDir, const QString &name,
+                               PackProgressCallback onProgress,
+                               PackCompleteCallback onComplete) {
+    // 所有 mod 下载完成后的 finalize
+    auto finalizeNow = [=]() {
+        QDir().mkpath(QFileInfo(finalDir).absolutePath());
+        copyDir(workDir, finalDir);
+        QDir(workDir).removeRecursively();
+        QDir(finalDir + "PCL/").mkpath(".");
+        QSettings ini(finalDir + "PCL/Setup.ini", QSettings::IniFormat);
+        ini.beginGroup("Setup");
+        ini.setValue("Name", name);
+        ini.setValue("VersionArgumentIndie", 1);
+        ini.setValue("VersionArgumentIndieV2", true);
+        ini.endGroup();
+        ini.sync();
+        if (onComplete) onComplete(true, name);
+    };
+
+    if (index >= mods.size()) {
+        finalizeNow();
+        return;
+    }
+
+    const auto &mod = mods[index];
+    if (onProgress) onProgress(QString("下载 Mod (%1/%2)...").arg(index + 1).arg(mods.size()),
+                                70 + (30 * index / mods.size()));
+
+    if (!mod.url.isEmpty()) {
+        // 直接 URL（Modrinth）
+        DownloadManager::instance().download(mod.url, workDir + mod.savePath,
+            nullptr,
+            [=](bool ok, QString) {
+                if (!ok) qWarning() << "Mod download failed:" << mod.url;
+                downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+            });
+    } else if (!mod.cfModId.isEmpty()) {
+        // CurseForge — 通过 ModPlatform 解析下载 URL
+        ModPlatform::instance().downloadMod(ModPlatform::CurseForge,
+            mod.cfModId, mod.cfFileId, workDir + mod.savePath,
+            [=](bool ok, QString) {
+                if (!ok) qWarning() << "CF mod download failed:" << mod.cfModId;
+                downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+            });
+    } else {
+        downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+    }
+}
+
+static void downloadAndFinalize(const QString &mcVersion,
+                                 const QString &forgeVer, const QString &neoVer, const QString &fabricVer,
+                                 const QString &workDir, const QString &finalDir, const QString &name,
+                                 const QList<ModDownloadEntry> &mods,
+                                 PackProgressCallback onProgress,
+                                 PackCompleteCallback onComplete) {
+    // 提取纯净 MC 版本号（去掉 modloader 前缀，如 "1.21.1-NeoForge_21.1.226" → "1.21.1"）
+    auto vanillaVersion = [](const QString &v) -> QString {
+        QRegularExpression re(R"(^\d+\.\d+(?:\.\d+)?)");
+        auto m = re.match(v);
+        return m.hasMatch() ? m.captured(0) : v;
+    };
+
+    auto startModDownloads = [=]() {
+        downloadModsAsync(mods, 0, workDir, finalDir, name, onProgress, onComplete);
+    };
+
+    if (mcVersion.isEmpty()) {
+        startModDownloads();
+        return;
+    }
+
+    // Step 1: 下载 MC 版本（JSON + JAR + libraries + assets）
+    QString vanilla = vanillaVersion(mcVersion);
+    if (onProgress) onProgress("下载 Minecraft " + vanilla + "...", 35);
+    AssetDownloader::instance().downloadVersion(vanilla,
+        [=](bool ok, QString err) {
+            if (!ok) {
+                QDir(workDir).removeRecursively();
+                if (onComplete) onComplete(false, "下载 Minecraft 失败: " + err);
+                return;
+            }
+
+            // Step 2: 下载 natives（平台相关原生库）
+            if (onProgress) onProgress("下载原生库...", 55);
+            McVersion ver;
+            ver.id = vanilla;
+            ver.pathVersion = VersionManager::instance().mcFolder() + vanilla + "/";
+            ver.pathJar = ver.pathVersion + vanilla + ".jar";
+            ver.pathIndie = VersionManager::instance().mcFolder();
+            AssetDownloader::instance().downloadNatives(ver,
+                [=](bool ok2, QString err2) {
+                    if (!ok2)
+                        qWarning() << "Natives download issue:" << err2;
+
+                    // Step 3: 安装 modloader
+                    auto installLoader = [=]() {
+                        QString loaderType;
+                        QString loaderVer;
+                        if (!forgeVer.isEmpty())   { loaderType = "forge"; loaderVer = forgeVer; }
+                        else if (!neoVer.isEmpty()) { loaderType = "neoforge"; loaderVer = neoVer; }
+                        else if (!fabricVer.isEmpty()) { loaderType = "fabric"; loaderVer = fabricVer; }
+
+                        if (loaderType.isEmpty()) {
+                            startModDownloads();
+                            return;
+                        }
+
+                        if (onProgress) onProgress("安装 " + loaderType + "...", 65);
+                        auto javaList = JavaManager::instance().javaList();
+                        if (javaList.isEmpty()) {
+                            qWarning() << "No Java found, skipping modloader install";
+                            startModDownloads();
+                            return;
+                        }
+                        QString javaPath = javaList.first().pathJava;
+
+                        Installer::instance().installLoader(loaderType,
+                            ver.pathVersion, loaderVer, javaPath,
+                            [=](bool ok3, QString err3) {
+                                if (!ok3)
+                                    qWarning() << "Modloader install issue:" << err3;
+                                startModDownloads();
+                            });
+                    };
+
+                    installLoader();
+                });
+        });
 }
 
 // ---- internal dispatch (from already-extracted directory) ----
@@ -821,7 +1031,9 @@ void installModpack(const QString &filePath,
 
     // 在游戏目录下创建 tmp 目录，解压到 tmp/pack/
     QString mcFolder = VersionManager::instance().mcFolder();
-    QString tmpRoot = mcFolder + "/tmp/";
+    // 设置 mcFolder 供 AssetDownloader 使用
+    DownloadManager::instance().setProperty("mcFolder", mcFolder);
+    QString tmpRoot = mcFolder + "tmp/";
 
     // 清理旧 tmp，确保干净环境
     QDir(tmpRoot).removeRecursively();
