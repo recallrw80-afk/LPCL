@@ -64,7 +64,6 @@ QList<McFolder> VersionManager::loadFolderList() {
     }
 
     // 2. Official launcher folder
-    QString mojangPath = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
     // On Windows: %APPDATA%/.minecraft
     // On Linux: ~/.minecraft
     // On Mac: ~/Library/Application Support/minecraft
@@ -296,21 +295,11 @@ McVersion VersionManager::parseVersionJson(const QString &jsonPath) {
         return ver;
     }
 
-    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-    if (doc.isNull()) {
-        ver.isValid = false;
-        ver.info = "Invalid JSON in: " + jsonPath;
-        return ver;
-    }
-
-    QJsonObject root = doc.object();
-
-    // Convert QJsonObject to nlohmann::json for easier handling
-    QString jsonStr = QString::fromUtf8(doc.toJson());
-    json j = json::parse(jsonStr.toStdString(), nullptr, false);
+    // 直接用 nlohmann::json 解析，避免 QJsonDocument 中转
+    json j = json::parse(file.readAll().toStdString(), nullptr, false);
     if (j.is_discarded()) {
         ver.isValid = false;
-        ver.info = "Failed to parse JSON";
+        ver.info = "Failed to parse JSON: " + jsonPath;
         return ver;
     }
 

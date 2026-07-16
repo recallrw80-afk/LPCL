@@ -15,9 +15,8 @@ QString desEncrypt(const QString &plainText, const QString &key);
 /// Mirrors CryptographyUtils.DesDecrypt from Windows PCL.
 QString desDecrypt(const QString &cipherB64, const QString &key);
 
-/// Generate the PCL encryption key: "PCL" + identify string
-/// For LPCL, identify = "Liunx" (mirrors Windows' Identify constant)
-inline QString pclEncryptKey() { return QString("PCL") + "Liunx"; }
+/// Generate the LPCL encryption key: "LPCL" + identify string
+inline QString pclEncryptKey() { return QString("LPCL") + "Liunx"; }
 
 /// Encrypt with PCL standard key
 inline QString pclEncrypt(const QString &plainText) {

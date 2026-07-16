@@ -26,6 +26,16 @@ LPCLCORE_EXPORT bool launchVersion(const QString &versionId,
 /// 列出系统中可用的 Java 运行时
 LPCLCORE_EXPORT QStringList listJavas();
 
+/// 导入整合包
+/// @param filePath     zip 文件路径
+/// @param instanceName 实例名（为空则自动从清单读取）
+/// @param onProgress   进度回调 (statusText, progress 0~100)
+/// @param onComplete   完成回调 (success, msg)
+LPCLCORE_EXPORT void importModpack(const QString &filePath,
+                                    const QString &instanceName,
+                                    std::function<void(const QString &, int)> onProgress,
+                                    std::function<void(bool, const QString &)> onComplete);
+
 } // namespace lpcl
 
 #endif // LPCLCORE_LPCL_H

@@ -217,7 +217,7 @@ void Launcher::interrupt() {
         m_gameProcess->kill();
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
-        appendLog("[PCL] Game process killed by user.");
+        appendLog("[LPCL] Game process killed by user.");
     } else if (m_state == LaunchState::Launching || m_state == LaunchState::Downloading) {
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
@@ -228,29 +228,45 @@ void Launcher::interrupt() {
 
 void Launcher::onGameStdout() {
     QByteArray data = m_gameProcess->readAllStandardOutput();
-    QString text = QString::fromUtf8(data);
-    for (const auto &line : text.split('\n', Qt::SkipEmptyParts)) {
-        emit gameLog(line.trimmed());
-        appendLog("[stdout] " + line.trimmed());
+    m_logBuffer += QString::fromUtf8(data);
+    QStringList lines = m_logBuffer.split('\n');
+    // 最后一段是不完整的行，保留到下次
+    m_logBuffer = lines.takeLast();
+    for (const auto &line : lines) {
+        QString trimmed = line.trimmed();
+        if (!trimmed.isEmpty()) {
+            emit gameLog(trimmed);
+            appendLog(trimmed);
+        }
     }
 }
 
 void Launcher::onGameStderr() {
     QByteArray data = m_gameProcess->readAllStandardError();
-    QString text = QString::fromUtf8(data);
-    for (const auto &line : text.split('\n', Qt::SkipEmptyParts)) {
-        emit gameLog(line.trimmed());
-        appendLog(line.trimmed());
+    m_logBuffer += QString::fromUtf8(data);
+    QStringList lines = m_logBuffer.split('\n');
+    m_logBuffer = lines.takeLast();
+    for (const auto &line : lines) {
+        QString trimmed = line.trimmed();
+        if (!trimmed.isEmpty()) {
+            emit gameLog(trimmed);
+            appendLog(trimmed);
+        }
     }
 }
 
 void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    // 用户主动中断时不再覆盖状态
+    if (m_state == LaunchState::Interrupted) {
+        emit gameExited(exitCode, "Interrupted by user");
+        return;
+    }
     if (exitStatus == QProcess::CrashExit) {
-        appendLog(QString("[PCL] Game crashed with exit code %1").arg(exitCode));
+        appendLog(QString("[LPCL] Game crashed with exit code %1").arg(exitCode));
         setState(LaunchState::Failed);
         emit gameExited(exitCode, "Game crashed");
     } else {
-        appendLog(QString("[PCL] Game exited with code %1").arg(exitCode));
+        appendLog(QString("[LPCL] Game exited with code %1").arg(exitCode));
         setState(LaunchState::Finished);
         setStatus("Game exited");
         emit gameExited(exitCode, "Game exited normally");

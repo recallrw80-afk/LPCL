@@ -215,6 +215,7 @@ QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
                                                               const QMap<QByteArray, QByteArray> &headers,
                                                               std::function<void(bool, QString)> onComplete,
                                                               int maxRetries) {
+    emit downloadStarted(url);
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,

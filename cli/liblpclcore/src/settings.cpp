@@ -31,7 +31,7 @@ void Settings::initialize(const QString &configPath) {
     if (path.isEmpty()) {
         // Use app data directory
         QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        path = dataDir + "/PCL.ini";
+        path = dataDir + "/LPCL.ini";
     }
 
     // Ensure directory exists
@@ -41,8 +41,8 @@ void Settings::initialize(const QString &configPath) {
     }
 
     s.m_settings = new QSettings(path, QSettings::IniFormat);
-    // Original VB uses "PCL" for all keys
-    s.m_settings->beginGroup("PCL");
+    // 设置组名
+    s.m_settings->beginGroup("LPCL");
     s.initDefaults();
 
     qCDebug(logSettings) << "Settings initialized at" << path;

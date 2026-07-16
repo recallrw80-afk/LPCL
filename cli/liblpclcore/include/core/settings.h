@@ -6,14 +6,13 @@
 #include <QSettings>
 #include <QVariant>
 #include <QString>
-#include <QMap>
 
 /**
  * Cross-platform settings manager.
  * Mirrors the original VB Settings.Get(Of T)(key) / Settings.Set(key, value) API.
  *
  * Uses QSettings (INI file on Linux/Mac, registry on Windows).
- * Stored in <app data>/PCL/PCL.ini on all platforms for consistency.
+ * Stored in <app data>/LPCL.ini on all platforms for consistency.
  */
 class LPCLCORE_EXPORT Settings : public QObject
 {
@@ -26,6 +25,7 @@ public:
     // Typed getters
     template<typename T>
     T get(const QString &key, const T &defaultValue = T()) const {
+        if (!m_settings) return defaultValue;
         QVariant v = m_settings->value(key);
         if (!v.isValid() || v.isNull()) return defaultValue;
         return v.value<T>();
@@ -34,6 +34,7 @@ public:
     // Typed setter
     template<typename T>
     void set(const QString &key, const T &value) {
+        if (!m_settings) return;
         m_settings->setValue(key, QVariant::fromValue(value));
         m_settings->sync();
     }
@@ -82,33 +83,39 @@ private:
 // Template specializations for common types
 template<>
 inline QString Settings::get<QString>(const QString &key, const QString &defaultValue) const {
+    if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toString();
 }
 
 template<>
 inline int Settings::get<int>(const QString &key, const int &defaultValue) const {
+    if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toInt();
 }
 
 template<>
 inline bool Settings::get<bool>(const QString &key, const bool &defaultValue) const {
+    if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toBool();
 }
 
 template<>
 inline void Settings::set<QString>(const QString &key, const QString &value) {
+    if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
 }
 
 template<>
 inline void Settings::set<int>(const QString &key, const int &value) {
+    if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
 }
 
 template<>
 inline void Settings::set<bool>(const QString &key, const bool &value) {
+    if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
 }

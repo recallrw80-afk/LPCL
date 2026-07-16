@@ -94,6 +94,7 @@ private:
     QProcess *m_gameProcess = nullptr;
     LaunchState m_state = LaunchState::Idle;
     QString m_statusText;
+    QString m_logBuffer;  // 缓冲不完整的日志行
     int m_progress = 0;
 };
 
