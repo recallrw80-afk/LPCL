@@ -30,8 +30,7 @@ void Settings::initialize(const QString &configPath) {
     QString path = configPath;
     if (path.isEmpty()) {
         // Use app data directory
-        QString dataDir = QStandardPaths::writableLocation(QStandardPaths::AppDataLocation);
-        path = dataDir + "/LPCL.ini";
+        path = QCoreApplication::applicationDirPath() + "/LPCL.ini";
     }
 
     // Ensure directory exists

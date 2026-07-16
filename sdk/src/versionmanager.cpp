@@ -9,6 +9,7 @@
 #include <QJsonArray>
 #include <QLoggingCategory>
 #include <QRegularExpression>
+#include <QSettings>
 #include <QStandardPaths>
 #include <QCoreApplication>
 #include <QNetworkAccessManager>
@@ -132,45 +133,58 @@ void VersionManager::loadLocalVersions() {
 
     m_versionList.clear();
 
-    // m_mcFolder ends with "/", so use QDir::filePath to avoid a "//versions" path.
-    QString versionsDir = QDir(m_mcFolder).filePath("versions");
-    QDir dir(versionsDir);
-    if (!dir.exists()) {
+    // 扫描 mcFolder 的直接子目录，查找 PCL/Setup.ini 标记的实例
+    QDir mcDir(m_mcFolder);
+    if (!mcDir.exists()) {
         m_isLoading = false;
         emit loadingChanged();
         return;
     }
 
-    for (const auto &entry : dir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-        QString jsonPath = entry.absoluteFilePath() + "/" + entry.fileName() + ".json";
-        if (!QFileInfo::exists(jsonPath)) continue;
-
+    for (const auto &entry : mcDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
         McVersionInfo info;
         info.id = entry.fileName();
         info.isLocal = true;
 
-        // Try to get more info from the JSON
-        try {
-            QFile file(jsonPath);
-            if (file.open(QIODevice::ReadOnly)) {
-                QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-                QJsonObject root = doc.object();
-                info.type = root.value("type").toString("unknown");
-                QString timeStr = root.value("releaseTime").toString();
-                if (!timeStr.isEmpty()) {
-                    info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+        // 优先识别导入的整合包实例：有 PCL/Setup.ini
+        bool isInstance = QFileInfo::exists(entry.absoluteFilePath() + "/PCL/Setup.ini");
+
+        if (isInstance) {
+            // 从 Setup.ini 读取实例元信息
+            info.type = "instance";
+            QSettings ini(entry.absoluteFilePath() + "/PCL/Setup.ini", QSettings::IniFormat);
+            QString displayName = ini.value("Setup/Name").toString();
+            if (!displayName.isEmpty()) info.id = displayName;
+        } else {
+            // 回退：原始 MC 版本（有匹配的 .json 文件）
+            QString jsonPath = entry.absoluteFilePath() + "/" + entry.fileName() + ".json";
+            if (!QFileInfo::exists(jsonPath)) continue;
+
+            // Try to get more info from the JSON
+            try {
+                QFile file(jsonPath);
+                if (file.open(QIODevice::ReadOnly)) {
+                    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+                    QJsonObject root = doc.object();
+                    info.type = root.value("type").toString("unknown");
+                    QString timeStr = root.value("releaseTime").toString();
+                    if (!timeStr.isEmpty()) {
+                        info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+                    }
                 }
+            } catch (...) {
+                // Use defaults
             }
-        } catch (...) {
-            // Use defaults
         }
 
         m_versionList.append(info);
     }
 
-    // Sort: releases first, then snapshots, then others; newest first
+    // Sort: instances first, then releases, then others; newest first
     std::sort(m_versionList.begin(), m_versionList.end(), [](const McVersionInfo &a, const McVersionInfo &b) {
         if (a.type != b.type) {
+            if (a.type == "instance") return true;
+            if (b.type == "instance") return false;
             if (a.type == "release") return true;
             if (b.type == "release") return false;
         }
@@ -181,7 +195,7 @@ void VersionManager::loadLocalVersions() {
     m_isLoading = false;
     emit loadingChanged();
 
-    qCInfo(logVer) << "Loaded" << m_versionList.size() << "local versions from" << versionsDir;
+    qCInfo(logVer) << "Loaded" << m_versionList.size() << "instances from" << m_mcFolder;
 }
 
 void VersionManager::fetchVersionManifest() {

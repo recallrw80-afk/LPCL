@@ -4,6 +4,7 @@
 #include <QCoreApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QLoggingCategory>
 #include <iostream>
 
 #include "lpcl.h"
@@ -16,8 +17,22 @@ enum Lang { CN, EN };
 static Lang g_lang = EN;
 
 #define _(cn, en) (g_lang == CN ? cn : en)
-
 static void setLang(bool en) { g_lang = en ? EN : CN; }
+static auto T(const char *cn, const char *en) { return QString::fromUtf8(g_lang == CN ? cn : en); }
+
+// ---- helper ----
+
+// 从 args 列表中提取 --folder <path>，返回 path，并从列表中移除这两个元素
+static QString extractFolder(QStringList &args) {
+    int idx = args.indexOf("--folder");
+    if (idx >= 0 && idx + 1 < args.size()) {
+        QString path = args.at(idx + 1);
+        args.removeAt(idx + 1);
+        args.removeAt(idx);
+        return path;
+    }
+    return {};
+}
 
 // ---- main ----
 
@@ -26,7 +41,8 @@ int main(int argc, char *argv[]) {
     app.setApplicationName("lpcl-cli");
     app.setApplicationVersion("0.1");
 
-    // 先扫描 --cn/--en，确保 help 文本在 parser 设置时就是正确语言
+    // 默认静默，关闭 SDK 调试日志
+    QLoggingCategory::setFilterRules("lpcl.*.info=false\nlpcl.*.debug=false");
     for (int i = 1; i < argc; ++i) {
         if (QString::fromLatin1(argv[i]) == "--cn") setLang(false);
         else if (QString::fromLatin1(argv[i]) == "--en") setLang(true);
@@ -40,56 +56,42 @@ int main(int argc, char *argv[]) {
         _("使用英文输出（默认）", "Use English output (default)"));
     QCommandLineOption optCn("cn",
         _("使用中文输出", "Use Chinese output"));
-    parser.addOption(optCn);
-    parser.addOption(optEn);
-    QCommandLineOption optHelp("help", _("显示帮助信息", "Show help information"));
-    QCommandLineOption optVersion("version", _("显示版本号", "Show version number"));
-    QCommandLineOption optMcFolder("mc-folder",
-        _("指定 Minecraft 文件夹路径（默认 ~/.minecraft/）",
-          "Set Minecraft folder path (default ~/.minecraft/)"),
-        _("路径", "path"));
     QCommandLineOption optConfig("config",
         _("查看当前配置", "Show current configuration"));
+    QCommandLineOption optHelp("help", _("显示帮助信息", "Show help information"));
+    QCommandLineOption optVersion("version", _("显示版本号", "Show version number"));
+    parser.addOption(optCn);
+    parser.addOption(optEn);
+    parser.addOption(optConfig);
     parser.addOption(optHelp);
     parser.addOption(optVersion);
-    parser.addOption(optMcFolder);
-    parser.addOption(optConfig);
-
     parser.addPositionalArgument("command", "placeholder");
+    parser.setOptionsAfterPositionalArgumentsMode(
+        QCommandLineParser::ParseAsPositionalArguments);
     parser.process(app);
 
-    // 自定义 help，对齐 Options 风格
     auto printHelp = [&]() {
-        auto T = [](const char *cn, const char *en) { return QString::fromUtf8(g_lang == CN ? cn : en); };
-
         auto out = [](const QString &s) { std::cout << s.toStdString(); };
-
-        struct Item {
-            QString cmdCn, cmdEn;
-            const char *descCn, *descEn;
-        };
+        struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
         const Item items[] = {
-            {"list",              "list",              "列出已导入的整合包",              "List imported modpacks"},
-            {"launch <名称>",     "launch <name>",     "启动整合包游戏",                 "Launch a modpack"},
-            {"list-javas",        "list-javas",        "列出可用 Java",                  "List available Java runtimes"},
-            {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",               "Set default Minecraft folder"},
-            {"set-player <名称>", "set-player <name>", "设置玩家名称",                   "Set player name"},
-            {"inpack <文件>",     "inpack <file>",     "导入整合包（需 --mc-folder）",   "Import modpack (--mc-folder required)"},
+            {"list",              "list",              "列出已导入的整合包",    "List imported modpacks"},
+            {"launch <名称>",     "launch <name>",     "启动整合包游戏",       "Launch a modpack"},
+            {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
+            {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
+            {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
+            {"inpack <文件>",     "inpack <file>",     "导入整合包",           "Import modpack"},
         };
         const Item opts[] = {
-            {"--cn",              "--cn",              "使用中文输出",                   "Use Chinese output"},
-            {"--en",              "--en",              "使用英文输出（默认）",            "Use English output (default)"},
-            {"--config",          "--config",          "查看当前配置",                   "Show current configuration"},
-            {"--help",            "--help",            "显示帮助信息",                   "Show help information"},
-            {"--version",         "--version",         "显示版本号",                     "Show version number"},
-            {"--mc-folder <路径>","--mc-folder <path>","指定 Minecraft 文件夹",          "Set Minecraft folder path"},
+            {"--cn",      "--cn",      "使用中文输出",          "Use Chinese output"},
+            {"--en",      "--en",      "使用英文输出（默认）",   "Use English output (default)"},
+            {"--config",  "--config",  "查看当前配置",          "Show current configuration"},
+            {"--help",    "--help",    "显示帮助信息",          "Show help information"},
+            {"--version", "--version", "显示版本号",            "Show version number"},
         };
         auto printItem = [&](const Item &it) {
-            QString cmd  = g_lang == CN ? it.cmdCn : it.cmdEn;
-            QString desc = T(it.descCn, it.descEn);
-            out(QString("  %1 %2\n").arg(cmd, -20).arg(desc));
+            out(QString("  %1 %2\n").arg(g_lang == CN ? it.cmdCn : it.cmdEn, -20)
+                    .arg(T(it.descCn, it.descEn)));
         };
-
         out(T("Usage: lpcl-cli [options] <command> [args]\n",
               "Usage: lpcl-cli [options] <command> [args]\n"));
         out("\n"); out(T("命令 / Commands:\n", "Commands:\n"));
@@ -106,10 +108,11 @@ int main(int argc, char *argv[]) {
         return 0;
     }
 
-    // 初始化（--config 需要 Settings）
-    Settings::initialize();
+    QStringList args = parser.positionalArguments();
+    if (args.isEmpty()) { printHelp(); return 1; }
 
     if (parser.isSet(optConfig)) {
+        Settings::initialize();
         std::cout << _("LPCL 版本: ", "LPCL version: ") << GIT_DESCRIBE << std::endl
                   << _("提交: ",       "Commit: ")       << GIT_COMMIT_HASH << std::endl;
         QString folder = Settings::instance().getString("LaunchFolderSelect");
@@ -123,40 +126,67 @@ int main(int argc, char *argv[]) {
         std::cout << _("头像路径: ", "Avatar path: ") << avatar.toStdString() << std::endl;
         return 0;
     }
-    QString mcFolder;
-    if (parser.isSet(optMcFolder))
-        mcFolder = parser.value(optMcFolder);
-    else
-        mcFolder = Settings::instance().getString("LaunchFolderSelect");
-    if (mcFolder.isEmpty()) mcFolder = QDir::homePath() + "/.minecraft/";
-    VersionManager::instance().setMcFolder(mcFolder);
-
-    if (parser.isSet(optMcFolder)) {
-        std::cout << _("Minecraft 文件夹: ", "Minecraft folder: ") << mcFolder.toStdString() << std::endl;
-    }
-
-    const QStringList args = parser.positionalArguments();
-    if (args.isEmpty()) { printHelp(); return 1; }
 
     const QString cmd = args.at(0);
+    Settings::initialize();
 
+    // ---- set-folder ----
+    if (cmd == "set-folder") {
+        if (args.size() < 2) {
+            std::cerr << _("error:  lpcl-cli set-folder <路径>\n",
+                           "error:  lpcl-cli set-folder <path>\n");
+            return 1;
+        }
+        Settings::instance().setString("LaunchFolderSelect", args[1]);
+        std::cout << "success" << std::endl;
+        return 0;
+    }
+
+    // ---- set-player ----
+    if (cmd == "set-player") {
+        if (args.size() < 2) {
+            std::cerr << T("error: 缺少参数\n", "error: missing argument\n").toStdString();
+            return 1;
+        }
+        Settings::instance().setString("PlayerName", args[1]);
+        std::cout << "success" << std::endl;
+        return 0;
+    }
+
+    // 确定游戏目录
+    QString mcFolder;
+    // inpack 支持 --folder 选项（仅 inpack 可用）
+    QString folderArg = extractFolder(args);
+    if (!folderArg.isEmpty())
+        mcFolder = folderArg;
+    else
+        mcFolder = Settings::instance().getString("LaunchFolderSelect");
+    if (mcFolder.isEmpty()) {
+        std::cerr << T("error: 未设置游戏目录，请先执行 set-folder\n",
+                       "error: no game folder set, run set-folder first\n").toStdString();
+        return 1;
+    }
+    VersionManager::instance().setMcFolder(mcFolder);
+
+    // ---- list ----
     if (cmd == "list") {
         auto ids = lpcl::listVersions();
         if (ids.isEmpty()) {
-            std::cout << _("（没有找到已安装的版本）\n"
-                           "提示：用 lpcl-cli inpack <文件> --mc-folder <路径> 导入整合包\n",
-                           "(No installed versions found)\n"
-                           "Hint: use lpcl-cli inpack <file> --mc-folder <path>\n");
+            std::cout << T("(No installed versions found)\n",
+                           "(No installed versions found)\n").toStdString();
         } else {
             std::cout << _("已安装的版本:\n", "Installed versions:\n");
             for (const auto &id : ids)
                 std::cout << "  " << id.toStdString() << "\n";
         }
+        return 0;
+    }
 
-    } else if (cmd == "launch") {
+    // ---- launch ----
+    if (cmd == "launch") {
         if (args.size() < 2) {
-            std::cerr << _("用法: lpcl-cli launch <版本号>\n",
-                           "Usage: lpcl-cli launch <version>\n");
+            std::cerr << T("error: lpcl-cli launch <名称>\n",
+                           "error: lpcl-cli launch <name>\n").toStdString();
             return 1;
         }
         std::cout << _(QString("正在启动 %1 ...\n").arg(args[1]).toStdString(),
@@ -164,63 +194,42 @@ int main(int argc, char *argv[]) {
         if (!lpcl::launchVersion(args[1],
                 [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
                 [&](int code) {
-                    std::cout << _("游戏退出，exit code: ", "Game exited, exit code: ") << code << "\n";
+                    std::cout << _("exit: ", "exit: ") << code << "\n";
                     QCoreApplication::quit();
                 })) {
-            std::cerr << _("启动失败\n", "Launch failed\n");
+            std::cerr << T("error: launch failed\n", "error: launch failed\n").toStdString();
             return 1;
         }
-        std::cout << _("游戏已启动，等待退出...\n", "Game started, waiting for exit...\n");
+        std::cout << "success" << std::endl;
         return app.exec();
+    }
 
-    } else if (cmd == "list-javas") {
+    // ---- list-javas ----
+    if (cmd == "list-javas") {
         auto names = lpcl::listJavas();
         if (names.isEmpty()) {
-            std::cout << _("（未检测到 Java，正在扫描中...）\n",
-                           "(No Java detected, scanning...)\n");
+            std::cout << _("(No Java detected)\n",
+                           "(No Java detected)\n");
         } else {
-            std::cout << _("检测到的 Java:\n", "Detected Java:\n");
+            std::cout << _("success\n", "success\n");
             for (const auto &name : names)
                 std::cout << "  " << name.toStdString() << "\n";
         }
+        return 0;
+    }
 
-    } else if (cmd == "set-folder") {
+    // ---- inpack ----
+    if (cmd == "inpack") {
         if (args.size() < 2) {
-            std::cerr << _("用法: lpcl-cli set-folder <路径>\n",
-                           "Usage: lpcl-cli set-folder <path>\n");
-            return 1;
-        }
-        Settings::instance().setString("LaunchFolderSelect", args[1]);
-        std::cout << _("默认游戏目录已设置为: ", "Default game folder set to: ")
-                  << args[1].toStdString() << std::endl;
-
-    } else if (cmd == "set-player") {
-        if (args.size() < 2) {
-            std::cerr << _("用法: lpcl-cli set-player <名称>\n",
-                           "Usage: lpcl-cli set-player <name>\n");
-            return 1;
-        }
-        Settings::instance().setString("PlayerName", args[1]);
-        std::cout << _("玩家名称已设置为: ", "Player name set to: ")
-                  << args[1].toStdString() << std::endl;
-
-    } else if (cmd == "inpack") {
-        if (args.size() < 2) {
-            std::cerr << _("用法: lpcl-cli inpack <文件路径> [--mc-folder <路径>]\n",
-                           "Usage: lpcl-cli inpack <file> [--mc-folder <path>]\n");
-            return 1;
-        }
-        if (!parser.isSet(optMcFolder) && Settings::instance().getString("LaunchFolderSelect").isEmpty()) {
-            std::cerr << _("错误：未设置安装目录，请使用 --mc-folder 指定\n",
-                           "Error: no install folder set, use --mc-folder\n")
-                      << _("用法: lpcl-cli inpack <文件> --mc-folder <路径>\n",
-                           "Usage: lpcl-cli inpack <file> --mc-folder <path>\n");
+            std::cerr << _("error:  lpcl-cli inpack <文件> [--folder <路径>]\n",
+                           "error:  lpcl-cli inpack <file> [--folder <path>]\n");
             return 1;
         }
         std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
+        bool inpackDone = false;
+        int  inpackResult = 1;
         lpcl::importModpack(args[1], "",
-            [](const QString &status, int progress) {
-                // 进度条: [====>     ] 50%
+            [&](const QString &status, int progress) {
                 int bars = progress / 5;
                 std::cout << "\r  [";
                 for (int i = 0; i < 20; ++i)
@@ -229,22 +238,25 @@ int main(int argc, char *argv[]) {
                 if (progress >= 100) std::cout << std::endl;
                 std::cout.flush();
             },
-            [](bool ok, const QString &msg) {
-                if (ok)
-                    std::cout << std::endl << _("✓ 导入成功！实例名: ", "✓ Import success! Instance: ")
+            [&](bool ok, const QString &msg) {
+                if (ok) {
+                    std::cout << std::endl << _("success: ", "success: ")
                               << msg.toStdString() << std::endl;
-                else
-                    std::cerr << std::endl << _("✗ 导入失败: ", "✗ Import failed: ")
+                    inpackResult = 0;
+                } else {
+                    std::cerr << std::endl << _("error: ", "error: ")
                               << msg.toStdString() << std::endl;
+                }
+                inpackDone = true;
                 QCoreApplication::quit();
             });
-        return app.exec();
-
-    } else {
-        std::cerr << _(QString("未知命令: %1\n").arg(cmd).toStdString(),
-                       QString("Unknown command: %1\n").arg(cmd).toStdString());
-        printHelp(); return 1;
+        if (inpackDone) return inpackResult;
+        app.exec();
+        return inpackResult;
     }
 
-    return 0;
+    // ---- unknown ----
+    std::cerr << _(QString("未知命令: %1\n").arg(cmd).toStdString(),
+                   QString("error: unknown command: %1\n").arg(cmd).toStdString());
+    printHelp(); return 1;
 }
