@@ -25,6 +25,7 @@ endif()
 
 # Core sources (no GUI, no QML)
 set(LPCLCORE_SOURCES
+    src/lpcl.cpp
     src/settings.cpp
     src/javamanager.cpp
     src/versionmanager.cpp
@@ -43,6 +44,7 @@ set(LPCLCORE_SOURCES
 )
 
 set(LPCLCORE_HEADERS
+    include/lpcl.h
     include/core/types.h
     include/core/settings.h
     include/core/javamanager.h

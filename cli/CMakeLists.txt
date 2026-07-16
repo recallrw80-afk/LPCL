@@ -28,3 +28,9 @@ target_include_directories(lpcl-cli PRIVATE
 target_link_libraries(lpcl-cli PRIVATE lpclcore Qt6::Core)
 
 target_compile_features(lpcl-cli PRIVATE cxx_std_20)
+
+# rpath: 优先在同目录找 liblpclcore.so（打包后 lpcl-cli 和 .so 放一起）
+set_target_properties(lpcl-cli PROPERTIES
+    BUILD_RPATH "$ORIGIN"
+    INSTALL_RPATH "$ORIGIN"
+)

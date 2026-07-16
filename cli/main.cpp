@@ -1,141 +1,135 @@
 // lpcl-cli — Minecraft launcher CLI frontend
 // Links only liblpclcore (QtCore + QtNetwork, no GUI/QML)
+
 #include <QCoreApplication>
 #include <QCommandLineParser>
-#include <QDebug>
 #include <QDir>
 #include <iostream>
 
+#include "lpcl.h"
 #include "core/settings.h"
-#include "core/javamanager.h"
 #include "core/versionmanager.h"
-#include "core/launcher.h"
-#include "download/downloadmanager.h"
-#include "auth/offlineauth.h"
 
-static void cmdListVersions() {
-    auto &vm = VersionManager::instance();
-    vm.loadLocalVersions();
-    auto ids = vm.versionIds();
-    if (ids.isEmpty()) {
-        std::cout << "（没有找到已安装的版本）\n";
-        std::cout << "提示：用 lpcl-cli install <版本号> 安装版本\n";
-        return;
-    }
-    std::cout << "已安装的版本:\n";
-    for (const auto &id : ids) {
-        std::cout << "  " << id.toStdString() << "\n";
-    }
-}
+// ---- 中英文切换 ----
 
-static void cmdInstallVersion(const QString &versionId) {
-    std::cout << "正在安装 " << versionId.toStdString() << " ...\n";
-    auto &vm = VersionManager::instance();
-    Q_UNUSED(vm);
-    std::cout << "（安装功能尚未实现——后端仍为桩实现）\n";
-}
+enum Lang { CN, EN };
+static Lang g_lang = EN;
 
-static void cmdLaunch(const QString &versionId) {
-    std::cout << "正在启动 " << versionId.toStdString() << " ...\n";
-    auto &launcher = Launcher::instance();
-    auto &jm = JavaManager::instance();
+#define _(cn, en) (g_lang == CN ? cn : en)
 
-    // 离线登录
-    auto login = OfflineAuth::createOfflineLogin("Player");
+static void setLang(bool en) { g_lang = en ? EN : CN; }
 
-    // 选 Java
-    auto version = VersionManager::instance().loadVersion(versionId);
-    auto *java = jm.selectJava();
-
-    if (!java) {
-        std::cerr << "错误：未找到可用的 Java\n";
-        return;
-    }
-
-    // 连接日志输出
-    QObject::connect(&launcher, &Launcher::gameLog, [](const QString &line) {
-        std::cout << "[MC] " << line.toStdString() << std::endl;
-    });
-    QObject::connect(&launcher, &Launcher::gameExited, [](int code, const QString &) {
-        std::cout << "游戏退出，exit code: " << code << "\n";
-        QCoreApplication::quit();
-    });
-
-    if (!launcher.launch(version, *java, login)) {
-        std::cerr << "启动失败\n";
-        return;
-    }
-
-    std::cout << "游戏已启动，等待退出...\n";
-}
-
-static void cmdListJavas() {
-    auto &jm = JavaManager::instance();
-    jm.scanSystemJava();
-    auto names = jm.javaNames();
-    if (names.isEmpty()) {
-        std::cout << "（未检测到 Java，正在扫描中...）\n";
-        return;
-    }
-    std::cout << "检测到的 Java:\n";
-    for (const auto &name : names) {
-        std::cout << "  " << name.toStdString() << "\n";
-    }
-}
+// ---- main ----
 
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
     app.setApplicationName("lpcl-cli");
     app.setApplicationVersion("0.1");
 
-    // 初始化核心库
-    Settings::initialize();
-    auto &jm = JavaManager::instance();
-    auto &vm = VersionManager::instance();
-
-    // 设置默认 Minecraft 文件夹
-    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
-    if (mcFolder.isEmpty()) {
-        mcFolder = QDir::homePath() + "/.minecraft/";
+    // 先扫描 --cn/--en，确保 help 文本在 parser 设置时就是正确语言
+    for (int i = 1; i < argc; ++i) {
+        if (QString::fromLatin1(argv[i]) == "--cn") setLang(false);
+        else if (QString::fromLatin1(argv[i]) == "--en") setLang(true);
     }
-    vm.setMcFolder(mcFolder);
 
-    // 命令行解析
     QCommandLineParser parser;
-    parser.setApplicationDescription("LPCL 命令行启动器");
-    parser.addHelpOption();
-    parser.addVersionOption();
+    parser.setApplicationDescription(
+        _("LPCL 命令行启动器", "LPCL Command-Line Launcher"));
 
-    parser.addPositionalArgument("command", "命令: list | install <版本> | launch <版本> | list-javas");
+    QCommandLineOption optEn("en",
+        _("使用英文输出（默认）", "Use English output (default)"));
+    QCommandLineOption optCn("cn",
+        _("使用中文输出", "Use Chinese output"));
+    parser.addOption(optCn);
+    parser.addOption(optEn);
+    QCommandLineOption optHelp("help", _("显示帮助信息", "Show help information"));
+    QCommandLineOption optVersion("version", _("显示版本号", "Show version number"));
+    parser.addOption(optHelp);
+    parser.addOption(optVersion);
 
-    parser.parse(app.arguments());
+    parser.addPositionalArgument("command",
+        _("命令: list | install <版本> | launch <版本> | list-javas",
+          "Commands: list | install <version> | launch <version> | list-javas"));
+
+    parser.process(app);
+
+    if (parser.isSet(optHelp))  { parser.showHelp(0); }
+    if (parser.isSet(optVersion)) {
+        std::cout << app.applicationName().toStdString() << " "
+                  << app.applicationVersion().toStdString() << std::endl;
+        return 0;
+    }
+
+    // 初始化
+    Settings::initialize();
+    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
+    if (mcFolder.isEmpty()) mcFolder = QDir::homePath() + "/.minecraft/";
+    VersionManager::instance().setMcFolder(mcFolder);
 
     const QStringList args = parser.positionalArguments();
-    if (args.isEmpty()) {
-        parser.showHelp(1);
-    }
+    if (args.isEmpty()) { parser.showHelp(1); }
 
     const QString cmd = args.at(0);
 
     if (cmd == "list") {
-        cmdListVersions();
+        auto ids = lpcl::listVersions();
+        if (ids.isEmpty()) {
+            std::cout << _("（没有找到已安装的版本）\n"
+                           "提示：用 lpcl-cli install <版本号> 安装版本\n",
+                           "(No installed versions found)\n"
+                           "Hint: use lpcl-cli install <version>\n");
+        } else {
+            std::cout << _("已安装的版本:\n", "Installed versions:\n");
+            for (const auto &id : ids)
+                std::cout << "  " << id.toStdString() << "\n";
+        }
+
     } else if (cmd == "install") {
         if (args.size() < 2) {
-            std::cerr << "用法: lpcl-cli install <版本号>\n";
+            std::cerr << _("用法: lpcl-cli install <版本号>\n",
+                           "Usage: lpcl-cli install <version>\n");
             return 1;
         }
-        cmdInstallVersion(args.at(1));
+        std::cout << _(QString("正在安装 %1 ...\n").arg(args[1]).toStdString(),
+                       QString("Installing %1 ...\n").arg(args[1]).toStdString());
+        lpcl::installVersion(args[1]);
+        std::cout << _("（安装功能尚未实现——后端仍为桩实现）\n",
+                       "(Install not yet implemented — backend is stubbed)\n");
+
     } else if (cmd == "launch") {
         if (args.size() < 2) {
-            std::cerr << "用法: lpcl-cli launch <版本号>\n";
+            std::cerr << _("用法: lpcl-cli launch <版本号>\n",
+                           "Usage: lpcl-cli launch <version>\n");
             return 1;
         }
-        cmdLaunch(args.at(1));
-        return app.exec();  // 等待游戏退出
+        std::cout << _(QString("正在启动 %1 ...\n").arg(args[1]).toStdString(),
+                       QString("Launching %1 ...\n").arg(args[1]).toStdString());
+        if (!lpcl::launchVersion(args[1],
+                [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
+                [&](int code) {
+                    std::cout << _("游戏退出，exit code: ", "Game exited, exit code: ") << code << "\n";
+                    QCoreApplication::quit();
+                })) {
+            std::cerr << _("启动失败\n", "Launch failed\n");
+            return 1;
+        }
+        std::cout << _("游戏已启动，等待退出...\n", "Game started, waiting for exit...\n");
+        return app.exec();
+
     } else if (cmd == "list-javas") {
-        cmdListJavas();
+        auto names = lpcl::listJavas();
+        if (names.isEmpty()) {
+            std::cout << _("（未检测到 Java，正在扫描中...）\n",
+                           "(No Java detected, scanning...)\n");
+        } else {
+            std::cout << _("检测到的 Java:\n", "Detected Java:\n");
+            for (const auto &name : names)
+                std::cout << "  " << name.toStdString() << "\n";
+        }
+
     } else {
-        std::cerr << "未知命令: " << cmd.toStdString() << "\n";
+        std::cerr << _(QString("未知命令: %1\n").arg(cmd).toStdString(),
+                       QString("Unknown command: %1\n").arg(cmd).toStdString());
         parser.showHelp(1);
     }
 
