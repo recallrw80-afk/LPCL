@@ -133,7 +133,6 @@ void VersionManager::loadLocalVersions() {
 
     m_versionList.clear();
 
-    // 扫描 mcFolder 的直接子目录，查找 PCL/Setup.ini 标记的实例
     QDir mcDir(m_mcFolder);
     if (!mcDir.exists()) {
         m_isLoading = false;
@@ -141,40 +140,61 @@ void VersionManager::loadLocalVersions() {
         return;
     }
 
-    for (const auto &entry : mcDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+    // 收集已知实例的目录名（从 INI [Instances] 映射中读取）
+    QMap<QString, QString> instanceMap = Settings::instance().instanceDirs();
+    QSet<QString> knownDirs; // 已知是实例目录的随机名
+
+    // 从 INI 映射加载所有实例
+    for (auto it = instanceMap.begin(); it != instanceMap.end(); ++it) {
+        const QString &dirName = it.key();
+        const QString &displayName = it.value();
+        QString dirPath = m_mcFolder + "instances/" + dirName + "/";
+
+        if (!QFileInfo::exists(dirPath + "PCL/Setup.ini")) {
+            // INI 映射存在但目录已丢失，跳过（可能是手动删除了目录）
+            continue;
+        }
+
         McVersionInfo info;
-        info.id = entry.fileName();
+        info.id = displayName;
+        info.isLocal = true;
+        info.type = "instance";
+        m_versionList.append(info);
+        knownDirs.insert(dirName);
+    }
+
+    // 扫描剩余子目录：原始 MC 版本（不在已知实例目录中的）
+    for (const auto &entry : mcDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        QString dirName = entry.fileName();
+
+        // 跳过已知的实例目录、tmp/、assets/、libraries/ 等共享目录
+        if (knownDirs.contains(dirName)) continue;
+        if (dirName == "tmp" || dirName == "assets" || dirName == "libraries" ||
+            dirName == "instances" || dirName == "versions" || dirName == "launcher" ||
+            dirName == "logs" || dirName == "resourcepacks" || dirName == "saves") continue;
+
+        // 原始 MC 版本：有匹配的 .json 文件
+        QString jsonPath = entry.absoluteFilePath() + "/" + dirName + ".json";
+        if (!QFileInfo::exists(jsonPath)) continue;
+
+        McVersionInfo info;
+        info.id = dirName;
         info.isLocal = true;
 
-        // 优先识别导入的整合包实例：有 PCL/Setup.ini
-        bool isInstance = QFileInfo::exists(entry.absoluteFilePath() + "/PCL/Setup.ini");
-
-        if (isInstance) {
-            // 从 Setup.ini 读取实例元信息
-            info.type = "instance";
-            QSettings ini(entry.absoluteFilePath() + "/PCL/Setup.ini", QSettings::IniFormat);
-            QString displayName = ini.value("Setup/Name").toString();
-            if (!displayName.isEmpty()) info.id = displayName;
-        } else {
-            // 回退：原始 MC 版本（有匹配的 .json 文件）
-            QString jsonPath = entry.absoluteFilePath() + "/" + entry.fileName() + ".json";
-            if (!QFileInfo::exists(jsonPath)) continue;
-
-            // Try to get more info from the JSON
-            try {
-                QFile file(jsonPath);
-                if (file.open(QIODevice::ReadOnly)) {
-                    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-                    QJsonObject root = doc.object();
-                    info.type = root.value("type").toString("unknown");
-                    QString timeStr = root.value("releaseTime").toString();
-                    if (!timeStr.isEmpty()) {
-                        info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
-                    }
+        // Try to get more info from the JSON
+        try {
+            QFile file(jsonPath);
+            if (file.open(QIODevice::ReadOnly)) {
+                QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+                QJsonObject root = doc.object();
+                info.type = root.value("type").toString("unknown");
+                QString timeStr = root.value("releaseTime").toString();
+                if (!timeStr.isEmpty()) {
+                    info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
                 }
-            } catch (...) {
-                // Use defaults
             }
+        } catch (...) {
+            info.type = "unknown";
         }
 
         m_versionList.append(info);

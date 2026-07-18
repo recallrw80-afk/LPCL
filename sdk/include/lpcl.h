@@ -63,7 +63,7 @@ LPCLCORE_EXPORT void importModpack(const QString &filePath,
                                     std::function<void(const ImportProgress &)> onProgress,
                                     std::function<void(bool, const QString &)> onComplete);
 
-/// 删除实例（移除 {mcFolder}/{name}/ 整个目录）
+/// 删除实例（通过 INI 映射查找随机目录名并删除，移除映射记录）
 LPCLCORE_EXPORT bool removeInstance(const QString &name);
 
 /// 读取当前配置快照（同步）

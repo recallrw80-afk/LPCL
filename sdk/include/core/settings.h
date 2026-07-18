@@ -84,6 +84,20 @@ public:
     QString selectedPlayer() const;
     void selectPlayer(const QString &uuid);
 
+    // ---- Instance directory mappings (随机名 → 实例名) ----
+
+    /// 写入实例目录映射：dirName → displayName（存储到 LPCL.ini 的 [LPCL] 节）
+    void setInstanceDir(const QString &dirName, const QString &displayName);
+
+    /// 读取全部实例映射：dirName → displayName
+    QMap<QString, QString> instanceDirs() const;
+
+    /// 删除一个实例映射
+    void removeInstanceDir(const QString &dirName);
+
+    /// 通过显示名反向查找目录名（找不到返回空字符串）
+    QString dirForDisplayName(const QString &displayName) const;
+
     // Initialize defaults
     void initDefaults();
 

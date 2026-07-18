@@ -29,8 +29,12 @@ bool launchVersion(const QString &versionId,
     auto &launcher = Launcher::instance();
     auto &jm = JavaManager::instance();
 
+    // 解析显示名 → 实例目录名（用于 loadVersion 的路径查找）
+    QString dirName = Settings::instance().dirForDisplayName(versionId);
+    QString resolvedId = dirName.isEmpty() ? versionId : dirName;
+
     auto login = OfflineAuth::createOfflineLogin("Player");
-    auto version = VersionManager::instance().loadVersion(versionId);
+    auto version = VersionManager::instance().loadVersion(resolvedId);
     auto *java = jm.selectJava();
     if (!java) return false;
 
@@ -70,9 +74,23 @@ bool removeInstance(const QString &name) {
         return false;
     QString folder = Settings::instance().getString("LaunchFolderSelect");
     if (!folder.endsWith('/')) folder += '/';
-    QString instanceDir = folder + name;
+
+    // 优先从 INI 映射查找随机目录名
+    QString dirName = Settings::instance().dirForDisplayName(name);
+    if (!dirName.isEmpty()) {
+        QString instanceDir = folder + "instances/" + dirName;
+        bool ok = QDir(instanceDir).removeRecursively();
+        if (ok) Settings::instance().removeInstanceDir(dirName);
+        return ok;
+    }
+
+    // 回退：直接用显示名作为目录名（兼容旧格式或测试）
+    QString instanceDir = folder + "instances/" + name;
     if (!QDir(instanceDir).exists()) return false;
-    return QDir(instanceDir).removeRecursively();
+    bool ok = QDir(instanceDir).removeRecursively();
+    // 也尝试清理可能残留的 INI 映射
+    Settings::instance().removeInstanceDir(name);
+    return ok;
 }
 
 ConfigInfo getConfig() {

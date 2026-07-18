@@ -215,3 +215,44 @@ void Settings::selectPlayer(const QString &uuid)
 {
     setString("SelectedPlayer", uuid);
 }
+
+// ---- Instance directory mappings ----
+
+void Settings::setInstanceDir(const QString &dirName, const QString &displayName)
+{
+    if (!m_settings) return;
+    m_settings->setValue("Instances/" + dirName, displayName);
+    m_settings->sync();
+}
+
+QMap<QString, QString> Settings::instanceDirs() const
+{
+    QMap<QString, QString> result;
+    if (!m_settings) return result;
+    for (const auto &key : m_settings->allKeys()) {
+        if (key.startsWith("Instances/")) {
+            QString dirName = key.mid(10); // after "Instances/"
+            result[dirName] = m_settings->value(key).toString();
+        }
+    }
+    return result;
+}
+
+void Settings::removeInstanceDir(const QString &dirName)
+{
+    if (!m_settings) return;
+    m_settings->remove("Instances/" + dirName);
+    m_settings->sync();
+}
+
+QString Settings::dirForDisplayName(const QString &displayName) const
+{
+    if (!m_settings || displayName.isEmpty()) return {};
+    for (const auto &key : m_settings->allKeys()) {
+        if (key.startsWith("Instances/")) {
+            if (m_settings->value(key).toString() == displayName)
+                return key.mid(10);
+        }
+    }
+    return {};
+}

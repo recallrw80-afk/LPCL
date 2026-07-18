@@ -1,5 +1,6 @@
 #include "download/assetdownloader.h"
 #include "download/downloadmanager.h"
+#include "core/versionmanager.h"
 #include "util/file_utils.h"
 
 #include <QDir>
@@ -62,9 +63,12 @@ void AssetDownloader::downloadVersion(const QString &versionId,
                         return;
                     }
 
-                    // Save version JSON locally
-                    QString versionsDir = DownloadManager::instance().property("mcFolder").toString();
-                    QString jsonPath = versionsDir + versionId + "/" + versionId + ".json";
+                    // 从 VersionManager 读取游戏目录，version 文件放入标准的 versions/ 子目录
+                    QString mcRoot = VersionManager::instance().mcFolder();
+                    if (mcRoot.isEmpty()) {
+                        mcRoot = DownloadManager::instance().property("mcFolder").toString();
+                    }
+                    QString jsonPath = mcRoot + "versions/" + versionId + "/" + versionId + ".json";
                     QDir().mkpath(QFileInfo(jsonPath).absolutePath());
                     QFile f(jsonPath);
                     if (f.open(QIODevice::WriteOnly)) {
@@ -76,9 +80,9 @@ void AssetDownloader::downloadVersion(const QString &versionId,
                     // Build a McVersion for path references
                     McVersion ver;
                     ver.id = versionId;
-                    ver.pathVersion = QFileInfo(jsonPath).absolutePath() + "/";
+                    ver.pathVersion = QFileInfo(jsonPath).absolutePath() + "/";  // {mcFolder}/versions/{id}/
                     ver.pathJar = ver.pathVersion + versionId + ".jar";
-                    ver.pathIndie = QFileInfo(versionsDir).absolutePath() + "/";
+                    ver.pathIndie = mcRoot;  // {mcFolder}/  全局 libraries/assets 放这里
 
                     // Parse asset index
                     QString assetIndex;

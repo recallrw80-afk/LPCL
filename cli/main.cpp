@@ -10,6 +10,10 @@
 #include <QCoreApplication>
 #include <QCommandLineParser>
 #include <QDir>
+#include <QElapsedTimer>
+#include <QEventLoop>
+#include <QFile>
+#include <QUuid>
 #include <QLoggingCategory>
 #include <iostream>
 
@@ -224,23 +228,78 @@ static QList<TestItem> runCommandTests() {
         }
     }
 
-    // inpack
-    skip("inpack", "需要整合包文件，跳过（手动测试: inpack <文件>）");
+    // inpack（实际导入测试）
+    {
+        const QString testFile = "/home/recall/Downloads/other/蛊真人.zip";
+        if (QFile::exists(testFile)) {
+            // 先清理可能存在的旧实例+全局 version 缓存
+            QString folder = Settings::instance().getString("LaunchFolderSelect");
+            if (!folder.endsWith('/')) folder += '/';
+            lpcl::removeInstance("蛊真人");
+            QDir(folder + "1.21.1/").removeRecursively();
 
-    // rm（创建临时目录 → removeInstance → 验证删除）
+            QElapsedTimer timer;
+            timer.start();
+            bool success = false;
+            QString message;
+            QEventLoop loop;
+
+            lpcl::importModpack(testFile, "蛊真人",
+                [](const lpcl::ImportProgress &) {},
+                [&](bool ok, const QString &msg) {
+                    success = ok;
+                    message = msg;
+                    loop.quit();
+                });
+            loop.exec();
+
+            QString elapsed = QString("%1s").arg(timer.elapsed() / 1000.0, 0, 'f', 1);
+            if (success) {
+                // 导入后验证实例出现在列表中
+                VersionManager::instance().loadLocalVersions();
+                auto ids = VersionManager::instance().versionIds();
+                if (ids.contains("蛊真人")) {
+                    ok("inpack", "导入成功: " + message + " (" + elapsed + ")");
+                    // 清理测试导入的实例
+                    lpcl::removeInstance("蛊真人");
+                    // 清理 import 产生的全局 version 缓存（downloadVersion 残留）
+                    QDir(folder + "1.21.1/").removeRecursively();
+                } else {
+                    fail("inpack", "list 中未找到实例 " + message);
+                }
+            } else {
+                fail("inpack", "导入失败: " + message + " (" + elapsed + ")");
+            }
+        } else {
+            warn("inpack", "测试文件不存在: " + testFile);
+        }
+    }
+
+    // rm（创建随机目录 + INI 映射 → removeInstance → 验证删除）
     {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (!folder.isEmpty()) {
             if (!folder.endsWith('/')) folder += '/';
             const QString testName = "_lpcl_test_rm_";
-            QString testDir = folder + testName + "/";
+            // 用随机目录名模拟新存储模型（instances/ 子目录）
+            QString randomDir = "test_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
+            QString testDir = folder + "instances/" + randomDir + "/";
             QDir().mkpath(testDir);
+            QDir(testDir + "PCL/").mkpath(".");
+            // 写入 INI 映射
+            Settings::instance().setInstanceDir(randomDir, testName);
             if (QDir(testDir).exists()) {
                 bool removed = lpcl::removeInstance(testName);
-                if (removed && !QDir(testDir).exists())
-                    ok("rm", "创建/删除 正常");
+                bool dirGone = !QDir(testDir).exists();
+                bool mappingGone = Settings::instance().dirForDisplayName(testName).isEmpty();
+                if (removed && dirGone && mappingGone)
+                    ok("rm", "映射删除/目录清理 正常");
+                else if (!mappingGone)
+                    fail("rm", "映射残留");
                 else
                     fail("rm", "删除失败或目录残留");
+                // 兜底清理
+                if (!dirGone) QDir(testDir).removeRecursively();
             } else {
                 fail("rm", "无法创建测试目录");
             }
@@ -588,6 +647,18 @@ int main(int argc, char *argv[]) {
                 std::cout << "  skin=" << p.skinType.toStdString();
                 if (isSel) std::cout << "  [" << _("当前", "active") << "]";
                 std::cout << std::endl;
+            }
+        }
+
+        // 实例映射表
+        auto instMap = Settings::instance().instanceDirs();
+        if (instMap.isEmpty()) {
+            std::cout << _("实例映射: （无）\n", "Instance mappings: (none)\n");
+        } else {
+            std::cout << _("实例映射:", "Instance mappings:") << std::endl;
+            for (auto it = instMap.begin(); it != instMap.end(); ++it) {
+                std::cout << "  " << it.key().toStdString()
+                          << " → " << it.value().toStdString() << std::endl;
             }
         }
         return 0;
