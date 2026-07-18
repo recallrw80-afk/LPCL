@@ -1,5 +1,11 @@
 // lpcl-cli — Minecraft launcher CLI frontend
 // Links only liblpclcore (QtCore + QtNetwork, no GUI/QML)
+//
+// 维护指南：
+//   新增命令只需三步：
+//     1. 在 printHelp() 的 items[] 数组加一行
+//     2. 写一个 static int handleXxx(const QStringList &args) 函数
+//     3. 在 dispatchCommand() 中按是否需要 mcFolder 归类加入
 
 #include <QCoreApplication>
 #include <QCommandLineParser>
@@ -10,6 +16,8 @@
 #include "lpcl.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
+#include "core/javamanager.h"
+#include <QDir>
 
 // ---- 中英文切换 ----
 
@@ -20,9 +28,8 @@ static Lang g_lang = EN;
 static void setLang(bool en) { g_lang = en ? EN : CN; }
 static auto T(const char *cn, const char *en) { return QString::fromUtf8(g_lang == CN ? cn : en); }
 
-// ---- helper ----
+// ---- helpers ----
 
-// 从 args 列表中提取 --flag <value>，返回 value，并从列表中移除两个元素
 static QString extractFlag(QStringList &args, const QString &flag) {
     int idx = args.indexOf(flag);
     if (idx >= 0 && idx + 1 < args.size()) {
@@ -34,7 +41,447 @@ static QString extractFlag(QStringList &args, const QString &flag) {
     return {};
 }
 static QString extractFolder(QStringList &args) { return extractFlag(args, "--folder"); }
-static QString extractRename(QStringList &args)   { return extractFlag(args, "--r"); }
+static QString extractRename(QStringList &args) { return extractFlag(args, "--r"); }
+
+// ---- 命令处理函数 ----
+// 每个函数签名: static int handleXxx(const QStringList &args)
+// args[0] = 命令名, args[1..] = 参数
+// 返回值 = 进程退出码
+
+// ---- 无需 mcFolder 的命令 ----
+
+static int handleSetFolder(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli set-folder <路径>\n",
+                       "error:  lpcl-cli set-folder <path>\n");
+        return 1;
+    }
+    Settings::instance().setString("LaunchFolderSelect", args[1]);
+    std::cout << "success" << std::endl;
+    return 0;
+}
+
+static int handleSetPlayer(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << T("error: 缺少参数\n", "error: missing argument\n").toStdString();
+        return 1;
+    }
+    Settings::instance().setString("PlayerName", args[1]);
+    std::cout << "success" << std::endl;
+    return 0;
+}
+
+static int handleListJavas() {
+    auto names = lpcl::listJavas();
+    if (names.isEmpty()) {
+        std::cout << _("(No Java detected)\n", "(No Java detected)\n");
+    } else {
+        std::cout << _("success\n", "success\n");
+        for (const auto &name : names)
+            std::cout << "  " << name.toStdString() << "\n";
+    }
+    return 0;
+}
+
+// ---- test 自检（CLI 层，逐条验证命令） ----
+
+struct TestItem {
+    QString cmd;
+    QString status;  // OK / WARN / FAIL / SKIP
+    QString detail;
+};
+
+static QList<TestItem> runCommandTests() {
+    QList<TestItem> results;
+    auto ok  = [&](const QString &cmd, const QString &detail)
+        { results.append({cmd, "OK", detail}); };
+    auto warn= [&](const QString &cmd, const QString &detail)
+        { results.append({cmd, "WARN", detail}); };
+    auto fail= [&](const QString &cmd, const QString &detail)
+        { results.append({cmd, "FAIL", detail}); };
+    auto skip= [&](const QString &cmd, const QString &detail)
+        { results.append({cmd, "SKIP", detail}); };
+
+    // --config
+    {
+        auto cfg = lpcl::getConfig();
+        if (!cfg.version.isEmpty() && !cfg.commit.isEmpty())
+            ok("--config", QString("v%1 (%2)").arg(cfg.version, cfg.commit));
+        else
+            fail("--config", "版本信息缺失");
+    }
+
+    // set-folder（写入 → 读回 → 还原）
+    {
+        QString orig = Settings::instance().getString("LaunchFolderSelect");
+        const QString testPath = "/tmp/_lpcl_test_mc_/";
+        Settings::instance().setString("LaunchFolderSelect", testPath);
+        QString readBack = Settings::instance().getString("LaunchFolderSelect");
+        Settings::instance().setString("LaunchFolderSelect", orig);
+        if (readBack == testPath)
+            ok("set-folder", "写入/读取/还原 正常");
+        else
+            fail("set-folder", QString("写入 '%1' 读回 '%2'").arg(testPath, readBack));
+    }
+
+    // set-player
+    {
+        const QString testName = "_lpcl_test_player_";
+        Settings::instance().setString("PlayerName", testName);
+        QString readBack = Settings::instance().getString("PlayerName");
+        Settings::instance().setString("PlayerName", QString());
+        if (readBack == testName)
+            ok("set-player", "写入/读取/清除 正常");
+        else
+            fail("set-player", QString("写入 '%1' 读回 '%2'").arg(testName, readBack));
+    }
+
+    // player-add → list → select → rm 全链路
+    QString testUuid;
+    {
+        auto entry = lpcl::addPlayer("_lpcl_test_");
+        if (!entry.uuid.isEmpty() && entry.name == "_lpcl_test_") {
+            ok("player-add", QString("创建 (uuid: %1)").arg(entry.uuid));
+            testUuid = entry.uuid;
+        } else {
+            fail("player-add", "创建失败");
+        }
+    }
+
+    if (!testUuid.isEmpty()) {
+        auto players = lpcl::listPlayers();
+        bool found = false;
+        for (const auto &p : players)
+            if (p.uuid == testUuid) { found = true; break; }
+        if (found)
+            ok("player-list", QString("共 %1 个玩家，测试玩家已找到").arg(players.size()));
+        else
+            fail("player-list", "测试玩家未出现在列表中");
+
+        QString before = Settings::instance().selectedPlayer();
+        lpcl::selectPlayer(testUuid);
+        QString after = Settings::instance().selectedPlayer();
+        lpcl::selectPlayer(before);
+        if (after == testUuid)
+            ok("player-select", "选中/还原 正常");
+        else
+            fail("player-select", "选中失败");
+
+        lpcl::removePlayer(testUuid);
+        players = lpcl::listPlayers();
+        bool gone = true;
+        for (const auto &p : players)
+            if (p.uuid == testUuid) { gone = false; break; }
+        if (gone)
+            ok("player-rm", "删除成功");
+        else
+            fail("player-rm", "删除后仍在列表中");
+    } else {
+        skip("player-list",   "player-add 失败，跳过");
+        skip("player-select", "player-add 失败，跳过");
+        skip("player-rm",     "player-add 失败，跳过");
+    }
+
+    // list-javas
+    {
+        auto names = lpcl::listJavas();
+        if (!names.isEmpty())
+            ok("list-javas", QString("检测到 %1 个 Java: %2").arg(names.size()).arg(names.join(", ")));
+        else
+            warn("list-javas", "未检测到 Java 运行时");
+    }
+
+    // list（需要游戏目录）
+    {
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (!folder.isEmpty()) {
+            auto &vm = VersionManager::instance();
+            vm.setMcFolder(folder);
+            vm.loadLocalVersions();
+            auto ids = vm.versionIds();
+            if (ids.isEmpty())
+                ok("list", "目录已设置，无已安装实例");
+            else
+                ok("list", QString("检测到 %1 个实例: %2").arg(ids.size()).arg(ids.join(", ")));
+        } else {
+            warn("list", "游戏目录未设置，跳过（请先 set-folder）");
+        }
+    }
+
+    // launch
+    {
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (!folder.isEmpty()) {
+            VersionManager::instance().setMcFolder(folder);
+            VersionManager::instance().loadLocalVersions();
+            auto ids = VersionManager::instance().versionIds();
+            if (!ids.isEmpty())
+                skip("launch", QString("实例 '%1' 存在但跳过（需 GUI 环境）").arg(ids.first()));
+            else
+                skip("launch", "无可用实例，跳过");
+        } else {
+            skip("launch", "游戏目录未设置，跳过");
+        }
+    }
+
+    // inpack
+    skip("inpack", "需要整合包文件，跳过（手动测试: inpack <文件>）");
+
+    // rm（创建临时目录 → removeInstance → 验证删除）
+    {
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (!folder.isEmpty()) {
+            if (!folder.endsWith('/')) folder += '/';
+            const QString testName = "_lpcl_test_rm_";
+            QString testDir = folder + testName + "/";
+            QDir().mkpath(testDir);
+            if (QDir(testDir).exists()) {
+                bool removed = lpcl::removeInstance(testName);
+                if (removed && !QDir(testDir).exists())
+                    ok("rm", "创建/删除 正常");
+                else
+                    fail("rm", "删除失败或目录残留");
+            } else {
+                fail("rm", "无法创建测试目录");
+            }
+        } else {
+            skip("rm", "游戏目录未设置，跳过");
+        }
+    }
+
+    return results;
+}
+
+static int handleTest() {
+    std::cout << _("=== LPCL 全系统自检 ===\n", "=== LPCL System Self-Test ===\n") << std::endl;
+
+    auto results = runCommandTests();
+    for (const auto &r : results) {
+        QString tag;
+        if (r.status == "OK")      tag = "\033[32m[ OK ]\033[0m";
+        else if (r.status == "WARN")   tag = "\033[33m[WARN]\033[0m";
+        else if (r.status == "FAIL")   tag = "\033[31m[FAIL]\033[0m";
+        else if (r.status == "SKIP")   tag = "\033[90m[SKIP]\033[0m";
+        else                      tag = "[INFO]";
+
+        std::cout << "  " << tag.toStdString() << " "
+                  << QString("%1").arg(r.cmd, -22).toStdString()
+                  << r.detail.toStdString() << std::endl;
+    }
+    return 0;
+}
+
+// ---- 玩家 Profile 命令 ----
+
+static int handlePlayerAdd(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli player-add <名称> [--avatar <路径>]\n",
+                       "error:  lpcl-cli player-add <name> [--avatar <path>]\n");
+        return 1;
+    }
+    // 检查 --avatar 标志
+    QString avatar;
+    for (int i = 1; i < args.size(); ++i) {
+        if (args[i] == "--avatar" && i + 1 < args.size()) {
+            avatar = args[i + 1];
+            break;
+        }
+    }
+    auto entry = lpcl::addPlayer(args[1], avatar);
+    std::cout << _("已添加玩家:\n", "Player added:\n")
+              << "  UUID: " << entry.uuid.toStdString() << "\n"
+              << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n";
+    if (!entry.avatar.isEmpty())
+        std::cout << "  " << _("头像: ", "Avatar: ") << entry.avatar.toStdString() << "\n";
+    return 0;
+}
+
+static int handlePlayerRm(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli player-rm <uuid>\n",
+                       "error:  lpcl-cli player-rm <uuid>\n");
+        return 1;
+    }
+    if (lpcl::removePlayer(args[1])) {
+        std::cout << "success" << std::endl;
+        return 0;
+    }
+    std::cerr << _("error: UUID 不存在\n", "error: UUID not found\n");
+    return 1;
+}
+
+static int handlePlayerList() {
+    auto players = lpcl::listPlayers();
+    if (players.isEmpty()) {
+        std::cout << _("（无玩家配置）\n", "(No player profiles)\n");
+        return 0;
+    }
+    QString selected = Settings::instance().selectedPlayer();
+    for (const auto &p : players) {
+        bool isSel = (p.uuid == selected);
+        std::cout << (isSel ? " * " : "   ")
+                  << p.uuid.toStdString() << "\n"
+                  << "     " << _("名称: ", "Name: ") << p.name.toStdString() << "\n";
+        if (!p.avatar.isEmpty())
+            std::cout << "     " << _("头像: ", "Avatar: ") << p.avatar.toStdString() << "\n";
+        std::cout << "     Skin: " << p.skinType.toStdString() << "\n";
+    }
+    return 0;
+}
+
+static int handlePlayerSelect(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli player-select <uuid>\n",
+                       "error:  lpcl-cli player-select <uuid>\n");
+        return 1;
+    }
+    lpcl::selectPlayer(args[1]);
+    std::cout << "success" << std::endl;
+    return 0;
+}
+
+// ---- 需要 mcFolder 的命令 ----
+
+static int handleList() {
+    auto ids = lpcl::listVersions();
+    if (ids.isEmpty()) {
+        std::cout << T("(No installed versions found)\n",
+                       "(No installed versions found)\n").toStdString();
+    } else {
+        std::cout << _("已安装的版本:\n", "Installed versions:\n");
+        for (const auto &id : ids)
+            std::cout << "  " << id.toStdString() << "\n";
+    }
+    return 0;
+}
+
+static int handleLaunch(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << T("error: lpcl-cli launch <名称>\n",
+                       "error: lpcl-cli launch <name>\n").toStdString();
+        return 1;
+    }
+    std::cout << _(QString("正在启动 %1 ...\n").arg(args[1]).toStdString(),
+                   QString("Launching %1 ...\n").arg(args[1]).toStdString());
+    if (!lpcl::launchVersion(args[1],
+            [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
+            [](int code) {
+                std::cout << _("exit: ", "exit: ") << code << "\n";
+                QCoreApplication::quit();
+            })) {
+        std::cerr << T("error: launch failed\n", "error: launch failed\n").toStdString();
+        return 1;
+    }
+    std::cout << "success" << std::endl;
+    QCoreApplication::instance()->exec(); // 等待游戏进程结束
+    return 0;
+}
+
+static int handleInpack(QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
+                       "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
+        return 1;
+    }
+    QString rename = extractRename(args);
+    std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
+
+    bool done = false;
+    int  result = 1;
+    lpcl::importModpack(args[1], rename,
+        [](const lpcl::ImportProgress &p) {
+            int bars = p.percent / 5;
+            std::cout << "\r  [";
+            for (int i = 0; i < 20; ++i)
+                std::cout << (i < bars ? "=" : i == bars ? ">" : " ");
+            std::cout << "] " << p.percent << "% " << p.step.toStdString();
+            if (p.percent >= 100) std::cout << std::endl;
+            std::cout.flush();
+        },
+        [&](bool ok, const QString &msg) {
+            if (ok) {
+                std::cout << std::endl << _("success: ", "success: ")
+                          << msg.toStdString() << std::endl;
+                result = 0;
+            } else {
+                std::cerr << std::endl << _("error: ", "error: ")
+                          << msg.toStdString() << std::endl;
+            }
+            done = true;
+            QCoreApplication::quit();
+        });
+
+    if (!done) QCoreApplication::instance()->exec(); // 等待异步下载完成
+    return result;
+}
+
+static int handleRm(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli rm <名称|*>\n",
+                       "error:  lpcl-cli rm <name|*>\n");
+        return 1;
+    }
+    if (args[1] == "*") {
+        auto ids = lpcl::listVersions();
+        if (ids.isEmpty()) {
+            std::cout << _("没有可删除的实例\n", "No instances to remove\n");
+            return 0;
+        }
+        int removed = 0;
+        for (const auto &id : ids) {
+            if (lpcl::removeInstance(id)) removed++;
+        }
+        std::cout << _(QString("已删除 %1 个实例\n").arg(removed).toStdString(),
+                       QString("Removed %1 instance(s)\n").arg(removed).toStdString());
+        return 0;
+    }
+    if (lpcl::removeInstance(args[1])) {
+        std::cout << "success" << std::endl;
+        return 0;
+    }
+    std::cerr << _("error: 实例不存在或删除失败\n",
+                   "error: instance not found or removal failed\n");
+    return 1;
+}
+
+// ---- 命令派发 ----
+
+/// 解析 mcFolder 并派发到对应处理函数。
+/// 返回值 >= 0 表示已处理（退出码），-1 表示未知命令。
+static int dispatchCommand(const QString &cmd, QStringList &args) {
+    // ---- 组 A: 无需 mcFolder ----
+    if (cmd == "set-folder")     return handleSetFolder(args);
+    if (cmd == "set-player")     return handleSetPlayer(args);
+    if (cmd == "list-javas")     return handleListJavas();
+    if (cmd == "player-add")     return handlePlayerAdd(args);
+    if (cmd == "player-rm")      return handlePlayerRm(args);
+    if (cmd == "player-list")    return handlePlayerList();
+    if (cmd == "player-select")  return handlePlayerSelect(args);
+    if (cmd == "test")           return handleTest();
+
+    // ---- 组 B: 需要 mcFolder ----
+    // 解析游戏目录：inpack 的 --folder 优先，否则从 Settings 读
+    QString mcFolder;
+    QString folderArg = extractFolder(args);
+    if (!folderArg.isEmpty())
+        mcFolder = folderArg;
+    else
+        mcFolder = Settings::instance().getString("LaunchFolderSelect");
+
+    if (mcFolder.isEmpty()) {
+        std::cerr << T("error: 未设置游戏目录，请先执行 set-folder\n",
+                       "error: no game folder set, run set-folder first\n").toStdString();
+        return 1;
+    }
+    VersionManager::instance().setMcFolder(mcFolder);
+
+    if (cmd == "list")    return handleList();
+    if (cmd == "launch")  return handleLaunch(args);
+    if (cmd == "inpack")  return handleInpack(args);
+    if (cmd == "rm")      return handleRm(args);
+
+    return -1; // unknown
+}
 
 // ---- main ----
 
@@ -50,6 +497,7 @@ int main(int argc, char *argv[]) {
         else if (QString::fromLatin1(argv[i]) == "--en") setLang(true);
     }
 
+    // ---- 选项解析 ----
     QCommandLineParser parser;
     parser.setApplicationDescription(
         _("LPCL 命令行启动器", "LPCL Command-Line Launcher"));
@@ -72,6 +520,7 @@ int main(int argc, char *argv[]) {
         QCommandLineParser::ParseAsPositionalArguments);
     parser.process(app);
 
+    // ---- printHelp ----
     auto printHelp = [&]() {
         auto out = [](const QString &s) { std::cout << s.toStdString(); };
         struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
@@ -83,6 +532,11 @@ int main(int argc, char *argv[]) {
             {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
             {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
             {"rm <名称|*>",       "rm <name|*>",       "删除实例（* 清空全部）", "Remove instance (* for all)"},
+            {"player-add <名称>","player-add <name>",  "添加玩家配置",          "Add player profile"},
+            {"player-rm <uuid>", "player-rm <uuid>",  "删除玩家配置",          "Remove player profile"},
+            {"player-list",      "player-list",       "列出玩家配置",          "List player profiles"},
+            {"player-select <uuid>","player-select <uuid>","选择当前玩家",     "Select current player"},
+            {"test",              "test",              "全系统自检",            "Run system self-test"},
         };
         const Item opts[] = {
             {"--cn",      "--cn",      "使用中文输出",          "Use Chinese output"},
@@ -104,6 +558,7 @@ int main(int argc, char *argv[]) {
         std::cout.flush();
     };
 
+    // ---- 纯选项（无命令） ----
     if (parser.isSet(optHelp))  { printHelp(); return 0; }
     if (parser.isSet(optVersion)) {
         std::cout << app.applicationName().toStdString() << " "
@@ -112,186 +567,43 @@ int main(int argc, char *argv[]) {
     }
     if (parser.isSet(optConfig)) {
         Settings::initialize();
-        std::cout << _("LPCL 版本: ", "LPCL version: ") << GIT_DESCRIBE << std::endl
-                  << _("提交: ",       "Commit: ")       << GIT_COMMIT_HASH << std::endl;
-        QString folder = Settings::instance().getString("LaunchFolderSelect");
-        if (folder.isEmpty()) folder = _("（未设置）", "(not set)");
+        auto cfg = lpcl::getConfig();
+
+        std::cout << _("LPCL 版本: ", "LPCL version: ") << cfg.version.toStdString() << std::endl
+                  << _("提交: ",       "Commit: ")       << cfg.commit.toStdString() << std::endl;
+        QString folder = cfg.gameFolderSet ? cfg.gameFolder : _("（未设置）", "(not set)");
         std::cout << _("默认游戏目录: ", "Default game folder: ") << folder.toStdString() << std::endl;
-        QString player = Settings::instance().getString("PlayerName");
-        if (player.isEmpty()) player = _("（未设置）", "(not set)");
-        std::cout << _("玩家名称: ", "Player name: ") << player.toStdString() << std::endl;
-        QString avatar = Settings::instance().getString("PlayerAvatar");
-        if (avatar.isEmpty()) avatar = _("（未设置）", "(not set)");
-        std::cout << _("头像路径: ", "Avatar path: ") << avatar.toStdString() << std::endl;
+
+        if (cfg.players.isEmpty()) {
+            std::cout << _("玩家配置: （无）\n", "Player profiles: (none)\n");
+        } else {
+            std::cout << _("玩家配置:", "Player profiles:") << std::endl;
+            for (const auto &p : cfg.players) {
+                bool isSel = (p.uuid == cfg.selectedPlayer);
+                std::cout << (isSel ? "  * " : "    ")
+                          << p.uuid.toStdString()
+                          << "  " << p.name.toStdString();
+                if (!p.avatar.isEmpty())
+                    std::cout << "  avatar=" << p.avatar.toStdString();
+                std::cout << "  skin=" << p.skinType.toStdString();
+                if (isSel) std::cout << "  [" << _("当前", "active") << "]";
+                std::cout << std::endl;
+            }
+        }
         return 0;
     }
 
+    // ---- 命令派发 ----
     QStringList args = parser.positionalArguments();
     if (args.isEmpty()) { printHelp(); return 1; }
 
-    const QString cmd = args.at(0);
     Settings::initialize();
-
-    // ---- set-folder ----
-    if (cmd == "set-folder") {
-        if (args.size() < 2) {
-            std::cerr << _("error:  lpcl-cli set-folder <路径>\n",
-                           "error:  lpcl-cli set-folder <path>\n");
-            return 1;
-        }
-        Settings::instance().setString("LaunchFolderSelect", args[1]);
-        std::cout << "success" << std::endl;
-        return 0;
-    }
-
-    // ---- set-player ----
-    if (cmd == "set-player") {
-        if (args.size() < 2) {
-            std::cerr << T("error: 缺少参数\n", "error: missing argument\n").toStdString();
-            return 1;
-        }
-        Settings::instance().setString("PlayerName", args[1]);
-        std::cout << "success" << std::endl;
-        return 0;
-    }
-
-    // 确定游戏目录
-    QString mcFolder;
-    // inpack 支持 --folder 选项（仅 inpack 可用）
-    QString folderArg = extractFolder(args);
-    if (!folderArg.isEmpty())
-        mcFolder = folderArg;
-    else
-        mcFolder = Settings::instance().getString("LaunchFolderSelect");
-    if (mcFolder.isEmpty()) {
-        std::cerr << T("error: 未设置游戏目录，请先执行 set-folder\n",
-                       "error: no game folder set, run set-folder first\n").toStdString();
+    int ret = dispatchCommand(args.at(0), args);
+    if (ret < 0) {
+        std::cerr << _(QString("未知命令: %1\n").arg(args.at(0)).toStdString(),
+                       QString("error: unknown command: %1\n").arg(args.at(0)).toStdString());
+        printHelp();
         return 1;
     }
-    VersionManager::instance().setMcFolder(mcFolder);
-
-    // ---- list ----
-    if (cmd == "list") {
-        auto ids = lpcl::listVersions();
-        if (ids.isEmpty()) {
-            std::cout << T("(No installed versions found)\n",
-                           "(No installed versions found)\n").toStdString();
-        } else {
-            std::cout << _("已安装的版本:\n", "Installed versions:\n");
-            for (const auto &id : ids)
-                std::cout << "  " << id.toStdString() << "\n";
-        }
-        return 0;
-    }
-
-    // ---- launch ----
-    if (cmd == "launch") {
-        if (args.size() < 2) {
-            std::cerr << T("error: lpcl-cli launch <名称>\n",
-                           "error: lpcl-cli launch <name>\n").toStdString();
-            return 1;
-        }
-        std::cout << _(QString("正在启动 %1 ...\n").arg(args[1]).toStdString(),
-                       QString("Launching %1 ...\n").arg(args[1]).toStdString());
-        if (!lpcl::launchVersion(args[1],
-                [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
-                [&](int code) {
-                    std::cout << _("exit: ", "exit: ") << code << "\n";
-                    QCoreApplication::quit();
-                })) {
-            std::cerr << T("error: launch failed\n", "error: launch failed\n").toStdString();
-            return 1;
-        }
-        std::cout << "success" << std::endl;
-        return app.exec();
-    }
-
-    // ---- list-javas ----
-    if (cmd == "list-javas") {
-        auto names = lpcl::listJavas();
-        if (names.isEmpty()) {
-            std::cout << _("(No Java detected)\n",
-                           "(No Java detected)\n");
-        } else {
-            std::cout << _("success\n", "success\n");
-            for (const auto &name : names)
-                std::cout << "  " << name.toStdString() << "\n";
-        }
-        return 0;
-    }
-
-    // ---- inpack ----
-    if (cmd == "inpack") {
-        if (args.size() < 2) {
-            std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
-                           "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
-            return 1;
-        }
-        QString rename = extractRename(args);
-        std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
-        bool inpackDone = false;
-        int  inpackResult = 1;
-        lpcl::importModpack(args[1], rename,
-            [&](const QString &status, int progress) {
-                int bars = progress / 5;
-                std::cout << "\r  [";
-                for (int i = 0; i < 20; ++i)
-                    std::cout << (i < bars ? "=" : i == bars ? ">" : " ");
-                std::cout << "] " << progress << "% " << status.toStdString();
-                if (progress >= 100) std::cout << std::endl;
-                std::cout.flush();
-            },
-            [&](bool ok, const QString &msg) {
-                if (ok) {
-                    std::cout << std::endl << _("success: ", "success: ")
-                              << msg.toStdString() << std::endl;
-                    inpackResult = 0;
-                } else {
-                    std::cerr << std::endl << _("error: ", "error: ")
-                              << msg.toStdString() << std::endl;
-                }
-                inpackDone = true;
-                QCoreApplication::quit();
-            });
-        if (inpackDone) return inpackResult;
-        app.exec();
-        return inpackResult;
-    }
-
-    // ---- rm ----
-    if (cmd == "rm") {
-        if (args.size() < 2) {
-            std::cerr << _("error:  lpcl-cli rm <名称|*>\n",
-                           "error:  lpcl-cli rm <name|*>\n");
-            return 1;
-        }
-        if (args[1] == "*") {
-            // 删除所有实例
-            auto ids = lpcl::listVersions();
-            if (ids.isEmpty()) {
-                std::cout << _("没有可删除的实例\n", "No instances to remove\n");
-                return 0;
-            }
-            int removed = 0;
-            for (const auto &id : ids) {
-                if (lpcl::removeInstance(id)) removed++;
-            }
-            std::cout << _(QString("已删除 %1 个实例\n").arg(removed).toStdString(),
-                           QString("Removed %1 instance(s)\n").arg(removed).toStdString());
-            return 0;
-        }
-        if (lpcl::removeInstance(args[1])) {
-            std::cout << "success" << std::endl;
-            return 0;
-        } else {
-            std::cerr << _("error: 实例不存在或删除失败\n",
-                           "error: instance not found or removal failed\n");
-            return 1;
-        }
-    }
-
-    // ---- unknown ----
-    std::cerr << _(QString("未知命令: %1\n").arg(cmd).toStdString(),
-                   QString("error: unknown command: %1\n").arg(cmd).toStdString());
-    printHelp(); return 1;
+    return ret;
 }

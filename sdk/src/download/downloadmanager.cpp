@@ -131,6 +131,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
     request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 
     QNetworkReply *reply = m_nam->get(request);
 
@@ -220,6 +221,7 @@ QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
     request.setRawHeader("User-Agent", "LPCL/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
+    request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
     for (auto it = headers.constBegin(); it != headers.constEnd(); ++it) {
         request.setRawHeader(it.key(), it.value());
     }

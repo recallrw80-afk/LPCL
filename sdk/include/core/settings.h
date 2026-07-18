@@ -65,6 +65,25 @@ public:
     void setInstance(const QString &instanceId, const QString &key, const QString &value);
     QString instancePath(const QString &instanceId) const;
 
+    // ---- Player profiles (multi-user, UUID-based) ----
+
+    /// 列出所有玩家配置的 UUID
+    QStringList playerProfiles() const;
+
+    /// 读取玩家配置字段
+    QString getProfile(const QString &uuid, const QString &key,
+                       const QString &defaultValue = QString()) const;
+
+    /// 写入玩家配置字段
+    void setProfile(const QString &uuid, const QString &key, const QString &value);
+
+    /// 删除一个玩家配置
+    void removeProfile(const QString &uuid);
+
+    /// 当前选中的玩家 UUID
+    QString selectedPlayer() const;
+    void selectPlayer(const QString &uuid);
+
     // Initialize defaults
     void initDefaults();
 

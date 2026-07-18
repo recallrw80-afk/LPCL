@@ -5,6 +5,7 @@
 #include <QDir>
 #include <QStandardPaths>
 #include <QLoggingCategory>
+#include <QUuid>
 
 static Q_LOGGING_CATEGORY(logSettings, "lpcl.settings")
 
@@ -48,7 +49,11 @@ void Settings::initialize(const QString &configPath) {
 }
 
 void Settings::initDefaults() {
-    // Set default values if not present
+    // 默认游戏目录：可执行文件旁边的 mc/ 目录
+    if (!m_settings->contains("LaunchFolderSelect")) {
+        QString defaultMc = QCoreApplication::applicationDirPath() + "/mc/";
+        m_settings->setValue("LaunchFolderSelect", defaultMc);
+    }
     if (!m_settings->contains("LoginType")) {
         m_settings->setValue("LoginType", static_cast<int>(0)); // Default: Legacy (offline)
     }
@@ -69,6 +74,17 @@ void Settings::initDefaults() {
     }
     if (!m_settings->contains("SystemLaunchCount")) {
         m_settings->setValue("SystemLaunchCount", 0);
+    }
+
+    // 默认玩家配置（首次运行时无任何 Profile 则自动创建）
+    m_settings->beginGroup("Profile");
+    bool hasProfiles = !m_settings->childGroups().isEmpty();
+    m_settings->endGroup();
+    if (!hasProfiles) {
+        QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+        m_settings->setValue("Profile/" + uuid + "/Name", "Player");
+        m_settings->setValue("Profile/" + uuid + "/SkinType", "slim");
+        m_settings->setValue("SelectedPlayer", uuid);
     }
 }
 
@@ -152,4 +168,50 @@ QString Settings::instancePath(const QString &instanceId) const
     QString base = getString("LaunchFolderSelect");
     if (base.isEmpty()) base = QDir::homePath() + "/.minecraft/";
     return base + "versions/" + instanceId + "/";
+}
+
+// ---- Player profiles ----
+
+QStringList Settings::playerProfiles() const
+{
+    if (!m_settings) return {};
+    m_settings->beginGroup("Profile");
+    QStringList uuids = m_settings->childGroups();
+    m_settings->endGroup();
+    return uuids;
+}
+
+QString Settings::getProfile(const QString &uuid, const QString &key,
+                             const QString &defaultValue) const
+{
+    if (!m_settings || uuid.isEmpty()) return defaultValue;
+    QString fullKey = QString("Profile/%1/%2").arg(uuid, key);
+    return m_settings->value(fullKey, defaultValue).toString();
+}
+
+void Settings::setProfile(const QString &uuid, const QString &key, const QString &value)
+{
+    if (!m_settings || uuid.isEmpty()) return;
+    QString fullKey = QString("Profile/%1/%2").arg(uuid, key);
+    m_settings->setValue(fullKey, value);
+    m_settings->sync();
+}
+
+void Settings::removeProfile(const QString &uuid)
+{
+    if (!m_settings || uuid.isEmpty()) return;
+    m_settings->beginGroup("Profile");
+    m_settings->remove(uuid);
+    m_settings->endGroup();
+    m_settings->sync();
+}
+
+QString Settings::selectedPlayer() const
+{
+    return getString("SelectedPlayer");
+}
+
+void Settings::selectPlayer(const QString &uuid)
+{
+    setString("SelectedPlayer", uuid);
 }

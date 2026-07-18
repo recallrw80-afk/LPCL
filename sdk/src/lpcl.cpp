@@ -7,6 +7,7 @@
 #include "auth/offlineauth.h"
 #include <QCoreApplication>
 #include <QDir>
+#include <QUuid>
 
 namespace lpcl {
 
@@ -55,17 +56,73 @@ QStringList listJavas() {
 
 void importModpack(const QString &filePath,
                     const QString &instanceName,
-                    std::function<void(const QString &, int)> onProgress,
+                    std::function<void(const ImportProgress &)> onProgress,
                     std::function<void(bool, const QString &)> onComplete) {
-    installModpack(filePath, instanceName, onProgress, onComplete);
+    // 适配：将 ImportProgress 结构体拆成 (status, percent) 传给内部实现
+    auto adaptedProgress = [onProgress](const QString &status, int percent) {
+        if (onProgress) onProgress({status, percent});
+    };
+    installModpack(filePath, instanceName, adaptedProgress, onComplete);
 }
 
 bool removeInstance(const QString &name) {
     if (name.isEmpty() || name.contains('/') || name.contains('\\') || name.contains(".."))
         return false;
-    QString instanceDir = Settings::instance().getString("LaunchFolderSelect") + "/" + name;
+    QString folder = Settings::instance().getString("LaunchFolderSelect");
+    if (!folder.endsWith('/')) folder += '/';
+    QString instanceDir = folder + name;
     if (!QDir(instanceDir).exists()) return false;
     return QDir(instanceDir).removeRecursively();
+}
+
+ConfigInfo getConfig() {
+    ConfigInfo info;
+    info.version       = GIT_DESCRIBE;
+    info.commit        = GIT_COMMIT_HASH;
+    info.gameFolder    = Settings::instance().getString("LaunchFolderSelect");
+    info.gameFolderSet = !info.gameFolder.isEmpty();
+    info.players       = listPlayers();
+    info.selectedPlayer = Settings::instance().selectedPlayer();
+    return info;
+}
+
+QList<PlayerEntry> listPlayers() {
+    QList<PlayerEntry> result;
+    QStringList uuids = Settings::instance().playerProfiles();
+    for (const auto &uuid : uuids) {
+        PlayerEntry e;
+        e.uuid     = uuid;
+        e.name     = Settings::instance().getProfile(uuid, "Name");
+        e.avatar   = Settings::instance().getProfile(uuid, "Avatar");
+        e.skinType = Settings::instance().getProfile(uuid, "SkinType", "slim");
+        result.append(e);
+    }
+    return result;
+}
+
+PlayerEntry addPlayer(const QString &name, const QString &avatar) {
+    QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+    Settings::instance().setProfile(uuid, "Name", name);
+    Settings::instance().setProfile(uuid, "Avatar", avatar);
+    Settings::instance().setProfile(uuid, "SkinType", "slim");
+
+    // 首个玩家自动选中
+    if (Settings::instance().playerProfiles().size() == 1)
+        Settings::instance().selectPlayer(uuid);
+
+    return {uuid, name, avatar, "slim"};
+}
+
+bool removePlayer(const QString &uuid) {
+    if (uuid.isEmpty()) return false;
+    Settings::instance().removeProfile(uuid);
+    if (Settings::instance().selectedPlayer() == uuid)
+        Settings::instance().selectPlayer(QString());
+    return true;
+}
+
+void selectPlayer(const QString &uuid) {
+    Settings::instance().selectPlayer(uuid);
 }
 
 } // namespace lpcl
