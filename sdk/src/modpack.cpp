@@ -949,7 +949,12 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     
     markIncomplete(finalDir);
     if (onProgress) onProgress("Extracting...", 20);
-    extractZip(filePath, workDir, onProgress, 25);
+    if (!extractZip(filePath, workDir, onProgress, 25)) {
+        QDir(workDir).removeRecursively();
+        cleanupOnError(finalDir);
+        if (onComplete) onComplete(false, "Extraction failed");
+        return;
+    }
 
     // 如有 mcRoot 包装层，把内容提出来
     if (!mcRoot.isEmpty()) {
@@ -961,7 +966,12 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     }
 
     QDir().mkpath(QFileInfo(finalDir).absolutePath());
-    copyDir(workDir, finalDir);
+    if (!copyDir(workDir, finalDir)) {
+        QDir(workDir).removeRecursively();
+        cleanupOnError(finalDir);
+        if (onComplete) onComplete(false, "Copy to instance directory failed");
+        return;
+    }
     QDir(workDir).removeRecursively();
 
     QDir(finalDir + "PCL/").mkpath(".");
@@ -1062,7 +1072,7 @@ static void downloadAndFinalize(const QString &mcVersion,
     AssetDownloader::instance().downloadVersion(vanilla,
         [=](bool ok, QString err) {
             if (!ok) {
-                
+                cleanupOnError(finalDir);
                 if (onComplete) onComplete(false, "Download Minecraft failed: " + err);
                 return;
             }
