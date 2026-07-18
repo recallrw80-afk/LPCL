@@ -110,10 +110,6 @@ int main(int argc, char *argv[]) {
                   << app.applicationVersion().toStdString() << std::endl;
         return 0;
     }
-
-    QStringList args = parser.positionalArguments();
-    if (args.isEmpty()) { printHelp(); return 1; }
-
     if (parser.isSet(optConfig)) {
         Settings::initialize();
         std::cout << _("LPCL 版本: ", "LPCL version: ") << GIT_DESCRIBE << std::endl
@@ -129,6 +125,9 @@ int main(int argc, char *argv[]) {
         std::cout << _("头像路径: ", "Avatar path: ") << avatar.toStdString() << std::endl;
         return 0;
     }
+
+    QStringList args = parser.positionalArguments();
+    if (args.isEmpty()) { printHelp(); return 1; }
 
     const QString cmd = args.at(0);
     Settings::initialize();
