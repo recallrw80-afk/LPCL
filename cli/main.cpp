@@ -241,15 +241,26 @@ static QList<TestItem> runCommandTests() {
         }
     }
 
-    // inpack（实际导入测试）
+    // inpack（多整合包导入测试）
     {
-        const QString testFile = "/home/recall/Downloads/other/蛊真人.zip";
-        if (QFile::exists(testFile)) {
-            // 先清理可能存在的旧实例+全局 version 缓存
-            QString folder = Settings::instance().getString("LaunchFolderSelect");
-            if (!folder.endsWith('/')) folder += '/';
-            lpcl::removeInstance("蛊真人");
-            QDir(folder + "1.21.1/").removeRecursively();
+        struct PackTest { QString filePath; QString instanceName; };
+        const QList<PackTest> packs = {
+            {"/home/recall/Downloads/other/蛊真人.zip",                          "蛊真人"},
+            {"/home/recall/Downloads/other/农场物语v1.3.3客户端.mrpack",         "农场物语v1.3.3"},
+            {"/home/recall/Downloads/other/勇者之章Ⅲ v3.11.5 客户端导入包.zip", "勇者之章Ⅲ"},
+        };
+
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (!folder.endsWith('/')) folder += '/';
+
+        for (const auto &pack : packs) {
+            if (!QFile::exists(pack.filePath)) {
+                warn("inpack", "文件不存在: " + pack.filePath.split('/').last());
+                continue;
+            }
+
+            // 清理旧实例残留
+            lpcl::removeInstance(pack.instanceName);
 
             QElapsedTimer timer;
             timer.start();
@@ -257,7 +268,7 @@ static QList<TestItem> runCommandTests() {
             QString message;
             QEventLoop loop;
 
-            lpcl::importModpack(testFile, "蛊真人",
+            lpcl::importModpack(pack.filePath, pack.instanceName,
                 [](const lpcl::ImportProgress &) {},
                 [&](bool ok, const QString &msg) {
                     success = ok;
@@ -268,23 +279,24 @@ static QList<TestItem> runCommandTests() {
 
             QString elapsed = QString("%1s").arg(timer.elapsed() / 1000.0, 0, 'f', 1);
             if (success) {
-                // 导入后验证实例出现在列表中
                 VersionManager::instance().loadLocalVersions();
                 auto ids = VersionManager::instance().versionIds();
-                if (ids.contains("蛊真人")) {
-                    ok("inpack", "导入成功: " + message + " (" + elapsed + ")");
-                    // 清理测试导入的实例
-                    lpcl::removeInstance("蛊真人");
-                    // 清理 import 产生的全局 version 缓存（downloadVersion 残留）
-                    QDir(folder + "1.21.1/").removeRecursively();
+                if (ids.contains(pack.instanceName)) {
+                    ok("inpack", pack.instanceName + ": 导入成功 (" + elapsed + ")");
+                    // 清理实例
+                    lpcl::removeInstance(pack.instanceName);
+                    // 清理 import 产生的全局 version 缓存
+                    QDir versionsDir(folder + "versions/");
+                    if (versionsDir.exists()) {
+                        for (const auto &entry : versionsDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot))
+                            QDir(entry.absoluteFilePath()).removeRecursively();
+                    }
                 } else {
-                    fail("inpack", "list 中未找到实例 " + message);
+                    fail("inpack", pack.instanceName + ": list 中未找到");
                 }
             } else {
-                fail("inpack", "导入失败: " + message + " (" + elapsed + ")");
+                fail("inpack", pack.instanceName + ": " + message + " (" + elapsed + ")");
             }
-        } else {
-            warn("inpack", "测试文件不存在: " + testFile);
         }
     }
 
