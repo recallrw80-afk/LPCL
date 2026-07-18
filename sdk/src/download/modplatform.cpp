@@ -12,26 +12,48 @@
 static Q_LOGGING_CATEGORY(logMod, "lpcl.mod")
 
 const QString ModPlatform::CF_API = "https://api.curseforge.com/v1";
+const QString ModPlatform::CF_MIRROR = "https://mod.mcimirror.top/curseforge/v1";
 const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
 ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
-    // Initialize CurseForge API key from settings or default
-    // PCL uses a compiled-in key; LPCL reads from settings first
-    if (m.m_cfApiKey.isEmpty()) {
-        // Try settings first
-        QString key = Settings::instance().getString("CurseForgeApiKey", "");
-        if (!key.isEmpty()) {
-            m.m_cfApiKey = CryptoUtils::pclDecrypt(key);
-        }
-        // Fallback: default key (same as PCL2 open-source distribution)
+    // 初始化 CurseForge API key：环境变量 → 设置项
+    // 均无则留空——CF 请求会自动改走 MCIM 镜像（无需鉴权，同 PCL-CE 方案）
+    static bool keyResolved = false;
+    if (!keyResolved) {
+        keyResolved = true;
+        m.m_cfApiKey = qEnvironmentVariable("LPCL_CURSEFORGE_API_KEY");
         if (m.m_cfApiKey.isEmpty()) {
-            m.m_cfApiKey = "$2a$10$wAadBaDMFGiEYjFJQOYiKOKz1OzIj1mVj2jYjJfJjJfJjJfJjJfJj";
-            // NOTE: Replace with a valid CurseForge Core API key from https://console.curseforge.com
-            // The above placeholder will cause CF requests to fail with 401
+            QString key = Settings::instance().getString("CurseForgeApiKey", "");
+            if (!key.isEmpty())
+                m.m_cfApiKey = CryptoUtils::pclDecrypt(key);
         }
+        if (m.m_cfApiKey.isEmpty())
+            qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
     }
     return m;
+}
+
+// CurseForge 请求辅助
+
+// 无 API key 时把官方地址改写为 MCIM 镜像地址
+QString ModPlatform::cfApiUrl(const QString &officialUrl) const {
+    if (!m_cfApiKey.isEmpty()) return officialUrl;
+    QString mirrored = officialUrl;
+    return mirrored.replace(CF_API, CF_MIRROR);
+}
+
+// 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key 走 MCIM 镜像
+void ModPlatform::cfJsonGet(const QString &officialUrl,
+                            std::function<void(bool, QString, json)> onComplete) {
+    if (m_cfApiKey.isEmpty()) {
+        DownloadManager::instance().downloadJson(cfApiUrl(officialUrl), onComplete);
+    } else {
+        QMap<QByteArray, QByteArray> headers;
+        headers.insert("x-api-key", m_cfApiKey.toUtf8());
+        headers.insert("Accept", "application/json");
+        DownloadManager::instance().downloadJsonWithHeaders(officialUrl, headers, onComplete);
+    }
 }
 
 // Public API — search
@@ -83,14 +105,9 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
                                 std::function<void(bool, QString)> onComplete,
                                 std::function<void(qint64, qint64)> onProgress) {
     if (platform == CurseForge) {
-        // CurseForge: first get the download URL, then download
+        // CurseForge：先解析下载 URL，再下载文件
         QString url = getFileDownloadUrl(platform, modId, fileId);
-        QNetworkRequest req(url);
-        req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
-        req.setRawHeader("Accept", "application/json");
-
-        DownloadManager::instance().downloadJson(
-            url, [this, savePath, onComplete, onProgress](bool ok, QString, json result) {
+        cfJsonGet(url, [savePath, onComplete, onProgress](bool ok, QString, json result) {
                 if (!ok) { onComplete(false, "Failed to get download URL"); return; }
                 QString dlUrl = QString::fromStdString(result.value("data", ""));
                 if (dlUrl.isEmpty()) { onComplete(false, "Empty download URL"); return; }
@@ -127,12 +144,7 @@ void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
     q.addQueryItem("sortOrder", "desc");
     url.setQuery(q);
 
-    QNetworkRequest req(url);
-    req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
-    req.setRawHeader("Accept", "application/json");
-
-    DownloadManager::instance().downloadJson(
-        url.toString(), [onComplete](bool ok, QString, json result) {
+    cfJsonGet(url.toString(), [onComplete](bool ok, QString, json result) {
             QList<ModResource> mods;
             if (!ok || !result.contains("data")) { onComplete(false, mods); return; }
 
@@ -164,11 +176,8 @@ void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
 void ModPlatform::getCurseForgeModDetails(const QString &modId,
                                             std::function<void(bool, ModResource)> onComplete) {
     QString url = CF_API + "/mods/" + modId;
-    QNetworkRequest req(url);
-    req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
 
-    DownloadManager::instance().downloadJson(
-        url, [onComplete](bool ok, QString, json result) {
+    cfJsonGet(url, [onComplete](bool ok, QString, json result) {
             ModResource r;
             if (!ok || !result.contains("data")) { onComplete(false, r); return; }
             auto &item = result["data"];
@@ -184,11 +193,8 @@ void ModPlatform::getCurseForgeModDetails(const QString &modId,
 void ModPlatform::getCurseForgeFiles(const QString &modId,
                                        std::function<void(bool, QList<ModFileInfo>)> onComplete) {
     QString url = CF_API + "/mods/" + modId + "/files";
-    QNetworkRequest req(url);
-    req.setRawHeader("x-api-key", m_cfApiKey.toUtf8());
 
-    DownloadManager::instance().downloadJson(
-        url, [onComplete](bool ok, QString, json result) {
+    cfJsonGet(url, [onComplete](bool ok, QString, json result) {
             QList<ModFileInfo> files;
             if (!ok || !result.contains("data")) { onComplete(false, files); return; }
             for (const auto &item : result["data"]) {

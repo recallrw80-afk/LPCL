@@ -114,10 +114,17 @@ private:
     void getModrinthFiles(const QString &modId,
                            std::function<void(bool, QList<ModFileInfo>)> onComplete);
 
+    // CurseForge 请求辅助：无 API key 时把官方地址改写为 MCIM 镜像（无需鉴权）
+    QString cfApiUrl(const QString &officialUrl) const;
+    // 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key 走 MCIM 镜像
+    void cfJsonGet(const QString &officialUrl,
+                   std::function<void(bool, QString, json)> onComplete);
+
     QString m_cfApiKey;
 
     // API base URLs
     static const QString CF_API;
+    static const QString CF_MIRROR; // MCIM 镜像，无需 API key
     static const QString MR_API;
 };
 
