@@ -140,11 +140,9 @@ void VersionManager::loadLocalVersions() {
         return;
     }
 
-    // 收集已知实例的目录名（从 INI [Instances] 映射中读取）
+    // 从 INI [Instances] 映射中读取所有实例
     QMap<QString, QString> instanceMap = Settings::instance().instanceDirs();
-    QSet<QString> knownDirs; // 已知是实例目录的随机名
 
-    // 从 INI 映射加载所有实例
     for (auto it = instanceMap.begin(); it != instanceMap.end(); ++it) {
         const QString &dirName = it.key();
         const QString &displayName = it.value();
@@ -160,62 +158,59 @@ void VersionManager::loadLocalVersions() {
         info.isLocal = true;
         info.type = "instance";
         m_versionList.append(info);
-        knownDirs.insert(dirName);
     }
 
-    // 扫描剩余子目录：原始 MC 版本（不在已知实例目录中的）
-    for (const auto &entry : mcDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-        QString dirName = entry.fileName();
+    emit versionListChanged();
+    m_isLoading = false;
+    emit loadingChanged();
+}
 
-        // 跳过已知的实例目录、tmp/、assets/、libraries/ 等共享目录
-        if (knownDirs.contains(dirName)) continue;
-        if (dirName == "tmp" || dirName == "assets" || dirName == "libraries" ||
-            dirName == "instances" || dirName == "versions" || dirName == "launcher" ||
-            dirName == "logs" || dirName == "resourcepacks" || dirName == "saves") continue;
+// 只加载原版 MC 版本（versions/ 子目录）
+void VersionManager::loadMcVersions() {
+    if (m_mcFolder.isEmpty()) return;
 
-        // 原始 MC 版本：有匹配的 .json 文件
-        QString jsonPath = entry.absoluteFilePath() + "/" + dirName + ".json";
-        if (!QFileInfo::exists(jsonPath)) continue;
+    m_isLoading = true;
+    emit loadingChanged();
 
-        McVersionInfo info;
-        info.id = dirName;
-        info.isLocal = true;
+    m_versionList.clear();
 
-        // Try to get more info from the JSON
-        try {
-            QFile file(jsonPath);
-            if (file.open(QIODevice::ReadOnly)) {
-                QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
-                QJsonObject root = doc.object();
-                info.type = root.value("type").toString("unknown");
-                QString timeStr = root.value("releaseTime").toString();
-                if (!timeStr.isEmpty()) {
-                    info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+    QDir versionsDir(m_mcFolder + "versions/");
+    if (versionsDir.exists()) {
+        for (const auto &entry : versionsDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            QString dirName = entry.fileName();
+            QString jsonPath = entry.absoluteFilePath() + "/" + dirName + ".json";
+            if (!QFileInfo::exists(jsonPath)) continue;
+
+            McVersionInfo info;
+            info.id = dirName;
+            info.isLocal = true;
+
+            try {
+                QFile file(jsonPath);
+                if (file.open(QIODevice::ReadOnly)) {
+                    QJsonDocument doc = QJsonDocument::fromJson(file.readAll());
+                    QJsonObject root = doc.object();
+                    info.type = root.value("type").toString("unknown");
+                    QString timeStr = root.value("releaseTime").toString();
+                    if (!timeStr.isEmpty())
+                        info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
                 }
+            } catch (...) {
+                info.type = "unknown";
             }
-        } catch (...) {
-            info.type = "unknown";
-        }
 
-        m_versionList.append(info);
+            m_versionList.append(info);
+        }
     }
 
-    // Sort: instances first, then releases, then others; newest first
-    std::sort(m_versionList.begin(), m_versionList.end(), [](const McVersionInfo &a, const McVersionInfo &b) {
-        if (a.type != b.type) {
-            if (a.type == "instance") return true;
-            if (b.type == "instance") return false;
-            if (a.type == "release") return true;
-            if (b.type == "release") return false;
-        }
+    std::sort(m_versionList.begin(), m_versionList.end(),
+              [](const McVersionInfo &a, const McVersionInfo &b) {
         return a.releaseTime > b.releaseTime;
     });
 
     emit versionListChanged();
     m_isLoading = false;
     emit loadingChanged();
-
-    qCInfo(logVer) << "Loaded" << m_versionList.size() << "instances from" << m_mcFolder;
 }
 
 void VersionManager::fetchVersionManifest() {

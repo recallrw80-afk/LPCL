@@ -43,8 +43,11 @@ struct PlayerEntry {
 
 // ---- SDK API ----
 
-/// 列出已安装的 Minecraft 版本
+/// 列出已导入的整合包实例（从 INI 映射）
 LPCLCORE_EXPORT QStringList listVersions();
+
+/// 列出已安装的原版 MC 版本（从 versions/ 目录）
+LPCLCORE_EXPORT QStringList listMcVersions();
 
 /// 安装指定版本（当前为桩实现）
 LPCLCORE_EXPORT bool installVersion(const QString &versionId);

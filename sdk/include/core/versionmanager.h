@@ -37,8 +37,11 @@ public:
 
     // ---- Version listing ----
 
-    /// Load local versions from versions/ directory
+    /// Load local instances from INI [Instances] mappings
     Q_INVOKABLE void loadLocalVersions();
+
+    /// Load vanilla MC versions from versions/ directory
+    Q_INVOKABLE void loadMcVersions();
 
     /// Fetch version manifest from Mojang API
     void fetchVersionManifest();

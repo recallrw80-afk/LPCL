@@ -17,6 +17,12 @@ QStringList listVersions() {
     return vm.versionIds();
 }
 
+QStringList listMcVersions() {
+    auto &vm = VersionManager::instance();
+    vm.loadMcVersions();
+    return vm.versionIds();
+}
+
 bool installVersion(const QString &versionId) {
     Q_UNUSED(versionId);
     // TODO: Phase 4

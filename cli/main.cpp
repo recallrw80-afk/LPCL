@@ -195,20 +195,33 @@ static QList<TestItem> runCommandTests() {
             warn("list-javas", "未检测到 Java 运行时");
     }
 
-    // list（需要游戏目录）
+    // list（实例 — INI 映射）
     {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (!folder.isEmpty()) {
-            auto &vm = VersionManager::instance();
-            vm.setMcFolder(folder);
-            vm.loadLocalVersions();
-            auto ids = vm.versionIds();
+            VersionManager::instance().setMcFolder(folder);
+            auto ids = lpcl::listVersions();
             if (ids.isEmpty())
-                ok("list", "目录已设置，无已安装实例");
+                ok("list", "目录已设置，无导入实例");
             else
                 ok("list", QString("检测到 %1 个实例: %2").arg(ids.size()).arg(ids.join(", ")));
         } else {
             warn("list", "游戏目录未设置，跳过（请先 set-folder）");
+        }
+    }
+
+    // mc-list（原版 MC — versions/ 目录）
+    {
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (!folder.isEmpty()) {
+            VersionManager::instance().setMcFolder(folder);
+            auto ids = lpcl::listMcVersions();
+            if (ids.isEmpty())
+                ok("mc-list", "无原版 MC 版本");
+            else
+                ok("mc-list", QString("检测到 %1 个版本: %2").arg(ids.size()).arg(ids.join(", ")));
+        } else {
+            warn("mc-list", "游戏目录未设置，跳过");
         }
     }
 
@@ -404,10 +417,23 @@ static int handlePlayerSelect(const QStringList &args) {
 static int handleList() {
     auto ids = lpcl::listVersions();
     if (ids.isEmpty()) {
-        std::cout << T("(No installed versions found)\n",
-                       "(No installed versions found)\n").toStdString();
+        std::cout << T("(No instances)\n", "(No instances)\n").toStdString();
     } else {
-        std::cout << _("已安装的版本:\n", "Installed versions:\n");
+        std::cout << T("Instances:\n", "Instances:\n").toStdString();
+        for (const auto &id : ids)
+            std::cout << "  " << id.toStdString() << "\n";
+    }
+    return 0;
+}
+
+static int handleMcList() {
+    auto ids = lpcl::listMcVersions();
+    if (ids.isEmpty()) {
+        std::cout << T("(No vanilla MC versions)\n",
+                       "(No vanilla MC versions)\n").toStdString();
+    } else {
+        std::cout << T("Vanilla MC versions:\n",
+                       "Vanilla MC versions:\n").toStdString();
         for (const auto &id : ids)
             std::cout << "  " << id.toStdString() << "\n";
     }
@@ -534,8 +560,9 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     }
     VersionManager::instance().setMcFolder(mcFolder);
 
-    if (cmd == "list")    return handleList();
-    if (cmd == "launch")  return handleLaunch(args);
+    if (cmd == "list")     return handleList();
+    if (cmd == "mc-list")  return handleMcList();
+    if (cmd == "launch")   return handleLaunch(args);
     if (cmd == "inpack")  return handleInpack(args);
     if (cmd == "rm")      return handleRm(args);
 
@@ -584,7 +611,8 @@ int main(int argc, char *argv[]) {
         auto out = [](const QString &s) { std::cout << s.toStdString(); };
         struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
         const Item items[] = {
-            {"list",              "list",              "列出已导入的整合包",    "List imported modpacks"},
+            {"list",              "list",              "列出已导入的整合包实例",  "List imported instances"},
+            {"mc-list",           "mc-list",           "列出原版 MC 版本",       "List vanilla MC versions"},
             {"launch <名称>",     "launch <name>",     "启动整合包游戏",       "Launch a modpack"},
             {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
             {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
