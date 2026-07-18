@@ -243,8 +243,23 @@ static bool validateInstanceName(const QString &name) {
 }
 
 // 获取导入临时工作目录
-static QString importWorkDir() {
-    return VersionManager::instance().mcFolder() + "tmp/import/";
+// 标记实例目录为"导入中"（.incomplete 文件），完成后删除
+static void markIncomplete(const QString &finalDir) {
+    QDir().mkpath(finalDir);
+    QFile marker(finalDir + ".incomplete");
+    (void)marker.open(QIODevice::WriteOnly | QIODevice::Truncate);
+    marker.close();
+}
+static void markComplete(const QString &finalDir) {
+    QFile::remove(finalDir + ".incomplete");
+}
+
+// 导入失败时回滚：删实例目录 + 清理 INI 映射
+static void cleanupOnError(const QString &finalDir) {
+    QString dirName = QDir(finalDir).dirName();
+    QDir(finalDir).removeRecursively();
+    if (!dirName.isEmpty())
+        Settings::instance().removeInstanceDir(dirName);
 }
 
 // Mod 下载条目
@@ -257,7 +272,7 @@ struct ModDownloadEntry {
 
 static void downloadAndFinalize(const QString &mcVersion,
                                  const QString &forgeVer, const QString &neoVer, const QString &fabricVer,
-                                 const QString &workDir, const QString &finalDir, const QString &name,
+                                 const QString &finalDir, const QString &name,
                                  const QList<ModDownloadEntry> &mods,
                                  PackProgressCallback onProgress,
                                  PackCompleteCallback onComplete);
@@ -328,16 +343,16 @@ static void installCurseForge(const QString &filePath, const QString &packDir,
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
     // 在 tmp 下工作，下载完成前不放入游戏目录
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     // 复制 overrides
     QString overridesDir = QString::fromStdString(manifest.value("overrides", "overrides"));
     QString srcOverride = packDir + "/" + overridesDir;
     if (QDir(srcOverride).exists()) {
         if (onProgress) onProgress("Copying modpack files...", 20);
-        copyDir(srcOverride, workDir);
+        copyDir(srcOverride, finalDir);
     }
 
     // 提取 mod 列表
@@ -357,7 +372,7 @@ static void installCurseForge(const QString &filePath, const QString &packDir,
     // 下载 MC + modloader → 移入最终位置
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
-                        workDir, finalDir, name, mods, onProgress, onComplete);
+                        finalDir, name, mods, onProgress, onComplete);
 }
 
 // ---- Type 1: HMCL ----
@@ -385,19 +400,19 @@ static void installHMCL(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     // 复制 minecraft/ 文件夹
     QString mcSrc = packDir + "/minecraft/";
     if (QDir(mcSrc).exists()) {
         if (onProgress) onProgress("Copying modpack files...", 20);
-        copyDir(mcSrc, workDir);
+        copyDir(mcSrc, finalDir);
     }
 
     if (onProgress) onProgress("Preparing download...", 30);
-    downloadAndFinalize(mcVersion, {}, {}, {}, workDir, finalDir, name, {}, onProgress, onComplete);
+    downloadAndFinalize(mcVersion, {}, {}, {}, finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 2: MultiMC ----
@@ -433,20 +448,20 @@ static void installMultiMC(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     // 复制 .minecraft/ 文件夹
     QString mcSrc = packDir + "/.minecraft/";
     if (QDir(mcSrc).exists()) {
         if (onProgress) onProgress("Copying modpack files...", 20);
-        copyDir(mcSrc, workDir);
+        copyDir(mcSrc, finalDir);
     }
 
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
-                        workDir, finalDir, name, {}, onProgress, onComplete);
+                        finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 3: MCBBS ----
@@ -494,20 +509,20 @@ static void installMCBBS(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     // 复制 overrides
     QString srcOverride = packDir + "/" + overridesDir;
     if (QDir(srcOverride).exists()) {
         if (onProgress) onProgress("Copying modpack files...", 20);
-        copyDir(srcOverride, workDir);
+        copyDir(srcOverride, finalDir);
     }
 
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
-                        workDir, finalDir, name, {}, onProgress, onComplete);
+                        finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Type 4: Modrinth ----
@@ -544,15 +559,15 @@ static void installModrinth(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     // 复制 overrides 和 client-overrides
     for (const auto &sub : {"overrides", "client-overrides"}) {
         QString src = packDir + "/" + sub;
         if (QDir(src).exists()) {
-            copyDir(src, workDir);
+            copyDir(src, finalDir);
         }
     }
 
@@ -571,7 +586,7 @@ static void installModrinth(const QString &filePath, const QString &packDir,
 
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, forgeVer, neoVer, fabricVer,
-                        workDir, finalDir, name, mods, onProgress, onComplete);
+                        finalDir, name, mods, onProgress, onComplete);
 }
 
 // ---- forward declarations ----
@@ -654,28 +669,28 @@ static void installLauncherPack(const QString &filePath, const QString &packDir,
     QString instanceDir = generateInstanceDir();
     QString finalDir = mcFolder + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     if (onProgress) onProgress("Copying game files...", 18);
-    copyDir(mcSource, workDir);
+    copyDir(mcSource, finalDir);
 
     // 清理共享目录（assets/libraries 由 downloadAndFinalize 下载到游戏目录，不应在实例内重复）
-    QDir(workDir + "assets").removeRecursively();
-    QDir(workDir + "libraries").removeRecursively();
+    QDir(finalDir + "assets").removeRecursively();
+    QDir(finalDir + "libraries").removeRecursively();
 
     // PCL 配置（在 root 级别，不在 .minecraft 内）
     if (QDir(rootDir + "/PCL").exists())
-        copyDir(rootDir + "/PCL/", workDir + "PCL/");
+        copyDir(rootDir + "/PCL/", finalDir + "PCL/");
 
     // 复制外层的散落 mod jar
     bool hasLooseMods = false;
     QDir outer(packDir);
     for (const auto &entry : outer.entryInfoList(QDir::Files | QDir::NoDotAndDotDot)) {
         if (entry.fileName().endsWith(".jar", Qt::CaseInsensitive)) {
-            QDir(workDir + "mods/").mkpath(".");
-            QFile::copy(entry.absoluteFilePath(), workDir + "mods/" + entry.fileName());
+            QDir(finalDir + "mods/").mkpath(".");
+            QFile::copy(entry.absoluteFilePath(), finalDir + "mods/" + entry.fileName());
             hasLooseMods = true;
         }
     }
@@ -685,8 +700,8 @@ static void installLauncherPack(const QString &filePath, const QString &packDir,
         for (const auto &entry : sd.entryInfoList(QDir::Files | QDir::NoDotAndDotDot)) {
             if (entry.fileName().endsWith(".jar", Qt::CaseInsensitive) &&
                 !entry.fileName().endsWith(".zip", Qt::CaseInsensitive)) {  // 跳过 zip
-                QDir(workDir + "mods/").mkpath(".");
-                QFile::copy(entry.absoluteFilePath(), workDir + "mods/" + entry.fileName());
+                QDir(finalDir + "mods/").mkpath(".");
+                QFile::copy(entry.absoluteFilePath(), finalDir + "mods/" + entry.fileName());
                 hasLooseMods = true;
             }
         }
@@ -697,7 +712,7 @@ static void installLauncherPack(const QString &filePath, const QString &packDir,
     // 6. 下载平台相关文件（MC 本体 + natives）
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, {}, {}, {},
-        workDir, finalDir, name, {}, onProgress, onComplete);
+        finalDir, name, {}, onProgress, onComplete);
 }
 
 // ---- Fallback: Compressed .minecraft ----
@@ -798,24 +813,24 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
     QString finalDir = mcFolder + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    QString workDir = importWorkDir() + name + "/";
-    QDir(workDir).removeRecursively();
-    QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
 
     if (onProgress) onProgress("Copying modpack files...", 20);
-    copyDir(mcSource, workDir);
+    copyDir(mcSource, finalDir);
 
-    // 如果 PCL/ 在 .minecraft 同级，也复制到工作目录
+    // 如果 PCL/ 在 .minecraft 同级，也复制到实例目录
     if (hasMcFolder && QDir(rootDir + "/PCL").exists())
-        copyDir(rootDir + "/PCL/", workDir + "PCL/");
+        copyDir(rootDir + "/PCL/", finalDir + "PCL/");
 
-    // 如果根目录有散落的 mod jar，复制到工作目录 mods/
+    // 如果根目录有散落的 mod jar，复制到实例目录 mods/
     QDir rd(rootDir);
     bool hasLooseJars = false;
     for (const auto &entry : rd.entryInfoList(QDir::Files | QDir::NoDotAndDotDot)) {
         if (entry.fileName().endsWith(".jar", Qt::CaseInsensitive)) {
-            QDir(workDir + "mods/").mkpath(".");
-            QFile::copy(entry.absoluteFilePath(), workDir + "mods/" + entry.fileName());
+            QDir(finalDir + "mods/").mkpath(".");
+            QFile::copy(entry.absoluteFilePath(), finalDir + "mods/" + entry.fileName());
             hasLooseJars = true;
         }
     }
@@ -825,7 +840,7 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
     // 下载 MC 版本文件（确保 libraries/natives/assets 匹配当前平台）
     if (onProgress) onProgress("Preparing download...", 30);
     downloadAndFinalize(mcVersion, {}, {}, {},
-                        workDir, finalDir, name, {}, onProgress, onComplete);
+                        finalDir, name, {}, onProgress, onComplete);
 }
 
 static void installCompressed(const QString &filePath, const QString &packDir,
@@ -927,9 +942,12 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
     // Compressed 已含全部文件，直接在 tmp 解压后移入
-    QString workDir = importWorkDir() + name + "/";
+    QString workDir = mcFolder + "tmp/extract_" + instanceDir + "/";
     QDir(workDir).removeRecursively();
     QDir().mkpath(workDir);
+    
+    
+    markIncomplete(finalDir);
     if (onProgress) onProgress("Extracting...", 20);
     extractZip(filePath, workDir, onProgress, 25);
 
@@ -954,24 +972,20 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     ini.setValue("VersionArgumentIndieV2", true);
     ini.endGroup();
     ini.sync();
-    // 写入 INI 实例映射（随机目录名 → 显示名）
     writeInstanceMapping(instanceDir, name);
-    // 清理 tmp 目录
     QDir(mcFolder + "tmp/").removeRecursively();
+    markComplete(finalDir);
     if (onComplete) onComplete(true, name);
 }
 
 // ---- download pipeline ----
 
 static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
-                               const QString &workDir, const QString &finalDir, const QString &name,
+                               const QString &finalDir, const QString &name,
                                PackProgressCallback onProgress,
                                PackCompleteCallback onComplete) {
     // 所有 mod 下载完成后的 finalize
     auto finalizeNow = [=]() {
-        QDir().mkpath(QFileInfo(finalDir).absolutePath());
-        copyDir(workDir, finalDir);
-        QDir(workDir).removeRecursively();
         QDir(finalDir + "PCL/").mkpath(".");
         QSettings ini(finalDir + "PCL/Setup.ini", QSettings::IniFormat);
         ini.beginGroup("Setup");
@@ -982,8 +996,9 @@ static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
         ini.sync();
         // 写入 INI 实例映射（随机目录名 → 显示名）
         writeInstanceMapping(QDir(finalDir).dirName(), name);
-        // 清理整个 tmp/ 目录（所有异步工作已完成）
+        // 清理 tmp 目录 + 移除 .incomplete 标记
         QDir(VersionManager::instance().mcFolder() + "tmp/").removeRecursively();
+        markComplete(finalDir);
         if (onProgress) onProgress("Complete", 100);
         if (onComplete) onComplete(true, name);
     };
@@ -1000,28 +1015,28 @@ static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
 
     if (!mod.url.isEmpty()) {
         // 直接 URL（Modrinth）
-        DownloadManager::instance().download(mod.url, workDir + mod.savePath,
+        DownloadManager::instance().download(mod.url, finalDir + mod.savePath,
             nullptr,
             [=](bool ok, QString) {
                 if (!ok) qWarning() << "Mod download failed:" << mod.url;
-                downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
             });
     } else if (!mod.cfModId.isEmpty()) {
         // CurseForge — 通过 ModPlatform 解析下载 URL
         ModPlatform::instance().downloadMod(ModPlatform::CurseForge,
-            mod.cfModId, mod.cfFileId, workDir + mod.savePath,
+            mod.cfModId, mod.cfFileId, finalDir + mod.savePath,
             [=](bool ok, QString) {
                 if (!ok) qWarning() << "CF mod download failed:" << mod.cfModId;
-                downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
             });
     } else {
-        downloadModsAsync(mods, index + 1, workDir, finalDir, name, onProgress, onComplete);
+        downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
     }
 }
 
 static void downloadAndFinalize(const QString &mcVersion,
                                  const QString &forgeVer, const QString &neoVer, const QString &fabricVer,
-                                 const QString &workDir, const QString &finalDir, const QString &name,
+                                 const QString &finalDir, const QString &name,
                                  const QList<ModDownloadEntry> &mods,
                                  PackProgressCallback onProgress,
                                  PackCompleteCallback onComplete) {
@@ -1033,7 +1048,7 @@ static void downloadAndFinalize(const QString &mcVersion,
     };
 
     auto startModDownloads = [=]() {
-        downloadModsAsync(mods, 0, workDir, finalDir, name, onProgress, onComplete);
+        downloadModsAsync(mods, 0, finalDir, name, onProgress, onComplete);
     };
 
     if (mcVersion.isEmpty()) {
@@ -1047,7 +1062,7 @@ static void downloadAndFinalize(const QString &mcVersion,
     AssetDownloader::instance().downloadVersion(vanilla,
         [=](bool ok, QString err) {
             if (!ok) {
-                QDir(workDir).removeRecursively();
+                
                 if (onComplete) onComplete(false, "Download Minecraft failed: " + err);
                 return;
             }

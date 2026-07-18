@@ -85,9 +85,9 @@ bool removeInstance(const QString &name) {
     QString dirName = Settings::instance().dirForDisplayName(name);
     if (!dirName.isEmpty()) {
         QString instanceDir = folder + "instances/" + dirName;
-        bool ok = QDir(instanceDir).removeRecursively();
-        if (ok) Settings::instance().removeInstanceDir(dirName);
-        return ok;
+        // 先删 INI 映射，再删目录（即使目录删除失败，映射也已清理）
+        Settings::instance().removeInstanceDir(dirName);
+        return QDir(instanceDir).removeRecursively();
     }
 
     // 回退：直接用显示名作为目录名（兼容旧格式或测试）
