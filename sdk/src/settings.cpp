@@ -221,7 +221,9 @@ void Settings::selectPlayer(const QString &uuid)
 void Settings::setInstanceDir(const QString &dirName, const QString &displayName)
 {
     if (!m_settings) return;
-    m_settings->setValue("Instances/" + dirName, displayName);
+    m_settings->beginGroup("Instances");
+    m_settings->setValue(dirName, displayName);
+    m_settings->endGroup();
     m_settings->sync();
 }
 
@@ -229,30 +231,34 @@ QMap<QString, QString> Settings::instanceDirs() const
 {
     QMap<QString, QString> result;
     if (!m_settings) return result;
-    for (const auto &key : m_settings->allKeys()) {
-        if (key.startsWith("Instances/")) {
-            QString dirName = key.mid(10); // after "Instances/"
-            result[dirName] = m_settings->value(key).toString();
-        }
-    }
+    m_settings->beginGroup("Instances");
+    const auto keys = m_settings->childKeys();
+    for (const auto &key : keys)
+        result[key] = m_settings->value(key).toString();
+    m_settings->endGroup();
     return result;
 }
 
 void Settings::removeInstanceDir(const QString &dirName)
 {
     if (!m_settings) return;
-    m_settings->remove("Instances/" + dirName);
+    m_settings->beginGroup("Instances");
+    m_settings->remove(dirName);
+    m_settings->endGroup();
     m_settings->sync();
 }
 
 QString Settings::dirForDisplayName(const QString &displayName) const
 {
     if (!m_settings || displayName.isEmpty()) return {};
-    for (const auto &key : m_settings->allKeys()) {
-        if (key.startsWith("Instances/")) {
-            if (m_settings->value(key).toString() == displayName)
-                return key.mid(10);
+    m_settings->beginGroup("Instances");
+    const auto keys = m_settings->childKeys();
+    for (const auto &key : keys) {
+        if (m_settings->value(key).toString() == displayName) {
+            m_settings->endGroup();
+            return key;
         }
     }
+    m_settings->endGroup();
     return {};
 }

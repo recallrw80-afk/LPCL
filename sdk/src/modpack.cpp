@@ -202,7 +202,7 @@ static json parseJsonSafe(const QByteArray &data, bool *ok = nullptr) {
 static bool copyDir(const QString &src, const QString &dst) {
     QProcess cp;
     cp.start("cp", {"-r", src + "/.", dst});
-    cp.waitForFinished(60000);
+    cp.waitForFinished(600000);  // 10 min timeout for large modpacks
     return cp.exitCode() == 0;
 }
 
@@ -516,9 +516,10 @@ static void installModrinth(const QString &filePath, const QString &packDir,
                              const QString &instanceName,
                              PackProgressCallback onProgress,
                              PackCompleteCallback onComplete) {
-    QFile f(packDir + "/modrinth.index.json");
+    QString indexPath = packDir + "modrinth.index.json";
+    QFile f(indexPath);
     if (!f.open(QIODevice::ReadOnly)) {
-        if (onComplete) onComplete(false, "Cannot read modrinth.index.json");
+        if (onComplete) onComplete(false, "Cannot read modrinth.index.json: " + f.errorString() + " (" + indexPath + ")");
         return;
     }
     bool ok; json index = parseJsonSafe(f.readAll(), &ok); if (!ok) { if (onComplete) onComplete(false, "modrinth.index.json parse failed"); return; }
@@ -1115,8 +1116,7 @@ static void installModpackFromDir(const QString &filePath, const QString &packDi
         if (sub.exists("manifest.json") || sub.exists("modrinth.index.json") ||
             sub.exists("mmc-pack.json") || sub.exists("mcbbs.packmeta") ||
             sub.exists("modpack.json") || sub.exists("modpack.zip") ||
-            sub.exists("modpack.mrpack") ||
-            sub.exists("PCL/Setup.ini")) {
+            sub.exists("modpack.mrpack")) {
             effectiveDir = subDir;
         }
     }
