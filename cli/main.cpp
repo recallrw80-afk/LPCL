@@ -310,19 +310,14 @@ static void printHelp() {
         {"help",              "help",              "显示帮助信息",          "Show help information"},
         {"version",           "version",           "显示版本号",            "Show version number"},
     };
-    const Item opts[] = {
-        {"--zh",      "--zh",      "使用中文输出（本次有效）",  "Use Chinese output (this run)"},
-    };
     auto printItem = [&](const Item &it) {
         out(QString("  %1 %2\n").arg(g_lang == CN ? it.cmdCn : it.cmdEn, -20)
                 .arg(T(it.descCn, it.descEn)));
     };
-    out(T("Usage: lpcl-cli [--zh] <command> [args]\n",
-          "Usage: lpcl-cli [--zh] <command> [args]\n"));
+    out(T("Usage: lpcl-cli <command> [args]\n",
+          "Usage: lpcl-cli <command> [args]\n"));
     out("\n"); out(T("命令 / Commands:\n", "Commands:\n"));
     for (const auto &it : items) printItem(it);
-    out("\n"); out(T("选项 / Options:\n", "Options:\n"));
-    for (const auto &it : opts) printItem(it);
     std::cout.flush();
 }
 
@@ -423,25 +418,16 @@ int main(int argc, char *argv[]) {
 
     // 默认静默，关闭 SDK 调试日志
     QLoggingCategory::setFilterRules("lpcl.*.info=false\nlpcl.*.debug=false");
-    // 语言预扫描：--zh 本次有效；无 flag 时读 set-lang 保存的设置
-    bool langFlag = false;
-    for (int i = 1; i < argc; ++i) {
-        if (QString::fromLatin1(argv[i]) == "--zh") { setLang(false); langFlag = true; }
-    }
-    if (!langFlag) {
-        Settings::initialize();
-        if (Settings::instance().getString("UiLanguage") == "zh")
-            setLang(false);
-    }
+    // 语言只由 set-lang 持久设置控制（无命令行 flag）
+    Settings::initialize();
+    if (Settings::instance().getString("UiLanguage") == "zh")
+        setLang(false);
 
     // ---- 选项解析 ----
     QCommandLineParser parser;
     parser.setApplicationDescription(
         _("LPCL 命令行启动器", "LPCL Command-Line Launcher"));
 
-    QCommandLineOption optZh("zh",
-        _("使用中文输出（本次有效）", "Use Chinese output (this run)"));
-    parser.addOption(optZh);
     parser.addPositionalArgument("command", "placeholder");
     parser.setOptionsAfterPositionalArgumentsMode(
         QCommandLineParser::ParseAsPositionalArguments);
