@@ -2,6 +2,7 @@
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "util/arg_utils.h"
+#include "util/file_utils.h"
 
 #include <QDir>
 #include <QLoggingCategory>
@@ -154,7 +155,8 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
             }
         } else {
             args.append("-XX:+UseZGC");
-            if (java.majorVersion >= 21) {
+            // ZGenerational 仅 Java 21-23 有效（24+ 已默认整合并被移除）
+            if (java.majorVersion >= 21 && java.majorVersion < 24) {
                 args.append("-XX:+ZGenerational");
             }
         }
@@ -299,6 +301,14 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
                 if (libPath.empty()) continue;
                 classpathParts.append(version.pathIndie + "libraries/" +
                                        QString::fromStdString(libPath));
+            } else {
+                // natives 容器条目不进 classpath（无主 jar）
+                if (lib.contains("natives")) continue;
+                // 旧格式（≤1.13）：只有 maven name，推导仓库相对路径
+                QString rel = FileUtils::mavenNameToPath(
+                    QString::fromStdString(lib.value("name", "")));
+                if (!rel.isEmpty())
+                    classpathParts.append(version.pathIndie + "libraries/" + rel);
             }
         }
     }

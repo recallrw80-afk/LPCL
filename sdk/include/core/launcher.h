@@ -84,6 +84,10 @@ private:
     void setProgress(int value);
     void appendLog(const QString &line);
     void doLaunch();
+    /// 按行处理游戏输出（buffer 保留不完整行；字节级缓冲避免 UTF-8 跨界乱码）
+    void processGameOutput(QByteArray &buffer, const QByteArray &data);
+    /// 冲刷缓冲中无换行结尾的残留行（进程退出时调用）
+    void flushLogBuffer(QByteArray &buffer);
 
     // Data for current launch
     McVersion m_version;
@@ -94,7 +98,8 @@ private:
     QProcess *m_gameProcess = nullptr;
     LaunchState m_state = LaunchState::Idle;
     QString m_statusText;
-    QString m_logBuffer;  // 缓冲不完整的日志行
+    QByteArray m_logBuffer;     // stdout 不完整行缓冲
+    QByteArray m_logBufferErr;  // stderr 不完整行缓冲（与 stdout 分开，防止两通道粘行）
     int m_progress = 0;
 };
 

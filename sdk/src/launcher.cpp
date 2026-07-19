@@ -108,6 +108,7 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
     auto javaList = javaMgr.javaList();
     if (javaList.isEmpty()) {
         javaMgr.scanSystemJava();
+        javaMgr.waitForScanFinished();  // 扫描是异步的，读结果前必须等完成
         javaList = javaMgr.javaList();
     }
     if (javaList.isEmpty()) {
@@ -206,6 +207,8 @@ void Launcher::doLaunch() {
 }
 
 void Launcher::onGameStarted() {
+    // 中断竞态：start 已异步发出，started 信号可能在 interrupt() 之后到达——不得覆盖中断状态
+    if (m_state == LaunchState::Interrupted) return;
     setState(LaunchState::Running);
     setStatus("Game running...");
     emit gameStarted();
@@ -214,12 +217,14 @@ void Launcher::onGameStarted() {
 }
 
 void Launcher::interrupt() {
-    if (m_state == LaunchState::Running) {
-        m_gameProcess->kill();
+    if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
+        // Launching 状态下进程可能已异步 start——必须真的 kill，否则取消无效
+        if (m_gameProcess->state() != QProcess::NotRunning)
+            m_gameProcess->kill();
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
         appendLog("[LPCL] Game process killed by user.");
-    } else if (m_state == LaunchState::Launching || m_state == LaunchState::Downloading) {
+    } else if (m_state == LaunchState::Downloading) {
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
     }
@@ -227,36 +232,42 @@ void Launcher::interrupt() {
 
 // Game output
 
-void Launcher::onGameStdout() {
-    QByteArray data = m_gameProcess->readAllStandardOutput();
-    m_logBuffer += QString::fromUtf8(data);
-    QStringList lines = m_logBuffer.split('\n');
-    // 最后一段是不完整的行，保留到下次
-    m_logBuffer = lines.takeLast();
-    for (const auto &line : lines) {
-        QString trimmed = line.trimmed();
-        if (!trimmed.isEmpty()) {
-            emit gameLog(trimmed);
-            appendLog(trimmed);
+void Launcher::processGameOutput(QByteArray &buffer, const QByteArray &data) {
+    buffer += data;
+    // 字节级缓冲：多字节 UTF-8 字符跨 readyRead 边界时不会切碎（'\n' 不会出现在多字节序列中）
+    int idx;
+    while ((idx = buffer.indexOf('\n')) != -1) {
+        QString line = QString::fromUtf8(buffer.left(idx)).trimmed();
+        buffer.remove(0, idx + 1);
+        if (!line.isEmpty()) {
+            emit gameLog(line);
+            appendLog(line);
         }
     }
+}
+
+void Launcher::flushLogBuffer(QByteArray &buffer) {
+    QString line = QString::fromUtf8(buffer).trimmed();
+    buffer.clear();
+    if (!line.isEmpty()) {
+        emit gameLog(line);
+        appendLog(line);
+    }
+}
+
+void Launcher::onGameStdout() {
+    processGameOutput(m_logBuffer, m_gameProcess->readAllStandardOutput());
 }
 
 void Launcher::onGameStderr() {
-    QByteArray data = m_gameProcess->readAllStandardError();
-    m_logBuffer += QString::fromUtf8(data);
-    QStringList lines = m_logBuffer.split('\n');
-    m_logBuffer = lines.takeLast();
-    for (const auto &line : lines) {
-        QString trimmed = line.trimmed();
-        if (!trimmed.isEmpty()) {
-            emit gameLog(trimmed);
-            appendLog(trimmed);
-        }
-    }
+    processGameOutput(m_logBufferErr, m_gameProcess->readAllStandardError());
 }
 
 void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
+    // 冲刷两通道中无换行结尾的残留日志
+    flushLogBuffer(m_logBuffer);
+    flushLogBuffer(m_logBufferErr);
+
     // 用户主动中断时不再覆盖状态
     if (m_state == LaunchState::Interrupted) {
         emit gameExited(exitCode, "Interrupted by user");
@@ -266,6 +277,11 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
         appendLog(QString("[LPCL] Game crashed with exit code %1").arg(exitCode));
         setState(LaunchState::Failed);
         emit gameExited(exitCode, "Game crashed");
+    } else if (exitCode != 0) {
+        // JVM 正常启动但以非零码退出（参数错误、mainClass 缺失等）——不是"正常退出"
+        appendLog(QString("[LPCL] Game exited abnormally with code %1").arg(exitCode));
+        setState(LaunchState::Failed);
+        emit gameExited(exitCode, "Game exited abnormally");
     } else {
         appendLog(QString("[LPCL] Game exited with code %1").arg(exitCode));
         setState(LaunchState::Finished);
@@ -275,13 +291,15 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
 }
 
 void Launcher::onGameError(QProcess::ProcessError error) {
+    if (error == QProcess::Crashed) {
+        // 崩溃时 QProcess 还会发 finished()——终态统一由 onGameFinished 上报，
+        // 避免 launchFailed + gameExited 双触发（且运行中崩溃不是"启动失败"）
+        return;
+    }
     QString errMsg;
     switch (error) {
     case QProcess::FailedToStart:
         errMsg = "Failed to start game process. Check Java installation.";
-        break;
-    case QProcess::Crashed:
-        errMsg = "Game process crashed.";
         break;
     case QProcess::Timedout:
         errMsg = "Game process timed out.";

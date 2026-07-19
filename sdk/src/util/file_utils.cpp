@@ -25,6 +25,22 @@ bool verifySha1(const QString &filePath, const QString &expectedHash) {
     return actual == expectedHash.toLower();
 }
 
+QString mavenNameToPath(const QString &name) {
+    QString n = name;
+    QString ext = QStringLiteral("jar");
+    int at = n.indexOf('@');
+    if (at != -1) {
+        ext = n.mid(at + 1);
+        n = n.left(at);
+    }
+    const auto parts = n.split(':');
+    if (parts.size() < 3) return {};
+    QString file = parts[1] + '-' + parts[2];
+    if (parts.size() > 3) file += '-' + parts[3];
+    return QString("%1/%2/%3/%4.%5")
+        .arg(QString(parts[0]).replace('.', '/'), parts[1], parts[2], file, ext);
+}
+
 // Minimal ZIP/JAR extractor for native libraries
 // Extracts .so, .dll, .dylib, .jnilib files, skipping META-INF/
 // Supports STORED (method 0) and DEFLATE (method 8) via zlib
@@ -81,7 +97,9 @@ static QByteArray inflateRaw(const QByteArray &compressed, quint32 expectedSize)
         }
 
         ret = inflate(&strm, Z_NO_FLUSH);
-        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR) {
+        // Z_BUF_ERROR：输入耗尽但流未结束（归档截断/损坏）——不处理会死循环
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR ||
+            ret == Z_BUF_ERROR || ret == Z_NEED_DICT) {
             inflateEnd(&strm);
             return {};
         }
@@ -125,6 +143,11 @@ static void skipCompressedData(QFile &file, QDataStream &stream, quint32 compres
                     }
                     return;
                 }
+                // 描述符签名可选：无签名时以下一个条目的 LFH 头或中央目录头为界
+                if (sig == 0x04034b50 || sig == 0x02014b50) {
+                    file.seek(file.pos() - bytesRead - carry.size() + i);
+                    return;
+                }
             }
             // Keep last 3 bytes for overlap detection
             if (searchLen > 3)
@@ -134,6 +157,17 @@ static void skipCompressedData(QFile &file, QDataStream &stream, quint32 compres
         }
     }
     // If neither known size nor data descriptor, we're stuck — caller should handle
+}
+
+/// 消费 data descriptor（签名可选）：有签名 16 字节（sig+CRC+comp+uncomp），
+/// 无签名 12 字节（CRC+comp+uncomp）——首字段读出来是签名还是 CRC 决定后续长度
+static void consumeDataDescriptor(QDataStream &stream)
+{
+    quint32 first = readU32(stream);
+    readU32(stream);
+    readU32(stream);
+    if (first == 0x08074b50)
+        readU32(stream);
 }
 
 QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
@@ -169,13 +203,15 @@ QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
 
         // Read filename
         QByteArray nameBytes(nameLen, Qt::Uninitialized);
-        stream.readRawData(nameBytes.data(), nameLen);
+        if (stream.readRawData(nameBytes.data(), nameLen) != (qint64)nameLen)
+            break;  // 归档截断
         QString fileName = QString::fromUtf8(nameBytes);
 
         // Skip extra field
         if (extraLen > 0) {
             QByteArray extra(extraLen, Qt::Uninitialized);
-            stream.readRawData(extra.data(), extraLen);
+            if (stream.readRawData(extra.data(), extraLen) != (qint64)extraLen)
+                break;  // 归档截断
         }
 
         bool hasDataDescriptor = (flags & 0x08) != 0;
@@ -198,8 +234,15 @@ QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
             continue;
         }
 
+        // ZIP64 哨兵值：真实尺寸在 extra 字段（未解析），跳过避免 ~4GiB 分配
+        if (compressedSize == 0xFFFFFFFF) {
+            skipCompressedData(file, stream, 0, hasDataDescriptor);
+            continue;
+        }
+
         QByteArray data(compressedSize, Qt::Uninitialized);
-        stream.readRawData(data.data(), compressedSize);
+        if (stream.readRawData(data.data(), compressedSize) != (qint64)compressedSize)
+            break;  // 归档截断，流已错位，终止
 
         QString outPath = destDir + "/" + QFileInfo(fileName).fileName();
         QFile outFile(outPath);
@@ -214,12 +257,8 @@ QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
                     // Decompression failed — skip this file
                     outFile.close();
                     QFile::remove(outPath);
-                    if (hasDataDescriptor) {
-                        quint32 descSig = readU32(stream);
-                        if (descSig == 0x08074b50) {
-                            readU32(stream); readU32(stream); readU32(stream);
-                        }
-                    }
+                    if (hasDataDescriptor)
+                        consumeDataDescriptor(stream);
                     continue;
                 }
                 outFile.write(decompressed);
@@ -229,14 +268,8 @@ QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
         }
 
         // Consume data descriptor if present
-        if (hasDataDescriptor) {
-            quint32 descSig = readU32(stream);
-            if (descSig == 0x08074b50) {
-                readU32(stream); // CRC
-                readU32(stream); // compressed size
-                readU32(stream); // uncompressed size
-            }
-        }
+        if (hasDataDescriptor)
+            consumeDataDescriptor(stream);
     }
 
     file.close();

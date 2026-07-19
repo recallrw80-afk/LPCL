@@ -18,6 +18,11 @@ bool verifySha1(const QString &filePath, const QString &expectedHash);
 /// Returns list of extracted file paths, or empty on failure.
 QStringList extractNativesJar(const QString &jarPath, const QString &destDir);
 
+/// maven 坐标 → 仓库相对路径（旧格式 libraries 用，≤1.13 的 JSON 无 downloads.artifact）
+/// "group:artifact:version[:classifier][@ext]" → "group/artifact/version/artifact-version[-classifier].ext"
+/// 解析失败返回空串
+QString mavenNameToPath(const QString &name);
+
 } // namespace FileUtils
 
 #endif // LPCL_FILE_UTILS_H

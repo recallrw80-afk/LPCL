@@ -255,7 +255,24 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
     for (const auto &lib : versionJson["libraries"]) {
         if (!rulesAllowOnThisPlatform(lib)) continue;
 
-        if (!lib.contains("downloads") || !lib["downloads"].contains("artifact")) continue;
+        if (!lib.contains("downloads") || !lib["downloads"].contains("artifact")) {
+            // 无 artifact 且带 natives 节 = natives 容器（jinput-platform 等），
+            // 由 downloadNatives 走 classifiers 处理，没有主 jar 可下
+            if (lib.contains("natives")) continue;
+            // 旧格式（≤1.13 的 JSON）：只有 maven name，按标准仓库推导 URL
+            QString rel = FileUtils::mavenNameToPath(
+                QString::fromStdString(lib.value("name", "")));
+            if (rel.isEmpty()) continue;
+            // 部分旧库自带仓库地址，默认 libraries.minecraft.net
+            QString base = QString::fromStdString(lib.value("url", ""));
+            if (base.isEmpty()) base = "https://libraries.minecraft.net/";
+            if (!base.endsWith('/')) base += '/';
+            QString savePath = version.pathIndie + "libraries/" + rel;
+            if (QFileInfo::exists(savePath)) continue;  // 无 sha1 可校验，存在即跳过
+            QDir().mkpath(QFileInfo(savePath).absolutePath());
+            toDownload.append({base + rel, savePath});
+            continue;
+        }
 
         auto &artifact = lib["downloads"]["artifact"];
         std::string url = artifact.value("url", "");

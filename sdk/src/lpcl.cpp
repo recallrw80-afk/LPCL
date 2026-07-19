@@ -41,7 +41,14 @@ bool launchVersion(const QString &versionId,
 
     auto login = OfflineAuth::createOfflineLogin("Player");
     auto version = VersionManager::instance().loadVersion(resolvedId);
-    auto *java = jm.selectJava();
+    if (jm.javaList().isEmpty()) {
+        jm.scanSystemJava();
+        jm.waitForScanFinished();
+    }
+    // 优先按版本兼容矩阵选 Java；无严格匹配时回退到最优可用
+    // （如 1.12.2 机器上只有 Java 21/25，严格匹配 Java 8 会落空，但新版本也能跑）
+    auto *java = jm.selectJavaForVersion(version);
+    if (!java) java = jm.selectJava();
     if (!java) return false;
 
     // 注：如在同一进程中多次调用 launchVersion，信号会累积连接。

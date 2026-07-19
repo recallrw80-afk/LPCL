@@ -1007,12 +1007,19 @@ static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
     if (onProgress) onProgress(QString("Downloading mod (%1/%2)...").arg(index + 1).arg(mods.size()),
                                 70 + (30 * index / mods.size()));
 
+    // 任一 mod 下载失败 = 整合包导入失败：回滚删除实例，不再继续
+    auto failNow = [=](const QString &what) {
+        qWarning() << "Mod download failed, rolling back:" << what;
+        cleanupOnError(finalDir);
+        if (onComplete) onComplete(false, "Mod download failed: " + what);
+    };
+
     if (!mod.url.isEmpty()) {
         // 直接 URL（Modrinth）
         DownloadManager::instance().download(mod.url, finalDir + mod.savePath,
             nullptr,
             [=](bool ok, QString) {
-                if (!ok) qWarning() << "Mod download failed:" << mod.url;
+                if (!ok) { failNow(mod.url); return; }
                 downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
             });
     } else if (!mod.cfModId.isEmpty()) {
@@ -1020,7 +1027,7 @@ static void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
         ModPlatform::instance().downloadMod(ModPlatform::CurseForge,
             mod.cfModId, mod.cfFileId, finalDir + mod.savePath,
             [=](bool ok, QString) {
-                if (!ok) qWarning() << "CF mod download failed:" << mod.cfModId;
+                if (!ok) { failNow("CF mod " + mod.cfModId); return; }
                 downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
             });
     } else {
