@@ -393,10 +393,12 @@ JavaEntry JavaManager::selectJava(const QVersionNumber &minVersion,
 
     if (candidates.isEmpty()) return {};
 
-    // Prefer 64-bit, then highest version, then JDK over JRE
+    // Prefer 64-bit, then LOWEST satisfying version, then JDK over JRE：
+    // modded MC（NeoForge/Fabric/Iris 等）对高于官方推荐版本的 Java 兼容性差，
+    // 区间内选最低版本最接近官方推荐（1.21.x → 21 而非 25）
     std::sort(candidates.begin(), candidates.end(), [](JavaEntry *a, JavaEntry *b) {
         if (a->is64Bit != b->is64Bit) return a->is64Bit > b->is64Bit;
-        if (a->version != b->version) return a->version > b->version;
+        if (a->version != b->version) return a->version < b->version;
         return !a->isJre && b->isJre;
     });
 
