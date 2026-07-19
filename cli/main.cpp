@@ -187,14 +187,35 @@ static int handleMcList() {
 }
 
 static int handleLaunch(const QStringList &args) {
+    QString target;
     if (args.size() < 2) {
-        std::cerr << T("error: lpcl-cli launch <名称>\n",
-                       "error: lpcl-cli launch <name>\n").toStdString();
-        return 1;
+        // 未指定实例：列出实例列表，用户按序号选择
+        auto ids = lpcl::listVersions();
+        if (ids.isEmpty()) {
+            std::cerr << _("error:  没有实例，请先导入整合包\n",
+                           "error:  no instances, import a modpack first\n");
+            return 1;
+        }
+        std::cout << _("选择要启动的实例:\n", "Select an instance to launch:\n");
+        for (int i = 0; i < ids.size(); ++i)
+            std::cout << "  " << (i + 1) << ") " << ids[i].toStdString() << "\n";
+        std::cout << _("请输入序号: ", "Enter number: ");
+        std::cout.flush();
+        std::string line;
+        std::getline(std::cin, line);
+        bool okNum = false;
+        int choice = QString::fromStdString(line).toInt(&okNum);
+        if (!okNum || choice < 1 || choice > ids.size()) {
+            std::cerr << _("error:  无效的选择\n", "error:  invalid choice\n");
+            return 1;
+        }
+        target = ids[choice - 1];
+    } else {
+        target = args[1];
     }
-    std::cout << _(QString("正在启动 %1 ...\n").arg(args[1]).toStdString(),
-                   QString("Launching %1 ...\n").arg(args[1]).toStdString());
-    if (!lpcl::launchVersion(args[1],
+    std::cout << _(QString("正在启动 %1 ...\n").arg(target).toStdString(),
+                   QString("Launching %1 ...\n").arg(target).toStdString());
+    if (!lpcl::launchVersion(target,
             [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
             [](int code) {
                 std::cout << _("exit: ", "exit: ") << code << "\n";
@@ -306,7 +327,7 @@ static void printHelp() {
     const Item items[] = {
         {"list",              "list",              "列出已导入的整合包实例",  "List imported instances"},
         {"mc-list",           "mc-list",           "列出原版 MC 版本",       "List vanilla MC versions"},
-        {"launch <名称>",     "launch <name>",     "启动整合包游戏",       "Launch a modpack"},
+        {"launch [名称]",    "launch [name]",     "启动整合包游戏（缺省则列出实例选择）", "Launch a modpack (interactive select if omitted)"},
         {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
         {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
         {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
