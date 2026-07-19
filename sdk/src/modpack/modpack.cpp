@@ -9,6 +9,7 @@
 
 static void installModpackFromDir(const QString &filePath, const QString &packDir,
                                    PackType type, const QString &instanceName,
+                                   const QString &targetInstance,
                                    PackProgressCallback onProgress,
                                    PackCompleteCallback onComplete) {
     // 处理一级目录包装（如 zip/蛊真人/ → 进入子目录）
@@ -46,6 +47,9 @@ static void installModpackFromDir(const QString &filePath, const QString &packDi
     case PackType::LauncherPack:
         installLauncherPack(filePath, effectiveDir, instanceName, onProgress, onComplete);
         break;
+    case PackType::Mod:
+        installMod(effectiveDir, targetInstance, onProgress, onComplete);
+        break;
     case PackType::Compressed:
         installCompressed(filePath, effectiveDir, instanceName, onProgress, onComplete);
         break;
@@ -60,6 +64,7 @@ static void installModpackFromDir(const QString &filePath, const QString &packDi
 
 void installModpack(const QString &filePath,
                      const QString &instanceName,
+                     const QString &targetInstance,
                      PackProgressCallback onProgress,
                      PackCompleteCallback onComplete) {
     if (!QFile::exists(filePath)) {
@@ -91,7 +96,7 @@ void installModpack(const QString &filePath,
         return;
     }
 
-    installModpackFromDir(filePath, packDir, type, instanceName, onProgress, onComplete);
+    installModpackFromDir(filePath, packDir, type, instanceName, targetInstance, onProgress, onComplete);
 
     // 注意：tmp/ 不在此清理——异步下载链末尾的 finalizeNow() 会统一清理；
     // 同步路径（Compressed Step 3）已自行清理。

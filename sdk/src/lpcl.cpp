@@ -74,13 +74,22 @@ QStringList listJavas() {
 
 void importModpack(const QString &filePath,
                     const QString &instanceName,
+                    const QString &targetInstance,
                     std::function<void(const ImportProgress &)> onProgress,
-                    std::function<void(bool, const QString &)> onComplete) {
+                    ImportCompleteCallback onComplete) {
+    // mod 包（jar-only zip）缺目标实例：直接返回错误 + 当前实例列表
+    if (targetInstance.isEmpty() && detectPackType(filePath) == PackType::Mod) {
+        if (onComplete) onComplete(false, "此 zip 为 mod 包，需要加 --to <实例名>", listVersions());
+        return;
+    }
     // 适配：将 ImportProgress 结构体拆成 (status, percent) 传给内部实现
     auto adaptedProgress = [onProgress](const QString &status, int percent) {
         if (onProgress) onProgress({status, percent});
     };
-    installModpack(filePath, instanceName, adaptedProgress, onComplete);
+    installModpack(filePath, instanceName, targetInstance, adaptedProgress,
+        [onComplete](bool ok, const QString &msg) {
+            if (onComplete) onComplete(ok, msg, {});
+        });
 }
 
 bool removeInstance(const QString &name) {

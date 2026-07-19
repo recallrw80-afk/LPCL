@@ -210,21 +210,22 @@ static int handleLaunch(const QStringList &args) {
 
 static int handleInpack(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
-                       "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
+        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
+                       "error:  lpcl-cli inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
         return 1;
     }
     QString rename = extractRename(args);
-    if (args.size() < 2) {  // --r/--folder 移除后可能没有文件参数
-        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
-                       "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
+    QString to = extractFlag(args, "--to");
+    if (args.size() < 2) {  // --r/--to/--folder 移除后可能没有文件参数
+        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
+                       "error:  lpcl-cli inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
         return 1;
     }
     std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
 
     bool done = false;
     int  result = 1;
-    lpcl::importModpack(args[1], rename,
+    lpcl::importModpack(args[1], rename, to,
         [](const lpcl::ImportProgress &p) {
             int bars = p.percent / 5;
             std::cout << "\r  [";
@@ -234,7 +235,7 @@ static int handleInpack(QStringList &args) {
             if (p.percent >= 100) std::cout << std::endl;
             std::cout.flush();
         },
-        [&](bool ok, const QString &msg) {
+        [&](bool ok, const QString &msg, const QStringList &data) {
             if (ok) {
                 std::cout << std::endl << _("success: ", "success: ")
                           << msg.toStdString() << std::endl;
@@ -242,6 +243,17 @@ static int handleInpack(QStringList &args) {
             } else {
                 std::cerr << std::endl << _("error: ", "error: ")
                           << msg.toStdString() << std::endl;
+                // mod 包缺 --to：输出当前实例列表（先判断有没有实例）
+                if (msg.contains("--to")) {
+                    if (data.isEmpty()) {
+                        std::cout << _("（当前没有实例，请先导入整合包）\n",
+                                       "(no instances yet, import a modpack first)\n");
+                    } else {
+                        std::cout << _("当前实例:\n", "Current instances:\n");
+                        for (const auto &d : data)
+                            std::cout << "  " << d.toStdString() << "\n";
+                    }
+                }
             }
             done = true;
             QCoreApplication::quit();

@@ -14,6 +14,7 @@ enum class PackType {
     MultiMC      = 2,   // mmc-pack.json
     MCBBS        = 3,   // mcbbs.packmeta 或 manifest.json（有 addons 键）
     Modrinth     = 4,   // modrinth.index.json
+    Mod          = 5,   // 只有 jar（无 .minecraft/清单）——mod 包，非整合包
     LauncherPack = 9,   // 内含 modpack.zip / modpack.mrpack（递归）
     Compressed   = 99,  // 回退：压缩版 .minecraft
 };
@@ -32,10 +33,12 @@ LPCLCORE_EXPORT QString packTypeName(PackType type);
 /// 安装整合包
 /// @param filePath      zip 文件路径
 /// @param instanceName  实例名（为空则自动从清单读取或使用文件名）
+/// @param targetInstance Mod 包的目标实例显示名（仅 PackType::Mod 使用，其余类型传空）
 /// @param onProgress    进度回调
 /// @param onComplete    完成回调
 LPCLCORE_EXPORT void installModpack(const QString &filePath,
                                      const QString &instanceName,
+                                     const QString &targetInstance,
                                      PackProgressCallback onProgress,
                                      PackCompleteCallback onComplete);
 

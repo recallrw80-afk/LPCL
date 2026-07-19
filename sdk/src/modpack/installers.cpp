@@ -1,8 +1,10 @@
 // 类型安装器：解析各格式清单 → beginInstall 前置 → 复制内容 → downloadAndFinalize
 #include "modpack_common.h"
 #include "core/versionmanager.h"
+#include "core/settings.h"
 #include "util/file_utils.h"
 #include <QDir>
+#include <QDirIterator>
 #include <QFile>
 #include <QFileInfo>
 #include <QRegularExpression>
@@ -411,9 +413,15 @@ void installLauncherPack(const QString &filePath, const QString &packDir,
     if (onProgress) onProgress("Copying game files...", 18);
     if (!copyOrFail(mcSource, finalDir, onComplete)) return;
 
-    // 清理共享目录（assets/libraries 由 downloadAndFinalize 下载到游戏目录，不应在实例内重复）
-    QDir(finalDir + "assets").removeRecursively();
-    QDir(finalDir + "libraries").removeRecursively();
+    // 包内 assets/libraries 合并进全局共享目录——资源不能丢
+    // （尤其是 modloader 依赖库，downloadVersion 只提供原版库，删了启动必缺）
+    for (const auto &shared : {"assets", "libraries"}) {
+        QString src = finalDir + shared;
+        if (QDir(src).exists()) {
+            if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
+            QDir(src).removeRecursively();
+        }
+    }
 
     // PCL 配置（在 root 级别，不在 .minecraft 内）
     if (QDir(rootDir + "/PCL").exists())
@@ -466,6 +474,16 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
 
     if (onProgress) onProgress("Copying modpack files...", 20);
     if (!copyOrFail(mcSource, finalDir, onComplete)) return;
+
+    // 包内 assets/libraries 合并进全局共享目录——资源不能丢
+    QString mcFolder = VersionManager::instance().mcFolder();
+    for (const auto &shared : {"assets", "libraries"}) {
+        QString src = finalDir + shared;
+        if (QDir(src).exists()) {
+            if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
+            QDir(src).removeRecursively();
+        }
+    }
 
     // 如果 PCL/ 在 .minecraft 同级，也复制到实例目录
     if (hasMcFolder && QDir(rootDir + "/PCL").exists())
@@ -607,4 +625,37 @@ void installCompressed(const QString &filePath, const QString &packDir,
     QDir(mcFolder + "tmp/").removeRecursively();
     markComplete(finalDir);
     if (onComplete) onComplete(true, name);
+}
+
+// ---- Type 5: Mod 包 —— jar 复制到目标实例的 mods/ ----
+
+void installMod(const QString &packDir, const QString &targetInstance,
+                PackProgressCallback onProgress,
+                PackCompleteCallback onComplete) {
+    if (targetInstance.isEmpty()) {
+        if (onComplete) onComplete(false, "此 zip 为 mod 包，需要加 --to <实例名>");
+        return;
+    }
+
+    // 解析目标实例（显示名 → 随机目录名）
+    QString dirName = Settings::instance().dirForDisplayName(targetInstance);
+    QString instDir = VersionManager::instance().mcFolder() + "instances/" + dirName + "/";
+    if (dirName.isEmpty() || !QDir(instDir).exists()) {
+        if (onComplete) onComplete(false, "目标实例不存在: " + targetInstance);
+        return;
+    }
+
+    // 递归收集包内所有 jar → 实例 mods/（拍平到文件名）
+    if (onProgress) onProgress("Copying mods...", 50);
+    QDir(instDir + "mods/").mkpath(".");
+    int copied = 0;
+    QDirIterator it(packDir, {"*.jar"}, QDir::Files, QDirIterator::Subdirectories);
+    while (it.hasNext()) {
+        it.next();
+        QFile::remove(instDir + "mods/" + it.fileName());  // 覆盖同名旧版
+        if (QFile::copy(it.filePath(), instDir + "mods/" + it.fileName()))
+            copied++;
+    }
+    if (onProgress) onProgress("Complete", 100);
+    if (onComplete) onComplete(true, QString("%1 mod(s) added to %2").arg(copied).arg(targetInstance));
 }

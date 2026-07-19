@@ -66,5 +66,6 @@ void installMCBBS(const QString &filePath, const QString &packDir, const QString
 void installModrinth(const QString &filePath, const QString &packDir, const QString &instanceName, PackProgressCallback, PackCompleteCallback);
 void installLauncherPack(const QString &filePath, const QString &packDir, const QString &instanceName, PackProgressCallback, PackCompleteCallback);
 void installCompressed(const QString &filePath, const QString &packDir, const QString &instanceName, PackProgressCallback, PackCompleteCallback);
+void installMod(const QString &packDir, const QString &targetInstance, PackProgressCallback, PackCompleteCallback);
 
 #endif // LPCL_MODPACK_COMMON_H

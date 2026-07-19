@@ -60,11 +60,17 @@ LPCLCORE_EXPORT bool launchVersion(const QString &versionId,
 /// 列出系统中可用的 Java 运行时
 LPCLCORE_EXPORT QStringList listJavas();
 
+/// 导入完成回调：(ok, message, data)
+/// data 在"mod 包缺 targetInstance"错误时为当前实例列表，其余情况为空
+using ImportCompleteCallback = std::function<void(bool ok, const QString &msg, const QStringList &data)>;
+
 /// 导入整合包（异步）
+/// @param targetInstance Mod 包（jar-only zip）的目标实例显示名，其余类型传空
 LPCLCORE_EXPORT void importModpack(const QString &filePath,
                                     const QString &instanceName,
+                                    const QString &targetInstance,
                                     std::function<void(const ImportProgress &)> onProgress,
-                                    std::function<void(bool, const QString &)> onComplete);
+                                    ImportCompleteCallback onComplete);
 
 /// 删除实例（通过 INI 映射查找随机目录名并删除，移除映射记录）
 LPCLCORE_EXPORT bool removeInstance(const QString &name);

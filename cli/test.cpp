@@ -24,17 +24,18 @@
 
 // ---- 冒烟测试辅助（合成包，几 KB，不依赖本机大文件） ----
 
-struct ImportResult { bool success = false; bool done = false; QString message; };
+struct ImportResult { bool success = false; bool done = false; QString message; QStringList data; };
 
 // 同步等待一次导入完成（带超时；回调捕获 QSharedPointer/QPointer，超时后回调不再访问栈对象）
-static ImportResult importAndWait(const QString &filePath, const QString &name, int timeoutMs = 600000) {
+static ImportResult importAndWait(const QString &filePath, const QString &name,
+                                   const QString &to = {}, int timeoutMs = 600000) {
     auto state = QSharedPointer<ImportResult>::create();
     QEventLoop loop;
     QPointer<QEventLoop> loopGuard = &loop;
-    lpcl::importModpack(filePath, name,
+    lpcl::importModpack(filePath, name, to,
         [](const lpcl::ImportProgress &) {},
-        [state, loopGuard](bool ok, const QString &msg) {
-            state->success = ok; state->message = msg; state->done = true;
+        [state, loopGuard](bool ok, const QString &msg, const QStringList &data) {
+            state->success = ok; state->message = msg; state->data = data; state->done = true;
             if (loopGuard) loopGuard->quit();
         });
     QTimer::singleShot(timeoutMs, &loop, &QEventLoop::quit);
@@ -86,6 +87,20 @@ static QString makeSyntheticHmclPack(const QString &workDir) {
     QProcess zip;
     zip.setWorkingDirectory(workDir);
     zip.start("zip", {"-qr", zipPath, "modpack.json"});
+    zip.waitForFinished(15000);
+    return zip.exitCode() == 0 ? zipPath : QString();
+}
+
+// 生成 jar-only 的 mod 包（无 .minecraft/清单 → PackType::Mod）
+static QString makeSyntheticModPack(const QString &workDir) {
+    QDir().mkpath(workDir + "/mods");
+    QFile f(workDir + "/mods/testmod.jar");
+    if (f.open(QIODevice::WriteOnly)) { f.write("fake jar for smoke test"); f.close(); }
+
+    QString zipPath = workDir + "/pack.zip";
+    QProcess zip;
+    zip.setWorkingDirectory(workDir);
+    zip.start("zip", {"-qr", zipPath, "."});
     zip.waitForFinished(15000);
     return zip.exitCode() == 0 ? zipPath : QString();
 }
@@ -321,6 +336,27 @@ static QList<TestItem> runCommandTests() {
                     ok("inpack-cf", "CF 合成包导入成功（mod 下载链路正常）");
                 else
                     fail("inpack-cf", "导入失败: " + r.message);
+
+                // mod 包流程（jar-only zip）：趁着 cfName 实例还在
+                if (r.success) {
+                    QString modZip = makeSyntheticModPack(base + "/mod_only");
+                    // 无 --to：报错且实例列表应包含 cfName
+                    auto rNoTo = importAndWait(modZip, {});
+                    if (!rNoTo.success && rNoTo.data.contains(cfName))
+                        ok("inpack-mod-need-to", "mod 包缺 --to → 报错 + 实例列表");
+                    else
+                        fail("inpack-mod-need-to",
+                             QString("success=%1 data=[%2]").arg(rNoTo.success).arg(rNoTo.data.join(",")));
+                    // 有 --to：jar 应进入实例 mods/
+                    auto rTo = importAndWait(modZip, {}, cfName);
+                    QString instDirName = Settings::instance().dirForDisplayName(cfName);
+                    bool jarOk = rTo.success
+                        && QFile::exists(folder + "instances/" + instDirName + "/mods/testmod.jar");
+                    if (jarOk)
+                        ok("inpack-mod-to", "mod 包 --to → jar 已进入实例 mods/");
+                    else
+                        fail("inpack-mod-to", QString("success=%1 jar 未到位 (%2)").arg(rTo.success).arg(rTo.message));
+                }
                 lpcl::removeInstance(cfName);
             } else {
                 skip("inpack-cf", "合成包失败");

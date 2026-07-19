@@ -6,6 +6,9 @@
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <zlib.h>
+#ifndef Q_OS_WIN
+#include <iconv.h>
+#endif
 
 namespace FileUtils {
 
@@ -108,6 +111,29 @@ static QByteArray inflateRaw(const QByteArray &compressed, quint32 expectedSize)
 
 // ---- 通用 ZIP 读取（基于中央目录，不猜数据区/描述符） ----
 
+// zip 条目名解码：UTF-8 标记位 → UTF-8；无标记时按 GBK
+// （中文 Windows 打包工具——PCL 导出的整合包——用 GBK 且不打 UTF-8 标记；
+//  Linux 的 fromLocal8Bit 是 UTF-8，直接解会得到乱码路径）
+static QString decodeZipName(const QByteArray &raw, bool utf8Flag) {
+    if (utf8Flag) return QString::fromUtf8(raw);
+#ifdef Q_OS_WIN
+    return QString::fromLocal8Bit(raw);  // 中文 Windows 本地编码即 GBK
+#else
+    iconv_t cd = iconv_open("UTF-8", "GBK");
+    if (cd == (iconv_t)-1) return QString::fromLocal8Bit(raw);
+    QByteArray out(raw.size() * 2 + 8, Qt::Uninitialized);
+    char *in = const_cast<char*>(raw.constData());
+    size_t inLeft = raw.size();
+    char *outp = out.data();
+    size_t outLeft = out.size();
+    size_t n = iconv(cd, &in, &inLeft, &outp, &outLeft);
+    iconv_close(cd);
+    if (n == (size_t)-1) return QString::fromLocal8Bit(raw);
+    out.resize(out.size() - outLeft);
+    return QString::fromUtf8(out);
+#endif
+}
+
 struct ZipEntryInfo {
     QString name;
     quint32 compressedSize = 0;
@@ -166,9 +192,7 @@ static QList<ZipEntryInfo> readZipCentralDirectory(QFile &file)
 
         QByteArray nameBytes(nameLen, Qt::Uninitialized);
         if (stream.readRawData(nameBytes.data(), nameLen) != (qint64)nameLen) break;
-        // 编码：flag bit 11 = UTF-8；无标记时按本地编码（中文 Windows 打包多为 GBK）
-        e.name = (flags & 0x800) ? QString::fromUtf8(nameBytes)
-                                 : QString::fromLocal8Bit(nameBytes);
+        e.name = decodeZipName(nameBytes, flags & 0x800);
 
         if (extraLen > 0) file.seek(file.pos() + extraLen);
         if (commentLen > 0) file.seek(file.pos() + commentLen);

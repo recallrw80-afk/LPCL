@@ -121,6 +121,12 @@ PackType detectPackType(const QString &filePath) {
             return PackType::Compressed;
     }
 
+    // Type 5: Mod 包 —— 找不到 .minecraft/清单，只有 jar（mod 导入，非整合包）
+    for (const auto &e : entries) {
+        if (e.endsWith(".jar", Qt::CaseInsensitive))
+            return PackType::Mod;
+    }
+
     return PackType::Unknown;
 }
 
@@ -131,6 +137,7 @@ QString packTypeName(PackType type) {
     case PackType::MultiMC:      return "MultiMC (MMC)";
     case PackType::MCBBS:        return "MCBBS";
     case PackType::Modrinth:     return "Modrinth";
+    case PackType::Mod:          return "Mod 包 (Mod Pack)";
     case PackType::LauncherPack: return "Launcher Pack";
     case PackType::Compressed:   return "Compressed .minecraft";
     default:                     return "Unknown";
