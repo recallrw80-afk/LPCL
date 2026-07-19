@@ -27,12 +27,14 @@ VersionManager& VersionManager::instance() {
 
 // Minecraft folder
 
-void VersionManager::setMcFolder(const QString &path) {
+void VersionManager::setMcFolder(const QString &path, bool persist) {
     QString normalized = QDir(path).absolutePath() + "/";
     if (m_mcFolder == normalized) return;
 
     m_mcFolder = normalized;
-    Settings::instance().setString("LaunchFolderSelect", path);
+    // persist=false 用于一次性覆盖（如 CLI --folder），不写回配置
+    if (persist)
+        Settings::instance().setString("LaunchFolderSelect", path);
     qCInfo(logVer) << "Minecraft folder set to:" << m_mcFolder;
     emit mcFolderChanged(m_mcFolder);
 
@@ -49,9 +51,9 @@ QList<McFolder> VersionManager::loadFolderList() {
         folders.append({.name = "Current Folder", .location = exeFolder, .type = McFolder::Type::Vanilla});
     }
 
-    // Scan subdirectories of exe folder for MC installations
+    // Scan subdirectories of exe folder for MC installations（含 .minecraft 隐藏目录）
     QDir exeDir(exeFolder);
-    for (const auto &entry : exeDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+    for (const auto &entry : exeDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot | QDir::Hidden)) {
         QString subPath = entry.absoluteFilePath() + "/";
         if (QDir(subPath + "versions").exists() || entry.fileName() == ".minecraft") {
             bool alreadyExists = false;
@@ -137,6 +139,7 @@ void VersionManager::loadLocalVersions() {
     if (!mcDir.exists()) {
         m_isLoading = false;
         emit loadingChanged();
+        emit versionListChanged();  // 列表已清空，UI 需要同步刷新
         return;
     }
 
@@ -454,7 +457,16 @@ QString VersionManager::detectVanillaVersion(const json &versionJson, const QStr
 
 // Inheritance resolution
 
-json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
+// 带环检测的递归实现（A 继承 B、B 继承 A 的损坏 JSON 会无限递归爆栈）
+static json resolveChainWithVisited(const QString &jsonPath, QSet<QString> &visited) {
+    QString canonical = QFileInfo(jsonPath).canonicalFilePath();
+    if (canonical.isEmpty()) return json();
+    if (visited.contains(canonical)) {
+        qWarning() << "Circular inheritsFrom detected:" << jsonPath;
+        return json();
+    }
+    visited.insert(canonical);
+
     QFile file(jsonPath);
     if (!file.open(QIODevice::ReadOnly)) return json();
 
@@ -471,8 +483,8 @@ json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
     QString parentPath = versionDir.absolutePath() + "/" + QString::fromStdString(inheritId) + "/" +
                          QString::fromStdString(inheritId) + ".json";
 
-    json parent = resolveInheritanceChain(parentPath);
-    if (parent.is_discarded()) return result;
+    json parent = resolveChainWithVisited(parentPath, visited);
+    if (parent.is_null()) return result;
 
     // Merge: child overrides parent
     // Merge arguments.jvm
@@ -491,13 +503,17 @@ json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
         }
     }
 
-    // Merge libraries
+    // Merge libraries（按 maven name 去重：子级覆盖父级同名库）
     if (parent.contains("libraries")) {
         if (!result.contains("libraries")) {
             result["libraries"] = parent["libraries"];
         } else {
-            // Append parent libraries not already present
+            QSet<QString> existing;
+            for (const auto &lib : result["libraries"])
+                existing.insert(QString::fromStdString(lib.value("name", "")));
             for (const auto &lib : parent["libraries"]) {
+                QString libName = QString::fromStdString(lib.value("name", ""));
+                if (!libName.isEmpty() && existing.contains(libName)) continue;
                 result["libraries"].push_back(lib);
             }
         }
@@ -524,4 +540,9 @@ json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
     }
 
     return result;
+}
+
+json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
+    QSet<QString> visited;
+    return resolveChainWithVisited(jsonPath, visited);
 }

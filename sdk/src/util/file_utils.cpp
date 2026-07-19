@@ -41,10 +41,6 @@ QString mavenNameToPath(const QString &name) {
         .arg(QString(parts[0]).replace('.', '/'), parts[1], parts[2], file, ext);
 }
 
-// Minimal ZIP/JAR extractor for native libraries
-// Extracts .so, .dll, .dylib, .jnilib files, skipping META-INF/
-// Supports STORED (method 0) and DEFLATE (method 8) via zlib
-
 static bool isNativeFile(const QString &name)
 {
     if (name.startsWith("META-INF/")) return false;
@@ -110,64 +106,182 @@ static QByteArray inflateRaw(const QByteArray &compressed, quint32 expectedSize)
     return result;
 }
 
-/// Skip compressed data when we don't need it, handling data descriptors correctly
-static void skipCompressedData(QFile &file, QDataStream &stream, quint32 compressedSize, bool hasDataDescriptor)
+// ---- 通用 ZIP 读取（基于中央目录，不猜数据区/描述符） ----
+
+struct ZipEntryInfo {
+    QString name;
+    quint32 compressedSize = 0;
+    quint32 uncompressedSize = 0;
+    quint16 compression = 0;
+    quint32 localHeaderOffset = 0;  // local header 偏移（解压时定位数据区）
+};
+
+// 从文件尾部的 EOCD 定位并读取中央目录（zip 规范必有；无 EOCD 则不是有效 zip）
+static QList<ZipEntryInfo> readZipCentralDirectory(QFile &file)
 {
-    if (compressedSize > 0) {
-        // Known size — skip directly
-        file.seek(file.pos() + compressedSize);
-    } else if (hasDataDescriptor) {
-        // Unknown size — scan for data descriptor signature
-        // Use overlapping reads to handle signature crossing chunk boundaries
-        QByteArray carry;
-        QByteArray buf(8192, Qt::Uninitialized);
-        while (!stream.atEnd()) {
-            qint64 bytesRead = stream.readRawData(buf.data(), buf.size());
-            if (bytesRead <= 0) break;
+    QList<ZipEntryInfo> entries;
+    qint64 fileSize = file.size();
+    if (fileSize < 22) return entries;
 
-            QByteArray search = carry + QByteArray::fromRawData(buf.data(), bytesRead);
-            int searchLen = search.size();
+    // EOCD 固定 22 字节 + 最长 65535 字节注释，从尾部回扫签名
+    qint64 scanLen = qMin(fileSize, (qint64)(22 + 65535));
+    file.seek(fileSize - scanLen);
+    QByteArray tail = file.read(scanLen);
 
-            for (int i = 0; i <= searchLen - 4; ++i) {
-                quint32 sig = static_cast<quint8>(search[i]) |
-                              (static_cast<quint8>(search[i+1]) << 8) |
-                              (static_cast<quint8>(search[i+2]) << 16) |
-                              (static_cast<quint8>(search[i+3]) << 24);
-                if (sig == 0x08074b50) {
-                    // Found descriptor — skip signature (already consumed) + CRC(4) + compSize(4) + uncompSize(4) = 12 bytes
-                    // But we may have read past it. Calculate how many bytes to seek back/forward.
-                    int descriptorEnd = i + 4 + 12; // sig + 3 fields
-                    int overread = searchLen - descriptorEnd;
-                    if (overread > 0) {
-                        file.seek(file.pos() - overread);
-                    }
-                    return;
-                }
-                // 描述符签名可选：无签名时以下一个条目的 LFH 头或中央目录头为界
-                if (sig == 0x04034b50 || sig == 0x02014b50) {
-                    file.seek(file.pos() - bytesRead - carry.size() + i);
-                    return;
-                }
-            }
-            // Keep last 3 bytes for overlap detection
-            if (searchLen > 3)
-                carry = search.right(3);
-            else
-                carry = search;
+    qint64 cdOffset = -1;
+    quint16 cdCount = 0;
+    for (int i = tail.size() - 22; i >= 0; --i) {
+        quint32 sig = quint32(quint8(tail[i])) | (quint32(quint8(tail[i+1])) << 8) |
+                      (quint32(quint8(tail[i+2])) << 16) | (quint32(quint8(tail[i+3])) << 24);
+        if (sig == 0x06054b50) {
+            cdCount = quint16(quint8(tail[i+10])) | (quint16(quint8(tail[i+11])) << 8);
+            cdOffset = qint64(quint32(quint8(tail[i+16])) | (quint32(quint8(tail[i+17])) << 8) |
+                              (quint32(quint8(tail[i+18])) << 16) | (quint32(quint8(tail[i+19])) << 24));
+            break;
         }
     }
-    // If neither known size nor data descriptor, we're stuck — caller should handle
+    if (cdOffset < 0 || !file.seek(cdOffset)) return entries;
+
+    QDataStream stream(&file);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    for (int i = 0; i < cdCount; ++i) {
+        if (readU32(stream) != 0x02014b50) break;
+
+        readU16(stream);  // version made by
+        readU16(stream);  // version needed
+        quint16 flags = readU16(stream);
+        ZipEntryInfo e;
+        e.compression = readU16(stream);
+        readU16(stream); readU16(stream);  // mod time/date
+        readU32(stream);  // crc32
+        e.compressedSize = readU32(stream);
+        e.uncompressedSize = readU32(stream);
+        quint16 nameLen = readU16(stream);
+        quint16 extraLen = readU16(stream);
+        quint16 commentLen = readU16(stream);
+        readU16(stream);  // disk number start
+        readU16(stream);  // internal attrs
+        readU32(stream);  // external attrs
+        e.localHeaderOffset = readU32(stream);
+
+        QByteArray nameBytes(nameLen, Qt::Uninitialized);
+        if (stream.readRawData(nameBytes.data(), nameLen) != (qint64)nameLen) break;
+        // 编码：flag bit 11 = UTF-8；无标记时按本地编码（中文 Windows 打包多为 GBK）
+        e.name = (flags & 0x800) ? QString::fromUtf8(nameBytes)
+                                 : QString::fromLocal8Bit(nameBytes);
+
+        if (extraLen > 0) file.seek(file.pos() + extraLen);
+        if (commentLen > 0) file.seek(file.pos() + commentLen);
+        entries.append(e);
+    }
+    return entries;
 }
 
-/// 消费 data descriptor（签名可选）：有签名 16 字节（sig+CRC+comp+uncomp），
-/// 无签名 12 字节（CRC+comp+uncomp）——首字段读出来是签名还是 CRC 决定后续长度
-static void consumeDataDescriptor(QDataStream &stream)
+// 解析 local header，返回数据区偏移（local 与 central 的 name/extra 长度可能不同，失败返回 -1）
+static qint64 localDataOffset(QFile &file, quint32 localHeaderOffset)
 {
-    quint32 first = readU32(stream);
-    readU32(stream);
-    readU32(stream);
-    if (first == 0x08074b50)
-        readU32(stream);
+    if (!file.seek(localHeaderOffset)) return -1;
+    QDataStream stream(&file);
+    stream.setByteOrder(QDataStream::LittleEndian);
+    if (readU32(stream) != 0x04034b50) return -1;
+    readU16(stream);  // version needed
+    readU16(stream);  // flags
+    readU16(stream);  // compression
+    readU16(stream); readU16(stream);  // time/date
+    readU32(stream);  // crc
+    readU32(stream);  // compressed size
+    readU32(stream);  // uncompressed size
+    quint16 nameLen = readU16(stream);
+    quint16 extraLen = readU16(stream);
+    return localHeaderOffset + 30 + nameLen + extraLen;
+}
+
+// 读单个条目的解压内容（尺寸取自中央目录，无需处理 data descriptor）
+static QByteArray inflateEntry(QFile &file, const ZipEntryInfo &e)
+{
+    if (e.compressedSize == 0xFFFFFFFF) return {};  // ZIP64 未支持
+    qint64 offset = localDataOffset(file, e.localHeaderOffset);
+    if (offset < 0 || !file.seek(offset)) return {};
+
+    QByteArray data(e.compressedSize, Qt::Uninitialized);
+    if (file.read(data.data(), e.compressedSize) != (qint64)e.compressedSize)
+        return {};
+
+    if (e.compression == 0) return data;      // STORED
+    if (e.compression == 8)                   // DEFLATE
+        return inflateRaw(data, e.uncompressedSize);
+    return {};  // 不支持的压缩方式
+}
+
+static bool inflateEntryToFile(QFile &file, const ZipEntryInfo &e, const QString &outPath)
+{
+    QByteArray content = inflateEntry(file, e);
+    if (content.isEmpty() && e.uncompressedSize > 0) return false;
+
+    QDir().mkpath(QFileInfo(outPath).absolutePath());
+    QFile out(outPath);
+    if (!out.open(QIODevice::WriteOnly)) return false;
+    out.write(content);
+    out.close();
+    return true;
+}
+
+QStringList listZipEntries(const QString &zipPath)
+{
+    QFile file(zipPath);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    QStringList names;
+    for (const auto &e : readZipCentralDirectory(file))
+        names.append(e.name);
+    return names;
+}
+
+bool extractZip(const QString &zipPath, const QString &destDir, QString *errorOut)
+{
+    QFile file(zipPath);
+    if (!file.open(QIODevice::ReadOnly)) {
+        if (errorOut) *errorOut = "Cannot open: " + zipPath;
+        return false;
+    }
+    auto entries = readZipCentralDirectory(file);
+    if (entries.isEmpty()) {
+        if (errorOut) *errorOut = "Not a valid zip archive: " + zipPath;
+        return false;
+    }
+
+    int failed = 0;
+    for (const auto &e : entries) {
+        if (e.name.endsWith('/')) continue;  // 目录条目
+        if (!inflateEntryToFile(file, e, destDir + "/" + e.name)) {
+            qWarning() << "extractZip: failed entry" << e.name;
+            failed++;
+        }
+    }
+    if (errorOut && failed > 0)
+        *errorOut = QString("%1/%2 entries failed").arg(failed).arg(entries.size());
+    return failed == 0;
+}
+
+bool extractZipEntry(const QString &zipPath, const QString &entryName, const QString &destPath)
+{
+    QFile file(zipPath);
+    if (!file.open(QIODevice::ReadOnly)) return false;
+    for (const auto &e : readZipCentralDirectory(file)) {
+        if (e.name == entryName)
+            return inflateEntryToFile(file, e, destPath);
+    }
+    return false;
+}
+
+QByteArray readZipEntry(const QString &zipPath, const QString &entryName)
+{
+    QFile file(zipPath);
+    if (!file.open(QIODevice::ReadOnly)) return {};
+    for (const auto &e : readZipCentralDirectory(file)) {
+        if (e.name == entryName)
+            return inflateEntry(file, e);
+    }
+    return {};
 }
 
 QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
@@ -175,105 +289,39 @@ QStringList extractNativesJar(const QString &jarPath, const QString &destDir)
     QStringList extracted;
     QFile file(jarPath);
     if (!file.open(QIODevice::ReadOnly)) return extracted;
-
-    QDataStream stream(&file);
-    stream.setByteOrder(QDataStream::LittleEndian);
     QDir().mkpath(destDir);
 
-    while (!stream.atEnd()) {
-        quint32 signature = readU32(stream);
-
-        // Local File Header signature: 0x04034b50
-        if (signature != 0x04034b50) break;
-
-        quint16 versionNeeded = readU16(stream);
-        Q_UNUSED(versionNeeded)
-        quint16 flags = readU16(stream);
-        quint16 compression = readU16(stream);
-        quint16 modTime = readU16(stream);
-        Q_UNUSED(modTime)
-        quint16 modDate = readU16(stream);
-        Q_UNUSED(modDate)
-        quint32 crc32 = readU32(stream);
-        Q_UNUSED(crc32)
-        quint32 compressedSize = readU32(stream);
-        quint32 uncompressedSize = readU32(stream);
-        quint16 nameLen = readU16(stream);
-        quint16 extraLen = readU16(stream);
-
-        // Read filename
-        QByteArray nameBytes(nameLen, Qt::Uninitialized);
-        if (stream.readRawData(nameBytes.data(), nameLen) != (qint64)nameLen)
-            break;  // 归档截断
-        QString fileName = QString::fromUtf8(nameBytes);
-
-        // Skip extra field
-        if (extraLen > 0) {
-            QByteArray extra(extraLen, Qt::Uninitialized);
-            if (stream.readRawData(extra.data(), extraLen) != (qint64)extraLen)
-                break;  // 归档截断
-        }
-
-        bool hasDataDescriptor = (flags & 0x08) != 0;
-
-        if (!isNativeFile(fileName)) {
-            skipCompressedData(file, stream, compressedSize, hasDataDescriptor);
-            continue;
-        }
-
-        // Only support STORED (0) and DEFLATE (8)
-        if (compression != 0 && compression != 8) {
-            skipCompressedData(file, stream, compressedSize, hasDataDescriptor);
-            continue;
-        }
-
-        // Read compressed data
-        if (compressedSize == 0 && hasDataDescriptor) {
-            // Can't extract — size unknown. Skip.
-            skipCompressedData(file, stream, compressedSize, hasDataDescriptor);
-            continue;
-        }
-
-        // ZIP64 哨兵值：真实尺寸在 extra 字段（未解析），跳过避免 ~4GiB 分配
-        if (compressedSize == 0xFFFFFFFF) {
-            skipCompressedData(file, stream, 0, hasDataDescriptor);
-            continue;
-        }
-
-        QByteArray data(compressedSize, Qt::Uninitialized);
-        if (stream.readRawData(data.data(), compressedSize) != (qint64)compressedSize)
-            break;  // 归档截断，流已错位，终止
-
-        QString outPath = destDir + "/" + QFileInfo(fileName).fileName();
-        QFile outFile(outPath);
-        if (outFile.open(QIODevice::WriteOnly)) {
-            if (compression == 0) {
-                // STORED
-                outFile.write(data);
-            } else {
-                // DEFLATE — proper zlib raw inflate
-                QByteArray decompressed = inflateRaw(data, uncompressedSize);
-                if (decompressed.isEmpty() && uncompressedSize > 0) {
-                    // Decompression failed — skip this file
-                    outFile.close();
-                    QFile::remove(outPath);
-                    if (hasDataDescriptor)
-                        consumeDataDescriptor(stream);
-                    continue;
-                }
-                outFile.write(decompressed);
-            }
-            outFile.close();
-            extracted.append(outPath);
-        }
-
-        // Consume data descriptor if present
-        if (hasDataDescriptor)
-            consumeDataDescriptor(stream);
+    for (const auto &e : readZipCentralDirectory(file)) {
+        if (!isNativeFile(e.name)) continue;
+        // natives 只取文件名（拍平到 destDir 根）
+        if (inflateEntryToFile(file, e, destDir + "/" + QFileInfo(e.name).fileName()))
+            extracted.append(destDir + "/" + QFileInfo(e.name).fileName());
     }
-
-    file.close();
     return extracted;
+}
+
+bool copyDir(const QString &src, const QString &dst)
+{
+    QDir srcDir(src);
+    if (!srcDir.exists()) return false;
+    QDir().mkpath(dst);
+
+    bool ok = true;
+    const auto entries = srcDir.entryInfoList(
+        QDir::Dirs | QDir::Files | QDir::NoDotAndDotDot | QDir::Hidden);
+    for (const auto &entry : entries) {
+        QString target = dst + "/" + entry.fileName();
+        if (entry.isDir()) {
+            if (!copyDir(entry.absoluteFilePath(), target)) ok = false;
+        } else {
+            QFile::remove(target);  // 覆盖已有文件
+            if (!QFile::copy(entry.absoluteFilePath(), target)) {
+                qWarning() << "copyDir: failed" << entry.absoluteFilePath();
+                ok = false;
+            }
+        }
+    }
+    return ok;
 }
 
 } // namespace FileUtils

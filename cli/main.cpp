@@ -724,7 +724,8 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
                        "error: no game folder set, run set-folder first\n").toStdString();
         return 1;
     }
-    VersionManager::instance().setMcFolder(mcFolder);
+    // --folder 是一次性覆盖，不写回配置（持久化只走 set-folder 命令）
+    VersionManager::instance().setMcFolder(mcFolder, folderArg.isEmpty());
 
     if (cmd == "list")     return handleList();
     if (cmd == "mc-list")  return handleMcList();

@@ -78,7 +78,8 @@ void ModPlatform::searchMods(Platform platform, const QString &query, int page, 
 
 void ModPlatform::searchByCategory(Platform platform, int category, int page,
                                      std::function<void(bool, QList<ModResource>)> onComplete) {
-    // Category search delegates to regular search with category filter
+    // 注意：分类过滤尚未实现（需要 CF categoryId / Modrinth facets 映射表），
+    // 当前按热门返回——调用方不要依赖 category 参数
     Q_UNUSED(category)
     searchMods(platform, QString(), page, 25, onComplete);
 }

@@ -1,10 +1,10 @@
 // 类型安装器：解析各格式清单 → beginInstall 前置 → 复制内容 → downloadAndFinalize
 #include "modpack_common.h"
 #include "core/versionmanager.h"
+#include "util/file_utils.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QRegularExpression>
 #include <QSettings>
 
@@ -208,7 +208,7 @@ void installModrinth(const QString &filePath, const QString &packDir,
                      PackProgressCallback onProgress,
                      PackCompleteCallback onComplete) {
     Q_UNUSED(filePath)
-    QString indexPath = packDir + "modrinth.index.json";
+    QString indexPath = packDir + "/modrinth.index.json";
     QFile f(indexPath);
     if (!f.open(QIODevice::ReadOnly)) {
         if (onComplete) onComplete(false, "Cannot read modrinth.index.json: " + f.errorString() + " (" + indexPath + ")");
@@ -553,20 +553,8 @@ void installCompressed(const QString &filePath, const QString &packDir,
         }
     }
 
-    // Step 3: 回退 — 通过 unzip -l 定位 versions 模式，直接解压（同步路径）
-    QProcess unzip;
-    unzip.start("unzip", {"-l", filePath});
-    unzip.waitForFinished(5000);
-    QStringList entries = QString::fromUtf8(unzip.readAllStandardOutput()).split('\n');
-
-    QStringList names;
-    for (const auto &line : entries) {
-        auto parts = line.trimmed().split(QRegularExpression("\\s+"));
-        if (parts.size() >= 4) {
-            QString n = parts.mid(3).join(' ');
-            if (!n.isEmpty() && !n.startsWith("-")) names.append(n);
-        }
-    }
+    // Step 3: 回退 — 通过条目列表定位 versions 模式，直接解压（同步路径）
+    QStringList names = FileUtils::listZipEntries(filePath);
 
     QString mcRoot = findMcRoot(names);
     QString packName = QFileInfo(filePath).completeBaseName();

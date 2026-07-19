@@ -1,32 +1,18 @@
 // 整合包类型检测（detectPackType / packTypeName）
 #include "modpack_common.h"
+#include "util/file_utils.h"
 #include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QRegularExpression>
 
 PackType detectPackType(const QString &filePath) {
-    // 通过 unzip -l 列出内容，避免加载整个 zip 到内存
-    QProcess unzip;
-    unzip.start("unzip", {"-l", filePath});
-    if (!unzip.waitForFinished(10000)) return PackType::Unknown;
-    QStringList lines = QString::fromUtf8(unzip.readAllStandardOutput()).split('\n');
-    QStringList entries;
-    for (const auto &line : lines) {
-        // unzip -l 格式: "    length  date  time  name"
-        auto parts = line.trimmed().split(QRegularExpression("\\s+"));
-        if (parts.size() >= 4) {
-            // 最后一个字段是文件名
-            QString name = parts.mid(3).join(' ');
-            if (!name.isEmpty() && name != "Name" && !name.startsWith("-")) {
-                entries.append(name);
-            }
-        }
-    }
+    // 列出 zip 条目（Qt 实现，无外部进程依赖）
+    QStringList entries = FileUtils::listZipEntries(filePath);
+    if (entries.isEmpty()) return PackType::Unknown;
 
     // 收集根目录和一级子目录的文件名
     QStringList roots, firstLevel;
@@ -75,18 +61,14 @@ PackType detectPackType(const QString &filePath) {
             }
         }
         // 提取并解析 manifest.json
-        QProcess extract;
-        extract.start("unzip", {"-p", filePath, manifestPath});
-        if (extract.waitForFinished(5000)) {
-            QByteArray data = extract.readAllStandardOutput();
-            QJsonDocument doc = QJsonDocument::fromJson(data);
-            if (!doc.isNull()) {
-                QJsonObject obj = doc.object();
-                if (obj.contains("addons"))
-                    return PackType::MCBBS;  // has addons → MCBBS
-                else
-                    return PackType::CurseForge;  // no addons → CurseForge
-            }
+        QByteArray data = FileUtils::readZipEntry(filePath, manifestPath);
+        QJsonDocument doc = QJsonDocument::fromJson(data);
+        if (!doc.isNull()) {
+            QJsonObject obj = doc.object();
+            if (obj.contains("addons"))
+                return PackType::MCBBS;  // has addons → MCBBS
+            else
+                return PackType::CurseForge;  // no addons → CurseForge
         }
         return PackType::CurseForge;  // fallback
     }
@@ -121,19 +103,14 @@ PackType detectPackType(const QString &filePath) {
             QString tmpInner = QDir::temp().filePath(
                 QString("_lpcl_detect_%1.zip").arg(QCoreApplication::applicationPid()));
             QFile::remove(tmpInner);
-            QString innerList;
-            QProcess peek;
-            peek.setStandardOutputFile(tmpInner);
-            peek.start("unzip", {"-p", filePath, innerZipPath});
-            if (peek.waitForFinished(15000) && peek.exitCode() <= 1) {
-                QProcess lister;
-                lister.start("unzip", {"-l", tmpInner});
-                if (lister.waitForFinished(15000))
-                    innerList = QString::fromUtf8(lister.readAllStandardOutput());
-            }
+            QStringList innerEntries;
+            if (FileUtils::extractZipEntry(filePath, innerZipPath, tmpInner))
+                innerEntries = FileUtils::listZipEntries(tmpInner);
             QFile::remove(tmpInner);
-            if (innerList.contains("/.minecraft/") || innerList.contains("versions/"))
-                return PackType::LauncherPack;
+            for (const auto &e : innerEntries) {
+                if (e.startsWith(".minecraft/") || e.contains("/.minecraft/") || e.contains("versions/"))
+                    return PackType::LauncherPack;
+            }
         }
     }
 

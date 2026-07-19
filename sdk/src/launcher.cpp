@@ -137,7 +137,8 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
     McLaunchOptions options;
     options.maxMemoryMB = Settings::instance().getString("LaunchMaxMemory", "4096").toInt();
     options.minMemoryMB = Settings::instance().getString("LaunchMinMemory", "512").toInt();
-    options.fullscreen = Settings::instance().getString("LaunchFullscreen", "False") == "True";
+    QString fsValue = Settings::instance().getString("LaunchFullscreen", "false").toLower();
+    options.fullscreen = (fsValue == "true" || fsValue == "1");
     options.windowWidth = Settings::instance().getString("LaunchWidth", "854").toInt();
     options.windowHeight = Settings::instance().getString("LaunchHeight", "480").toInt();
 
@@ -189,7 +190,9 @@ void Launcher::doLaunch() {
     if (gameDir.endsWith('/') || gameDir.endsWith('\\')) {
         gameDir.chop(1);
     }
-    env.insert("APPDATA", gameDir);
+    // APPDATA 仅 Windows 下 MC 用于定位 .minecraft，其他平台无意义
+    if (currentPlatform() == Platform::Windows)
+        env.insert("APPDATA", gameDir);
 
     // Minecraft-specific env
     env.insert("MINECRAFT_LAUNCHER_NAME", "LPCL");

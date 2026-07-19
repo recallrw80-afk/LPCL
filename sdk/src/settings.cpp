@@ -119,10 +119,12 @@ void Settings::setString(const QString &key, const QString &value) {
 
 QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
 {
+    if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue);
 }
 
 void Settings::setValue(const QString &key, const QVariant &value) {
+    if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
     emit settingChanged(key);

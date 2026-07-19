@@ -559,7 +559,12 @@ QString JavaManager::getJavaDownloadUrl(int majorVersion) const
     default: return QString();
     }
 
-    arch = is64BitSystem() ? "x64" : "x86";
+    // ARM64 不能用 x64 包（Adoptium 的 ARM64 标识是 aarch64）
+    QString cpu = QSysInfo::currentCpuArchitecture();
+    if (cpu == "arm64" || cpu == "aarch64")
+        arch = "aarch64";
+    else
+        arch = is64BitSystem() ? "x64" : "x86";
 
     return QString("https://api.adoptium.net/v3/binary/latest/%1/ga/%2/%3/jre/hotspot/normal/eclipse")
         .arg(majorVersion).arg(os).arg(arch);

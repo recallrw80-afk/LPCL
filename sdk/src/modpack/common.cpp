@@ -2,10 +2,10 @@
 #include "modpack_common.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
+#include "util/file_utils.h"
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QProcess>
 #include <QRegularExpression>
 #include <QRandomGenerator>
 
@@ -35,10 +35,7 @@ json parseJsonSafe(const QByteArray &data, bool *ok) {
 }
 
 bool copyDir(const QString &src, const QString &dst) {
-    QProcess cp;
-    cp.start("cp", {"-r", src + "/.", dst});
-    cp.waitForFinished(600000);  // 10 min timeout for large modpacks
-    return cp.exitCode() == 0;
+    return FileUtils::copyDir(src, dst);
 }
 
 // ---- extract zip ----
@@ -46,13 +43,8 @@ bool copyDir(const QString &src, const QString &dst) {
 bool extractZip(const QString &zipPath, const QString &destDir,
                        PackProgressCallback onProgress, int baseProgress) {
     QDir().mkpath(destDir);
-    QProcess unzip;
-    unzip.start("unzip", {"-o", zipPath, "-d", destDir});
     if (onProgress) onProgress("Extracting...", baseProgress);
-    if (!unzip.waitForFinished(300000)) return false;  // 5 min timeout for large packs
-    int code = unzip.exitCode();
-    // exit 0 = success, exit 1 = success with warnings (common with Windows-encoded filenames)
-    return code == 0 || code == 1;
+    return FileUtils::extractZip(zipPath, destDir);
 }
 
 // ---- find .minecraft root inside archive ----
