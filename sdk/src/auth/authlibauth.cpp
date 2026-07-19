@@ -23,6 +23,7 @@ LoginType AuthlibAuth::loginType() const
 
 void AuthlibAuth::login(Callback onComplete) {
     m_cancelled = false;
+    m_callback = onComplete;
 
     if (m_username.trimmed().isEmpty() || m_password.isEmpty()) {
         qCWarning(logAl) << "Username or password empty";
@@ -39,7 +40,9 @@ void AuthlibAuth::login(Callback onComplete) {
 
 void AuthlibAuth::cancel() {
     m_cancelled = true;
-    emit loginFinished(false, LoginResult());
+    // 取消也必须触发完成回调——回调驱动的调用方还在等（与 MsAuth::cancel 行为一致）
+    finishLogin(false, LoginResult(), m_callback);
+    m_callback = nullptr;
 }
 
 void AuthlibAuth::finishLogin(bool success, const LoginResult &result, const Callback &cb) {

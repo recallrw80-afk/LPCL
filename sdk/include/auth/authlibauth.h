@@ -44,6 +44,7 @@ private:
 
     QNetworkAccessManager *m_nam = nullptr;
     bool m_cancelled = false;
+    Callback m_callback = nullptr;  // cancel() 时也需要回调（与 MsAuth 行为一致）
 };
 
 #endif // LPCL_AUTHLIBAUTH_H

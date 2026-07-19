@@ -163,10 +163,12 @@ void Settings::setInstance(const QString &instanceId, const QString &key, const 
 
 QString Settings::instancePath(const QString &instanceId) const
 {
-    if (instanceId.isEmpty()) return getString("LaunchFolderSelect");
-    // Per-instance path: base .minecraft / versions / instanceId
     QString base = getString("LaunchFolderSelect");
     if (base.isEmpty()) base = QDir::homePath() + "/.minecraft/";
+    // LaunchFolderSelect 存的是用户原始输入，不保证尾斜杠——拼接前必须规范化
+    if (!base.endsWith('/')) base += '/';
+    if (instanceId.isEmpty()) return base;
+    // Per-instance path: base .minecraft / versions / instanceId
     return base + "versions/" + instanceId + "/";
 }
 

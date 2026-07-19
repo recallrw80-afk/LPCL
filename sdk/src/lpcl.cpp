@@ -47,9 +47,9 @@ bool launchVersion(const QString &versionId,
     }
     // 优先按版本兼容矩阵选 Java；无严格匹配时回退到最优可用
     // （如 1.12.2 机器上只有 Java 21/25，严格匹配 Java 8 会落空，但新版本也能跑）
-    auto *java = jm.selectJavaForVersion(version);
-    if (!java) java = jm.selectJava();
-    if (!java) return false;
+    JavaEntry java = jm.selectJavaForVersion(version);
+    if (java.pathJava.isEmpty()) java = jm.selectJava();
+    if (java.pathJava.isEmpty()) return false;
 
     // 注：如在同一进程中多次调用 launchVersion，信号会累积连接。
     // CLI 每次只启动一次游戏即退出，不受影响。
@@ -62,7 +62,7 @@ bool launchVersion(const QString &versionId,
                          [onExit](int code, const QString &) { onExit(code); });
     }
 
-    return launcher.launch(version, *java, login);
+    return launcher.launch(version, java, login);
 }
 
 QStringList listJavas() {

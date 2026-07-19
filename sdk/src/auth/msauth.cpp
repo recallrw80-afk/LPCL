@@ -97,6 +97,16 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
         reply->deleteLater();
         if (m_cancelled) return;
 
+        // 用成员定时器调度下一轮（cancel() 可停止；裸 QTimer::singleShot 无法取消）
+        auto scheduleNext = [this, deviceCode](int nextInterval) {
+            m_pollTimer->stop();
+            m_pollTimer->disconnect();
+            connect(m_pollTimer, &QTimer::timeout, this, [this, deviceCode, nextInterval]() {
+                pollForToken(deviceCode, nextInterval);
+            });
+            m_pollTimer->start(nextInterval * 1000);
+        };
+
         QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
         QJsonObject root = doc.object();
 
@@ -110,10 +120,13 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
                 return;
             }
             emit loginProgress("Waiting for approval...");
-            QTimer::singleShot(intervalSeconds * 1000, this,
-                               [this, deviceCode, intervalSeconds]() {
-                pollForToken(deviceCode, intervalSeconds);
-            });
+            scheduleNext(intervalSeconds);
+            return;
+        }
+
+        if (error == "slow_down") {
+            // RFC 8628：限流时轮询间隔 +5s 继续，不是致命错误
+            scheduleNext(intervalSeconds + 5);
             return;
         }
 

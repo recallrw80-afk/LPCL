@@ -45,19 +45,18 @@ public:
     // ---- Selection ----
 
     /// Find the best Java matching version constraints
-    /// Returns nullptr if none found
-    JavaEntry* selectJava(const QVersionNumber &minVersion = QVersionNumber(),
-                          const QVersionNumber &maxVersion = QVersionNumber());
+    /// 返回拷贝而非内部指针（扫描线程并发重分配安全）；未找到返回空 entry（pathJava 为空）
+    JavaEntry selectJava(const QVersionNumber &minVersion = QVersionNumber(),
+                         const QVersionNumber &maxVersion = QVersionNumber());
 
     /// Auto-detect and select Java for a Minecraft version
-    /// Returns matching Java or nullptr; may trigger download prompt
-    JavaEntry* selectJavaForVersion(const McVersion &version);
+    JavaEntry selectJavaForVersion(const McVersion &version);
 
     // ---- Accessors ----
 
     const QList<JavaEntry>& javaList() const { return m_javaList; }
     QStringList javaNames() const;
-    int javaCount() const { return m_javaList.size(); }
+    int javaCount() const;
     bool isScanning() const { return m_isScanning; }
     QString selectedJavaName() const;
     JavaEntry* selectedJava() { return m_selectedJava; }

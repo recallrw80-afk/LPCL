@@ -137,7 +137,9 @@ void JavaManager::scanPathVariable() {
         pathEnv = qEnvironmentVariable("Path"); // Windows
     }
 
-    const auto entries = pathEnv.split(QRegularExpression("[:;]"), Qt::SkipEmptyParts);
+    // Windows 的 PATH 分隔符是 ';'（盘符含 ':' 会切碎），Unix 是 ':'
+    const QChar sep = (currentPlatform() == Platform::Windows) ? ';' : ':';
+    const auto entries = pathEnv.split(sep, Qt::SkipEmptyParts);
     for (const auto &path : entries) {
         QString trimmed = path.trimmed();
         if (trimmed.isEmpty()) continue;
@@ -377,8 +379,9 @@ QVersionNumber JavaManager::parseJavaVersionOutput(const QString &output) {
 
 // Java selection
 
-JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
+JavaEntry JavaManager::selectJava(const QVersionNumber &minVersion,
                                     const QVersionNumber &maxVersion) {
+    QMutexLocker lock(&m_mutex);
     QList<JavaEntry*> candidates;
 
     for (auto &java : m_javaList) {
@@ -388,7 +391,7 @@ JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
         candidates.append(&java);
     }
 
-    if (candidates.isEmpty()) return nullptr;
+    if (candidates.isEmpty()) return {};
 
     // Prefer 64-bit, then highest version, then JDK over JRE
     std::sort(candidates.begin(), candidates.end(), [](JavaEntry *a, JavaEntry *b) {
@@ -397,10 +400,10 @@ JavaEntry* JavaManager::selectJava(const QVersionNumber &minVersion,
         return !a->isJre && b->isJre;
     });
 
-    return candidates.first();
+    return *candidates.first();
 }
 
-JavaEntry* JavaManager::selectJavaForVersion(const McVersion &version) {
+JavaEntry JavaManager::selectJavaForVersion(const McVersion &version) {
     QVersionNumber minVer, maxVer;
     getJavaCompatibilityRange(version, minVer, maxVer);
     return selectJava(minVer, maxVer);
@@ -525,11 +528,18 @@ QString JavaManager::selectedJavaName() const
 
 QStringList JavaManager::javaNames() const
 {
+    QMutexLocker lock(&m_mutex);
     QStringList names;
     for (const auto &j : m_javaList) {
         names.append(j.toString());
     }
     return names;
+}
+
+int JavaManager::javaCount() const
+{
+    QMutexLocker lock(&m_mutex);
+    return m_javaList.size();
 }
 
 // Java download
