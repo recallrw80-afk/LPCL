@@ -96,8 +96,11 @@ bool checkNameConflict(const QString &targetDir, const QString &name,
             onComplete(false, QString("Invalid instance name: \"%1\"").arg(name));
         return false;
     }
-    // 检查显示名是否已存在于 INI 映射中
-    if (!Settings::instance().dirForDisplayName(name).isEmpty()) {
+    // 检查显示名冲突：映射存在且实例目录在当前游戏目录真实存在才算
+    // （目录已丢失的失效映射不算冲突——list 会自清理）
+    QString existingDir = Settings::instance().dirForDisplayName(name);
+    if (!existingDir.isEmpty() &&
+        QDir(VersionManager::instance().mcFolder() + "instances/" + existingDir + "/").exists()) {
         if (explicitName) {
             if (onComplete)
                 onComplete(false, QString("Instance \"%1\" already exists, use a different name").arg(name));

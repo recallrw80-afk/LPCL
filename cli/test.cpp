@@ -107,13 +107,13 @@ static QList<TestItem> runCommandTests() {
     auto skip= [&](const QString &cmd, const QString &detail)
         { results.append({cmd, "SKIP", detail}); };
 
-    // --config
+    // config
     {
         auto cfg = lpcl::getConfig();
         if (!cfg.version.isEmpty() && !cfg.commit.isEmpty())
-            ok("--config", QString("v%1 (%2)").arg(cfg.version, cfg.commit));
+            ok("config", QString("v%1 (%2)").arg(cfg.version, cfg.commit));
         else
-            fail("--config", "版本信息缺失");
+            fail("config", "版本信息缺失");
     }
 
     // set-folder（写入 → 读回 → 还原）

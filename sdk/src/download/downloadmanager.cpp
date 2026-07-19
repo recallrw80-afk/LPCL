@@ -166,6 +166,15 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
         }
 
         if (!success) {
+            // CF 文件 CDN（edge.forgecdn.net）拒绝访问时，回退 MCIM 代理
+            // （同 PCL-CE DlSourceModDownloadGet 方案，路径不变只换主机）
+            if (QUrl(url).host() == "edge.forgecdn.net") {
+                QString fallback = url;
+                fallback.replace("edge.forgecdn.net", "mod.mcimirror.top");
+                qCInfo(logDl) << "forgecdn failed, fallback to MCIM mirror:" << fallback;
+                downloadInternal(fallback, savePath, onProgress, onComplete, 1);
+                return;
+            }
             QString err = reply->errorString();
             qCWarning(logDl) << "Download failed:" << url << err;
             emit downloadFinished(url, false, err);

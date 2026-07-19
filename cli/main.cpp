@@ -286,12 +286,98 @@ static int handleRm(const QStringList &args) {
     return 1;
 }
 
+// ---- 帮助与配置 ----
+
+static void printHelp() {
+    auto out = [](const QString &s) { std::cout << s.toStdString(); };
+    struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
+    const Item items[] = {
+        {"list",              "list",              "列出已导入的整合包实例",  "List imported instances"},
+        {"mc-list",           "mc-list",           "列出原版 MC 版本",       "List vanilla MC versions"},
+        {"launch <名称>",     "launch <name>",     "启动整合包游戏",       "Launch a modpack"},
+        {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
+        {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
+        {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
+        {"set-lang <en|zh>", "set-lang <en|zh>", "设置界面语言（持久保存）", "Set UI language (persistent)"},
+        {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
+        {"rm <名称|*>",       "rm <name|*>",       "删除实例（* 清空全部）", "Remove instance (* for all)"},
+        {"player-add <名称>","player-add <name>",  "添加玩家配置",          "Add player profile"},
+        {"player-rm <uuid>", "player-rm <uuid>",  "删除玩家配置",          "Remove player profile"},
+        {"player-list",      "player-list",       "列出玩家配置",          "List player profiles"},
+        {"player-select <uuid>","player-select <uuid>","选择当前玩家",     "Select current player"},
+        {"config",            "config",            "查看当前配置",          "Show current configuration"},
+        {"test",              "test",              "全系统自检",            "Run system self-test"},
+        {"help",              "help",              "显示帮助信息",          "Show help information"},
+        {"version",           "version",           "显示版本号",            "Show version number"},
+    };
+    const Item opts[] = {
+        {"--zh",      "--zh",      "使用中文输出（本次有效）",  "Use Chinese output (this run)"},
+    };
+    auto printItem = [&](const Item &it) {
+        out(QString("  %1 %2\n").arg(g_lang == CN ? it.cmdCn : it.cmdEn, -20)
+                .arg(T(it.descCn, it.descEn)));
+    };
+    out(T("Usage: lpcl-cli [--zh] <command> [args]\n",
+          "Usage: lpcl-cli [--zh] <command> [args]\n"));
+    out("\n"); out(T("命令 / Commands:\n", "Commands:\n"));
+    for (const auto &it : items) printItem(it);
+    out("\n"); out(T("选项 / Options:\n", "Options:\n"));
+    for (const auto &it : opts) printItem(it);
+    std::cout.flush();
+}
+
+static int handleConfig() {
+    auto cfg = lpcl::getConfig();
+
+    std::cout << _("LPCL 版本: ", "LPCL version: ") << cfg.version.toStdString() << std::endl
+              << _("提交: ",       "Commit: ")       << cfg.commit.toStdString() << std::endl;
+    QString folder = cfg.gameFolderSet ? cfg.gameFolder : _("（未设置）", "(not set)");
+    std::cout << _("默认游戏目录: ", "Default game folder: ") << folder.toStdString() << std::endl;
+
+    if (cfg.players.isEmpty()) {
+        std::cout << _("玩家配置: （无）\n", "Player profiles: (none)\n");
+    } else {
+        std::cout << _("玩家配置:", "Player profiles:") << std::endl;
+        for (const auto &p : cfg.players) {
+            bool isSel = (p.uuid == cfg.selectedPlayer);
+            std::cout << (isSel ? "  * " : "    ")
+                      << p.uuid.toStdString()
+                      << "  " << p.name.toStdString();
+            if (!p.avatar.isEmpty())
+                std::cout << "  avatar=" << p.avatar.toStdString();
+            std::cout << "  skin=" << p.skinType.toStdString();
+            if (isSel) std::cout << "  [" << _("当前", "active") << "]";
+            std::cout << std::endl;
+        }
+    }
+
+    // 实例映射表
+    auto instMap = Settings::instance().instanceDirs();
+    if (instMap.isEmpty()) {
+        std::cout << _("实例映射: （无）\n", "Instance mappings: (none)\n");
+    } else {
+        std::cout << _("实例映射:", "Instance mappings:") << std::endl;
+        for (auto it = instMap.begin(); it != instMap.end(); ++it) {
+            std::cout << "  " << it.key().toStdString()
+                      << " → " << it.value().toStdString() << std::endl;
+        }
+    }
+    return 0;
+}
+
 // ---- 命令派发 ----
 
 /// 解析 mcFolder 并派发到对应处理函数。
 /// 返回值 >= 0 表示已处理（退出码），-1 表示未知命令。
 static int dispatchCommand(const QString &cmd, QStringList &args) {
     // ---- 组 A: 无需 mcFolder ----
+    if (cmd == "help")    { printHelp(); return 0; }
+    if (cmd == "version") {
+        std::cout << QCoreApplication::applicationName().toStdString() << " "
+                  << QCoreApplication::applicationVersion().toStdString() << std::endl;
+        return 0;
+    }
+    if (cmd == "config")       return handleConfig();
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-player")     return handleSetPlayer(args);
     if (cmd == "set-lang")       return handleSetLang(args);
@@ -337,12 +423,10 @@ int main(int argc, char *argv[]) {
 
     // 默认静默，关闭 SDK 调试日志
     QLoggingCategory::setFilterRules("lpcl.*.info=false\nlpcl.*.debug=false");
-    // 语言预扫描：显式 flag 优先（--zh 标准，--cn 兼容别名）；无 flag 时读保存的设置
+    // 语言预扫描：--zh 本次有效；无 flag 时读 set-lang 保存的设置
     bool langFlag = false;
     for (int i = 1; i < argc; ++i) {
-        QString a = QString::fromLatin1(argv[i]);
-        if (a == "--zh" || a == "--cn") { setLang(false); langFlag = true; }
-        else if (a == "--en") { setLang(true); langFlag = true; }
+        if (QString::fromLatin1(argv[i]) == "--zh") { setLang(false); langFlag = true; }
     }
     if (!langFlag) {
         Settings::initialize();
@@ -355,113 +439,13 @@ int main(int argc, char *argv[]) {
     parser.setApplicationDescription(
         _("LPCL 命令行启动器", "LPCL Command-Line Launcher"));
 
-    QCommandLineOption optEn("en",
-        _("使用英文输出（默认）", "Use English output (default)"));
     QCommandLineOption optZh("zh",
-        _("使用中文输出", "Use Chinese output"));
-    QCommandLineOption optCn("cn",
-        _("使用中文输出（--zh 的兼容别名）", "Use Chinese output (alias of --zh)"));
-    QCommandLineOption optConfig("config",
-        _("查看当前配置", "Show current configuration"));
-    QCommandLineOption optHelp("help", _("显示帮助信息", "Show help information"));
-    QCommandLineOption optVersion("version", _("显示版本号", "Show version number"));
+        _("使用中文输出（本次有效）", "Use Chinese output (this run)"));
     parser.addOption(optZh);
-    parser.addOption(optCn);
-    parser.addOption(optEn);
-    parser.addOption(optConfig);
-    parser.addOption(optHelp);
-    parser.addOption(optVersion);
     parser.addPositionalArgument("command", "placeholder");
     parser.setOptionsAfterPositionalArgumentsMode(
         QCommandLineParser::ParseAsPositionalArguments);
     parser.process(app);
-
-    // ---- printHelp ----
-    auto printHelp = [&]() {
-        auto out = [](const QString &s) { std::cout << s.toStdString(); };
-        struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
-        const Item items[] = {
-            {"list",              "list",              "列出已导入的整合包实例",  "List imported instances"},
-            {"mc-list",           "mc-list",           "列出原版 MC 版本",       "List vanilla MC versions"},
-            {"launch <名称>",     "launch <name>",     "启动整合包游戏",       "Launch a modpack"},
-            {"list-javas",        "list-javas",        "列出可用 Java",        "List available Java runtimes"},
-            {"set-folder <路径>", "set-folder <path>", "设置默认游戏目录",     "Set default Minecraft folder"},
-            {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
-            {"set-lang <en|zh>", "set-lang <en|zh>", "设置界面语言（持久保存）", "Set UI language (persistent)"},
-            {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
-            {"rm <名称|*>",       "rm <name|*>",       "删除实例（* 清空全部）", "Remove instance (* for all)"},
-            {"player-add <名称>","player-add <name>",  "添加玩家配置",          "Add player profile"},
-            {"player-rm <uuid>", "player-rm <uuid>",  "删除玩家配置",          "Remove player profile"},
-            {"player-list",      "player-list",       "列出玩家配置",          "List player profiles"},
-            {"player-select <uuid>","player-select <uuid>","选择当前玩家",     "Select current player"},
-            {"test",              "test",              "全系统自检",            "Run system self-test"},
-        };
-        const Item opts[] = {
-            {"--zh",      "--zh",      "使用中文输出",          "Use Chinese output"},
-            {"--en",      "--en",      "使用英文输出（默认）",   "Use English output (default)"},
-            {"--config",  "--config",  "查看当前配置",          "Show current configuration"},
-            {"--help",    "--help",    "显示帮助信息",          "Show help information"},
-            {"--version", "--version", "显示版本号",            "Show version number"},
-        };
-        auto printItem = [&](const Item &it) {
-            out(QString("  %1 %2\n").arg(g_lang == CN ? it.cmdCn : it.cmdEn, -20)
-                    .arg(T(it.descCn, it.descEn)));
-        };
-        out(T("Usage: lpcl-cli [options] <command> [args]\n",
-              "Usage: lpcl-cli [options] <command> [args]\n"));
-        out("\n"); out(T("命令 / Commands:\n", "Commands:\n"));
-        for (const auto &it : items) printItem(it);
-        out("\n"); out(T("选项 / Options:\n", "Options:\n"));
-        for (const auto &it : opts) printItem(it);
-        std::cout.flush();
-    };
-
-    // ---- 纯选项（无命令） ----
-    if (parser.isSet(optHelp))  { printHelp(); return 0; }
-    if (parser.isSet(optVersion)) {
-        std::cout << app.applicationName().toStdString() << " "
-                  << app.applicationVersion().toStdString() << std::endl;
-        return 0;
-    }
-    if (parser.isSet(optConfig)) {
-        Settings::initialize();
-        auto cfg = lpcl::getConfig();
-
-        std::cout << _("LPCL 版本: ", "LPCL version: ") << cfg.version.toStdString() << std::endl
-                  << _("提交: ",       "Commit: ")       << cfg.commit.toStdString() << std::endl;
-        QString folder = cfg.gameFolderSet ? cfg.gameFolder : _("（未设置）", "(not set)");
-        std::cout << _("默认游戏目录: ", "Default game folder: ") << folder.toStdString() << std::endl;
-
-        if (cfg.players.isEmpty()) {
-            std::cout << _("玩家配置: （无）\n", "Player profiles: (none)\n");
-        } else {
-            std::cout << _("玩家配置:", "Player profiles:") << std::endl;
-            for (const auto &p : cfg.players) {
-                bool isSel = (p.uuid == cfg.selectedPlayer);
-                std::cout << (isSel ? "  * " : "    ")
-                          << p.uuid.toStdString()
-                          << "  " << p.name.toStdString();
-                if (!p.avatar.isEmpty())
-                    std::cout << "  avatar=" << p.avatar.toStdString();
-                std::cout << "  skin=" << p.skinType.toStdString();
-                if (isSel) std::cout << "  [" << _("当前", "active") << "]";
-                std::cout << std::endl;
-            }
-        }
-
-        // 实例映射表
-        auto instMap = Settings::instance().instanceDirs();
-        if (instMap.isEmpty()) {
-            std::cout << _("实例映射: （无）\n", "Instance mappings: (none)\n");
-        } else {
-            std::cout << _("实例映射:", "Instance mappings:") << std::endl;
-            for (auto it = instMap.begin(); it != instMap.end(); ++it) {
-                std::cout << "  " << it.key().toStdString()
-                          << " → " << it.value().toStdString() << std::endl;
-            }
-        }
-        return 0;
-    }
 
     // ---- 命令派发 ----
     QStringList args = parser.positionalArguments();

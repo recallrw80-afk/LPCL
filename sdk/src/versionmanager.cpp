@@ -146,13 +146,20 @@ void VersionManager::loadLocalVersions() {
     // 从 INI [Instances] 映射中读取所有实例
     QMap<QString, QString> instanceMap = Settings::instance().instanceDirs();
 
+    // 当前目录是否是持久化的默认目录（--folder 临时覆盖时只过滤不清理，防止误删默认目录的映射）
+    QString persisted = Settings::instance().getString("LaunchFolderSelect");
+    bool isDefaultFolder = (QDir(persisted).absolutePath() + "/" == m_mcFolder);
+
     for (auto it = instanceMap.begin(); it != instanceMap.end(); ++it) {
         const QString &dirName = it.key();
         const QString &displayName = it.value();
         QString dirPath = m_mcFolder + "instances/" + dirName + "/";
 
         if (!QFileInfo::exists(dirPath + "PCL/Setup.ini")) {
-            // INI 映射存在但目录已丢失，跳过（可能是手动删除了目录）
+            // INI 映射存在但实例目录已丢失（如手动删除目录）：
+            // 默认目录下清理失效映射（自修复）；--folder 看别的目录时只跳过不清理
+            if (isDefaultFolder && !QDir(dirPath).exists())
+                Settings::instance().removeInstanceDir(dirName);
             continue;
         }
 
