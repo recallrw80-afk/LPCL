@@ -273,8 +273,10 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
     r["clientid"] = login.clientToken.isEmpty() ? "0" : login.clientToken;
 
     // Paths
+    // libraries/assets/natives 始终用全局共享目录（PCL 规则：版本隔离只影响 game_directory）
+    QString mcFolder = VersionManager::instance().mcFolder();
     r["game_directory"] = version.pathIndie;
-    r["game_assets"] = version.pathIndie + "assets/";
+    r["game_assets"] = mcFolder + "assets/virtual/legacy/";
 
     // Assets
     QString assetsIndex = "legacy";
@@ -285,46 +287,70 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
         assetsIndex = QString::fromStdString(m_versionJson["assetIndex"]["id"].get<std::string>());
     }
     r["assets_index_name"] = assetsIndex;
-    r["assets_root"] = version.pathIndie + "assets/";
+    r["assets_root"] = mcFolder + "assets/";
 
-    // Classpath
-    QStringList classpathParts;
-    classpathParts.append(version.pathVersion + version.id + ".jar");
-    // Libraries would be added here from the version JSON
+    // Classpath：libraries 在前（loader 先于 vanilla 由继承合并保证），
+    // 主 jar 在最后；1.17+ 的 Forge/NeoForge 不加主 jar（fmlloader 从 libraries 加载）
+    bool skipMainJar = (version.modLoader.hasForge || version.modLoader.hasNeoForge)
+        && version.vanillaVersion.majorVersion() == 1
+        && version.vanillaVersion.minorVersion() >= 17;
+    // 收集库条目（同名库去重保留高版本——NeoForge 的 json 会重复列出 vanilla 库，
+    // 重复 jar 会让 fmlloader 的 UnionFileSystem 崩溃，PCL 同样按此规则去重）
+    struct LibEntry { QString key; QString path; QVersionNumber ver; };
+    QList<LibEntry> libEntries;
     if (m_versionJson.contains("libraries")) {
         for (const auto &lib : m_versionJson["libraries"]) {
             if (lib.contains("rules") && !checkRules(lib["rules"])) continue;
-            // Try to build the library path
+            QString path;
+            QString mavenName = QString::fromStdString(lib.value("name", ""));
             if (lib.contains("downloads") && lib["downloads"].contains("artifact")) {
                 // const json 上用 operator[] 取缺失键是 UB，用 value() 兜底
                 std::string libPath = lib["downloads"]["artifact"].value("path", "");
                 if (libPath.empty()) continue;
-                classpathParts.append(version.pathIndie + "libraries/" +
-                                       QString::fromStdString(libPath));
+                path = mcFolder + "libraries/" + QString::fromStdString(libPath);
             } else {
                 // natives 容器条目不进 classpath（无主 jar）
                 if (lib.contains("natives")) continue;
                 // 旧格式（≤1.13）：只有 maven name，推导仓库相对路径
-                QString rel = FileUtils::mavenNameToPath(
-                    QString::fromStdString(lib.value("name", "")));
-                if (!rel.isEmpty())
-                    classpathParts.append(version.pathIndie + "libraries/" + rel);
+                QString rel = FileUtils::mavenNameToPath(mavenName);
+                if (rel.isEmpty()) continue;
+                path = mcFolder + "libraries/" + rel;
             }
+            // key = group:artifact[:classifier]，按它比版本
+            QString key = path;
+            auto parts = mavenName.split(':');
+            if (parts.size() >= 3)
+                key = parts[0] + ':' + parts[1] + (parts.size() > 3 ? ':' + parts[3] : QString());
+            libEntries.append({key, path,
+                parts.size() >= 3 ? QVersionNumber::fromString(parts[2]) : QVersionNumber()});
         }
     }
+    QStringList classpathParts;
+    QSet<QString> emitted;
+    for (const auto &e : libEntries) {
+        if (emitted.contains(e.key)) continue;
+        bool hasHigher = false;
+        for (const auto &o : libEntries)
+            if (o.key == e.key && o.ver > e.ver) { hasHigher = true; break; }
+        if (hasHigher) continue;
+        emitted.insert(e.key);
+        classpathParts.append(e.path);
+    }
+    if (!skipMainJar)
+        classpathParts.append(version.pathJar);
     QString classpathSep = (currentPlatform() == Platform::Windows) ? ";" : ":";
     r["classpath"] = classpathParts.join(classpathSep);
     r["classpath_separator"] = classpathSep;
 
-    // Natives
-    r["natives_directory"] = version.pathVersion + "natives/";
+    // Natives：全局 vanilla 版本的 natives 目录（实例版本共用 vanilla natives）
+    r["natives_directory"] = mcFolder + "versions/" + version.vanillaVersion.toString() + "/natives/";
 
     // Resolution
     r["resolution_width"] = QString::number(m_options.windowWidth);
     r["resolution_height"] = QString::number(m_options.windowHeight);
 
     // Java
-    r["library_directory"] = version.pathIndie + "libraries/";
+    r["library_directory"] = mcFolder + "libraries/";
 
     return r;
 }

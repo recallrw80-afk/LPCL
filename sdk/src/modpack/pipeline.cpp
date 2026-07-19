@@ -12,7 +12,7 @@
 #include <QSettings>
 
 void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
-                               const QString &finalDir, const QString &name,
+                               const QString &finalDir, const QString &name, const QString &mcVersion,
                                PackProgressCallback onProgress,
                                PackCompleteCallback onComplete) {
     // 所有 mod 下载完成后的 finalize
@@ -23,6 +23,9 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
         ini.setValue("Name", name);
         ini.setValue("VersionArgumentIndie", 1);
         ini.setValue("VersionArgumentIndieV2", true);
+        // 记录版本 json 名——launch 时据此解析（实例内版本文件夹/全局 loader 目录/vanilla）
+        QString versionName = resolveInstanceVersionName(finalDir, mcVersion);
+        if (!versionName.isEmpty()) ini.setValue("Version", versionName);
         ini.endGroup();
         ini.sync();
         // 写入 INI 实例映射（随机目录名 → 显示名）
@@ -57,7 +60,7 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
             nullptr,
             [=](bool ok, QString) {
                 if (!ok) { failNow(mod.url); return; }
-                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
             });
     } else if (!mod.cfModId.isEmpty()) {
         // CurseForge — 通过 ModPlatform 解析下载 URL
@@ -65,10 +68,10 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
             mod.cfModId, mod.cfFileId, finalDir + mod.savePath,
             [=](bool ok, QString) {
                 if (!ok) { failNow("CF mod " + mod.cfModId); return; }
-                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
             });
     } else {
-        downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+        downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
     }
 }
 
@@ -78,15 +81,8 @@ void downloadAndFinalize(const QString &mcVersion,
                                  const QList<ModDownloadEntry> &mods,
                                  PackProgressCallback onProgress,
                                  PackCompleteCallback onComplete) {
-    // 提取纯净 MC 版本号（去掉 modloader 前缀，如 "1.21.1-NeoForge_21.1.226" → "1.21.1"）
-    auto vanillaVersion = [](const QString &v) -> QString {
-        QRegularExpression re(R"(^\d+\.\d+(?:\.\d+)?)");
-        auto m = re.match(v);
-        return m.hasMatch() ? m.captured(0) : v;
-    };
-
     auto startModDownloads = [=]() {
-        downloadModsAsync(mods, 0, finalDir, name, onProgress, onComplete);
+        downloadModsAsync(mods, 0, finalDir, name, mcVersion, onProgress, onComplete);
     };
 
     if (mcVersion.isEmpty()) {
@@ -95,7 +91,7 @@ void downloadAndFinalize(const QString &mcVersion,
     }
 
     // Step 1: 下载 MC 版本（JSON + JAR + libraries + assets）
-    QString vanilla = vanillaVersion(mcVersion);
+    QString vanilla = extractVanillaVersion(mcVersion);
     if (onProgress) onProgress("Downloading Minecraft " + vanilla + "...", 35);
     AssetDownloader::instance().downloadVersion(vanilla,
         [=](bool ok, QString err) {

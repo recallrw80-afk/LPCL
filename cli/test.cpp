@@ -439,18 +439,18 @@ static QList<TestItem> runCommandTests() {
                 bool dirGone = !QDir(testDir).exists();
                 bool mappingGone = Settings::instance().dirForDisplayName(testName).isEmpty();
                 if (removed && dirGone && mappingGone)
-                    ok("rm", "映射删除/目录清理 正常");
+                    ok("list-rm", "映射删除/目录清理 正常");
                 else if (!mappingGone)
-                    fail("rm", "映射残留");
+                    fail("list-rm", "映射残留");
                 else
-                    fail("rm", "删除失败或目录残留");
+                    fail("list-rm", "删除失败或目录残留");
                 // 兜底清理
                 if (!dirGone) QDir(testDir).removeRecursively();
             } else {
-                fail("rm", "无法创建测试目录");
+                fail("list-rm", "无法创建测试目录");
             }
         } else {
-            skip("rm", "游戏目录未设置，跳过");
+            skip("list-rm", "游戏目录未设置，跳过");
         }
     }
 

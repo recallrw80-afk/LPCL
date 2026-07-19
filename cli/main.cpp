@@ -265,14 +265,14 @@ static int handleInpack(QStringList &args) {
 
 static int handleRm(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli rm <名称|*>\n",
-                       "error:  lpcl-cli rm <name|*>\n");
+        std::cerr << _("error:  lpcl-cli list-rm <名称|*>\n",
+                       "error:  lpcl-cli list-rm <name|*>\n");
         return 1;
     }
     // shell 会把不带引号的 * 展开成当前目录文件列表（多个参数）——检测并提示加引号
     if (args.size() > 2) {
-        std::cerr << _("error:  参数过多（shell 会展开 *）。删除全部实例请加引号：lpcl-cli rm \"*\"\n",
-                       "error:  too many arguments (shell expands *). To remove all instances, quote it: lpcl-cli rm \"*\"\n");
+        std::cerr << _("error:  参数过多（shell 会展开 *）。删除全部实例请加引号：lpcl-cli list-rm \"*\"\n",
+                       "error:  too many arguments (shell expands *). To remove all instances, quote it: lpcl-cli list-rm \"*\"\n");
         return 1;
     }
     if (args[1] == "*") {
@@ -312,7 +312,7 @@ static void printHelp() {
         {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
         {"set-lang <en|zh>", "set-lang <en|zh>", "设置界面语言（持久保存）", "Set UI language (persistent)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
-        {"rm <名称|*>",       "rm <name|*>",       "删除实例（* 清空全部）", "Remove instance (* for all)"},
+        {"list-rm <名称|*>", "list-rm <name|*>", "删除实例（* 清空全部）", "Remove instance (* for all)"},
         {"player-add <名称>","player-add <name>",  "添加玩家配置",          "Add player profile"},
         {"player-rm <uuid>", "player-rm <uuid>",  "删除玩家配置",          "Remove player profile"},
         {"player-list",      "player-list",       "列出玩家配置",          "List player profiles"},
@@ -416,7 +416,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "mc-list")  return handleMcList();
     if (cmd == "launch")   return handleLaunch(args);
     if (cmd == "inpack")  return handleInpack(args);
-    if (cmd == "rm")      return handleRm(args);
+    if (cmd == "list-rm") return handleRm(args);
 
     return -1; // unknown
 }

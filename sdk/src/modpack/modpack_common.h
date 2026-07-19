@@ -48,6 +48,13 @@ bool beginInstall(const QString &instanceName, const QString &packName,
 // 复制失败 = 导入失败（cleanupOnError + onComplete(false)，返回 false）
 bool copyOrFail(const QString &src, const QString &finalDir, PackCompleteCallback onComplete);
 
+// 提取纯净 MC 版本号（"1.21.1-NeoForge_21.1.226" → "1.21.1"）
+QString extractVanillaVersion(const QString &v);
+
+// 确定实例应记录的版本 json 名（写进 Setup.ini 的 Version 键）：
+// 实例内版本文件夹（带 json）→ 全局 versions/ 下 vanilla 前缀的 loader 目录 → vanilla
+QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion);
+
 // ---- 下载管线（pipeline.cpp） ----
 
 void downloadAndFinalize(const QString &mcVersion,

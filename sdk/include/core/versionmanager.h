@@ -56,6 +56,10 @@ public:
     /// Load and parse a specific version's JSON
     McVersion loadVersion(const QString &versionId);
 
+    /// 解析实例版本：实例 Setup.ini 的 Version 键 → 实例 versions/ 扫描；
+    /// version json 实例内优先、全局 versions/ 兜底；PathIndie 按 PCL 版本隔离语义判定
+    McVersion loadInstanceVersion(const QString &dirName);
+
     /// Parse version JSON from file path
     McVersion parseVersionJson(const QString &jsonPath);
 

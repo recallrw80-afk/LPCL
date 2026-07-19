@@ -140,3 +140,32 @@ bool copyOrFail(const QString &src, const QString &finalDir, PackCompleteCallbac
     if (onComplete) onComplete(false, "Copy failed: " + src);
     return false;
 }
+
+// 提取纯净 MC 版本号（去掉 modloader 前缀）
+QString extractVanillaVersion(const QString &v) {
+    QRegularExpression re(R"(^\d+\.\d+(?:\.\d+)?)");
+    auto m = re.match(v);
+    return m.hasMatch() ? m.captured(0) : v;
+}
+
+// 确定实例应记录的版本 json 名
+QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion) {
+    // 实例内版本文件夹优先（LauncherPack/Compressed 的包自带版本）
+    QDir instVd(finalDir + "versions/");
+    for (const auto &entry : instVd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+        if (QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json"))
+            return entry.fileName();
+    }
+    if (!mcVersion.isEmpty()) {
+        QString vanilla = extractVanillaVersion(mcVersion);
+        // 全局 versions/ 下找 vanilla 前缀的 loader 目录（如 1.20.1-forge-47.4.10）
+        QDir gd(VersionManager::instance().mcFolder() + "versions/");
+        for (const auto &entry : gd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            if (entry.fileName().startsWith(vanilla + "-") &&
+                QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json"))
+                return entry.fileName();
+        }
+        return vanilla;
+    }
+    return {};
+}

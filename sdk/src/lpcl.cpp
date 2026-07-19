@@ -35,12 +35,16 @@ bool launchVersion(const QString &versionId,
     auto &launcher = Launcher::instance();
     auto &jm = JavaManager::instance();
 
-    // 解析显示名 → 实例目录名（用于 loadVersion 的路径查找）
+    // 解析：INI 映射命中 → 实例版本（loadInstanceVersion）；否则全局版本
     QString dirName = Settings::instance().dirForDisplayName(versionId);
-    QString resolvedId = dirName.isEmpty() ? versionId : dirName;
+    McVersion version;
+    if (!dirName.isEmpty())
+        version = VersionManager::instance().loadInstanceVersion(dirName);
+    else
+        version = VersionManager::instance().loadVersion(versionId);
+    if (!version.isValid) return false;
 
     auto login = OfflineAuth::createOfflineLogin("Player");
-    auto version = VersionManager::instance().loadVersion(resolvedId);
     if (jm.javaList().isEmpty()) {
         jm.scanSystemJava();
         jm.waitForScanFinished();

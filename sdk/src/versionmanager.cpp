@@ -318,6 +318,54 @@ QStringList VersionManager::versionIds() const
 
 // Version parsing
 
+// 实例版本解析（整合包实例，instances/{随机名}/）
+McVersion VersionManager::loadInstanceVersion(const QString &dirName) {
+    McVersion ver;
+    QString instDir = m_mcFolder + "instances/" + dirName + "/";
+
+    // 1. 版本名：Setup.ini 的 Version 键 → 实例内唯一带 json 的版本文件夹
+    QString verName;
+    QSettings ini(instDir + "PCL/Setup.ini", QSettings::IniFormat);
+    ini.beginGroup("Setup");
+    verName = ini.value("Version").toString();
+    ini.endGroup();
+    if (verName.isEmpty()) {
+        QDir vd(instDir + "versions/");
+        for (const auto &entry : vd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
+            if (QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json")) {
+                verName = entry.fileName();
+                break;
+            }
+        }
+    }
+    if (verName.isEmpty()) {
+        ver.isValid = false;
+        ver.info = "实例未记录游戏版本: " + dirName;
+        return ver;
+    }
+
+    // 2. version json：实例内优先，全局 versions/ 兜底
+    QString jsonPath = instDir + "versions/" + verName + "/" + verName + ".json";
+    if (!QFile::exists(jsonPath))
+        jsonPath = m_mcFolder + "versions/" + verName + "/" + verName + ".json";
+    if (!QFile::exists(jsonPath)) {
+        ver.isValid = false;
+        ver.info = "version json 缺失: " + verName;
+        return ver;
+    }
+
+    ver = parseVersionJson(jsonPath);
+
+    // 3. 游戏目录（PathIndie，PCL 版本隔离语义）：
+    // 实例 versions/{ver}/ 下有 mods/ 或 config/ → 游戏目录用它，否则用实例根
+    QString gameDir = instDir;
+    if (QDir(instDir + "versions/" + verName + "/mods").exists() ||
+        QDir(instDir + "versions/" + verName + "/config").exists())
+        gameDir = instDir + "versions/" + verName + "/";
+    ver.pathIndie = gameDir;
+    return ver;
+}
+
 McVersion VersionManager::loadVersion(const QString &versionId) {
     // QDir::filePath keeps the path clean (no "//" from the trailing slash in m_mcFolder).
     QString jsonPath = QDir(m_mcFolder).filePath("versions/" + versionId + "/" + versionId + ".json");
@@ -489,6 +537,12 @@ static json resolveChainWithVisited(const QString &jsonPath, QSet<QString> &visi
     versionDir.cdUp(); // Go to versions dir
     QString parentPath = versionDir.absolutePath() + "/" + QString::fromStdString(inheritId) + "/" +
                          QString::fromStdString(inheritId) + ".json";
+    if (!QFile::exists(parentPath)) {
+        // 实例内版本的父版本在全局 versions/（实例目录只存游戏文件）
+        parentPath = VersionManager::instance().mcFolder() + "versions/" +
+                     QString::fromStdString(inheritId) + "/" +
+                     QString::fromStdString(inheritId) + ".json";
+    }
 
     json parent = resolveChainWithVisited(parentPath, visited);
     if (parent.is_null()) return result;
