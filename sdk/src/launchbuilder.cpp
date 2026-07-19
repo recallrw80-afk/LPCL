@@ -428,5 +428,13 @@ bool LaunchBuilder::checkFeatures(const json &features) {
         // We always support custom resolution
     }
 
+    // 未实现 QuickPlay——剔除 --quickPlay* 参数（has_quick_plays_support /
+    // is_quick_play_singleplayer/multiplayer/realms 四类键）：
+    // 未替换的 ${quickPlay*} 占位符会让游戏把占位符当世界名，自动创建并进入世界
+    for (auto it = features.begin(); it != features.end(); ++it) {
+        if (QString::fromStdString(it.key()).contains("quick_play", Qt::CaseInsensitive))
+            return false;
+    }
+
     return true;
 }
