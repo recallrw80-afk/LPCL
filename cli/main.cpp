@@ -672,6 +672,12 @@ static int handleRm(const QStringList &args) {
                        "error:  lpcl-cli rm <name|*>\n");
         return 1;
     }
+    // shell 会把不带引号的 * 展开成当前目录文件列表（多个参数）——检测并提示加引号
+    if (args.size() > 2) {
+        std::cerr << _("error:  参数过多（shell 会展开 *）。删除全部实例请加引号：lpcl-cli rm \"*\"\n",
+                       "error:  too many arguments (shell expands *). To remove all instances, quote it: lpcl-cli rm \"*\"\n");
+        return 1;
+    }
     if (args[1] == "*") {
         auto ids = lpcl::listVersions();
         if (ids.isEmpty()) {
