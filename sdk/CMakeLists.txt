@@ -73,6 +73,30 @@ set(LPCLCORE_HEADERS
 
 add_library(lpclcore SHARED ${LPCLCORE_SOURCES} ${LPCLCORE_HEADERS})
 
+# CurseForge API key：开发构建从 LPCL/.env 嵌入（发布构建 -DLPCL_EMBED_CF_KEY=OFF 跳过）
+option(LPCL_EMBED_CF_KEY "Embed CurseForge API key from .env (dev builds)" ON)
+set(LPCL_CF_KEY "")
+if(LPCL_EMBED_CF_KEY AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../.env")
+    file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../.env" _lpcl_env_lines)
+    foreach(_line IN LISTS _lpcl_env_lines)
+        # 兼容 LPCL_CURSEFORGE_API_KEY= 和 API_KEY= 两种写法
+        if(_line MATCHES "^(LPCL_CURSEFORGE_API_KEY|API_KEY)=(.*)$")
+            set(LPCL_CF_KEY "${CMAKE_MATCH_2}")
+        endif()
+    endforeach()
+    # 去掉可能的首尾引号和 C 字符串转义
+    string(REGEX REPLACE "^[\"'](.*)[\"']$" "\\1" LPCL_CF_KEY "${LPCL_CF_KEY}")
+    string(REPLACE "\\" "\\\\" LPCL_CF_KEY "${LPCL_CF_KEY}")
+    string(REPLACE "\"" "\\\"" LPCL_CF_KEY "${LPCL_CF_KEY}")
+endif()
+# 始终生成头文件（禁用时为空串），源码无需条件编译
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cf_key_embedded.h"
+     "#pragma once\n#define LPCL_CF_API_KEY_EMBEDDED \"${LPCL_CF_KEY}\"\n")
+target_include_directories(lpclcore PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+if(LPCL_CF_KEY)
+    message(STATUS "LPCL: CurseForge API key embedded from .env")
+endif()
+
 # Mark this build as the library itself (for export/import macros)
 target_compile_definitions(lpclcore PRIVATE LPCLCORE_LIBRARY)
 

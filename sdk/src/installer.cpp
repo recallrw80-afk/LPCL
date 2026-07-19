@@ -1,11 +1,9 @@
 #include "core/installer.h"
 #include "download/downloadmanager.h"
-#include "core/settings.h"
 #include "util/platform_utils.h"
 
 #include <QDir>
 #include <QFile>
-#include <QFileInfo>
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
@@ -57,8 +55,37 @@ void Installer::downloadInstaller(const QString &loaderType, const QString &mcVe
         url = QString("https://maven.minecraftforge.net/net/minecraftforge/forge/%1-%2/%3")
                   .arg(mcVersion, loaderVersion, jarName);
     } else if (loaderType == "fabric") {
-        jarName = "fabric-installer.jar";
-        url = FABRIC_API + "/versions/loader/" + mcVersion + "/" + loaderVersion + "/server/jar";
+        // Fabric 官方安装器地址需从 meta API 解析
+        // （/server/jar 端点返回的是服务端启动器，不能用于客户端安装）
+        DownloadManager::instance().downloadJson(FABRIC_API + "/versions/installer",
+            [this, onComplete](bool ok, QString err, json list) {
+                if (!ok) {
+                    if (onComplete) onComplete(false, "Failed to resolve Fabric installer: " + err);
+                    return;
+                }
+                QString installerUrl;
+                if (list.is_array()) {
+                    for (const auto &e : list) {
+                        if (e.value("stable", false)) {
+                            installerUrl = QString::fromStdString(e.value("url", ""));
+                            break;
+                        }
+                    }
+                    if (installerUrl.isEmpty() && !list.empty())
+                        installerUrl = QString::fromStdString(list[0].value("url", ""));
+                }
+                if (installerUrl.isEmpty()) {
+                    if (onComplete) onComplete(false, "No Fabric installer URL found");
+                    return;
+                }
+                QString savePath = QDir::temp().filePath("fabric-installer.jar");
+                emit installLog("Downloading fabric-installer.jar...");
+                DownloadManager::instance().download(installerUrl, savePath,
+                    nullptr, [onComplete, savePath](bool ok2, QString err2) {
+                        if (onComplete) onComplete(ok2, ok2 ? savePath : err2);
+                    });
+            });
+        return;
     } else if (loaderType == "neoforge") {
         jarName = QString("neoforge-%1-installer.jar").arg(loaderVersion);
         url = NEOFORGE_API + "/" + loaderVersion + "/" + jarName;
@@ -67,7 +94,7 @@ void Installer::downloadInstaller(const QString &loaderType, const QString &mcVe
         return;
     }
 
-    QString savePath = Settings::instance().getString("PathTemp", "/tmp/") + jarName;
+    QString savePath = QDir::temp().filePath(jarName);
     emit installLog("Downloading " + jarName + "...");
     DownloadManager::instance().download(url, savePath,
         nullptr, [onComplete, savePath](bool ok, QString err) {
@@ -106,6 +133,19 @@ void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
         }
     });
 
+    connect(proc, &QProcess::errorOccurred, this,
+            [this, proc, onComplete](QProcess::ProcessError e) {
+        if (e != QProcess::FailedToStart) return;  // 崩溃等其他错误由 finished 处理
+        proc->deleteLater();
+        m_isRunning = false;
+        emit runningChanged();
+        QString err = "Cannot start installer process: " + proc->errorString();
+        qCWarning(logInstall) << err;
+        m_statusText = "Installation failed";
+        emit statusTextChanged();
+        if (onComplete) onComplete(false, err);
+    });
+
     connect(proc, &QProcess::readyReadStandardOutput, this, [this, proc]() {
         QString line = QString::fromUtf8(proc->readAllStandardOutput()).trimmed();
         if (!line.isEmpty()) emit installLog(line);
@@ -125,54 +165,62 @@ void Installer::runInstallerJar(const QString &jarPath, const QString &javaPath,
 
 // Forge
 
-void Installer::installForge(const QString &mcVersionDir, const QString &mcVersion,
+void Installer::installForge(const QString &mcDir, const QString &mcVersion,
                                const QString &forgeVersion, const QString &javaPath,
                                std::function<void(bool, QString)> onComplete) {
     downloadInstaller("forge", mcVersion, forgeVersion,
-        [this, mcVersionDir, javaPath, onComplete](bool ok, QString jarPath) {
+        [this, mcDir, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
 
-            runInstallerJar(jarPath, javaPath, {"-jar", jarPath, "--installClient", mcVersionDir},
+            runInstallerJar(jarPath, javaPath, {"-jar", jarPath, "--installClient", mcDir},
                             onComplete);
         });
 }
 
-void Installer::installFabric(const QString &mcVersionDir, const QString &mcVersion,
+void Installer::installFabric(const QString &mcDir, const QString &mcVersion,
                                 const QString &loaderVersion, const QString &javaPath,
                                 std::function<void(bool, QString)> onComplete) {
     downloadInstaller("fabric", mcVersion, loaderVersion,
-        [this, mcVersionDir, mcVersion, javaPath, onComplete](bool ok, QString jarPath) {
+        [this, mcDir, mcVersion, loaderVersion, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
             QStringList args;
-            args << "-jar" << jarPath << "client" << "-dir" << mcVersionDir
-                 << "-mcversion" << mcVersion;
+            args << "-jar" << jarPath << "client" << "-dir" << mcDir
+                 << "-mcversion" << mcVersion << "-loader" << loaderVersion;
             runInstallerJar(jarPath, javaPath, args, onComplete);
         });
 }
 
-void Installer::installNeoForge(const QString &mcVersionDir, const QString &mcVersion,
+void Installer::installNeoForge(const QString &mcDir, const QString &mcVersion,
                                   const QString &neoVersion, const QString &javaPath,
                                   std::function<void(bool, QString)> onComplete) {
     downloadInstaller("neoforge", mcVersion, neoVersion,
-        [this, mcVersionDir, javaPath, onComplete](bool ok, QString jarPath) {
+        [this, mcDir, javaPath, onComplete](bool ok, QString jarPath) {
             if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
-            runInstallerJar(jarPath, javaPath, {"-jar", jarPath, "--installClient", mcVersionDir},
+            runInstallerJar(jarPath, javaPath, {"-jar", jarPath, "--installClient", mcDir},
                             onComplete);
         });
 }
 
-void Installer::installLoader(const QString &loaderType, const QString &mcVersionDir,
+void Installer::installLoader(const QString &loaderType, const QString &mcDir,
+                                const QString &mcVersion,
                                 const QString &loaderVersion, const QString &javaPath,
                                 std::function<void(bool, QString)> onComplete) {
-    // Extract MC version from directory name
-    QString mcVersion;
-    QRegularExpression re(R"(\d+\.\d+(?:\.\d+)?)");
-    auto match = re.match(QFileInfo(mcVersionDir).fileName());
-    if (match.hasMatch()) mcVersion = match.captured(1);
+    // Forge/NeoForge 安装器要求游戏根目录存在 launcher_profiles.json（原版启动器痕迹），
+    // 否则报 "no minecraft launcher profile" 拒绝安装——缺失时补一个最小文件
+    if (loaderType == "forge" || loaderType == "neoforge") {
+        QString profilesPath = QDir(mcDir).filePath("launcher_profiles.json");
+        if (!QFile::exists(profilesPath)) {
+            QFile f(profilesPath);
+            if (f.open(QIODevice::WriteOnly)) {
+                f.write("{\"profiles\":{}}");
+                f.close();
+            }
+        }
+    }
 
-    if (loaderType == "forge") installForge(mcVersionDir, mcVersion, loaderVersion, javaPath, onComplete);
-    else if (loaderType == "fabric") installFabric(mcVersionDir, mcVersion, loaderVersion, javaPath, onComplete);
-    else if (loaderType == "neoforge") installNeoForge(mcVersionDir, mcVersion, loaderVersion, javaPath, onComplete);
+    if (loaderType == "forge") installForge(mcDir, mcVersion, loaderVersion, javaPath, onComplete);
+    else if (loaderType == "fabric") installFabric(mcDir, mcVersion, loaderVersion, javaPath, onComplete);
+    else if (loaderType == "neoforge") installNeoForge(mcDir, mcVersion, loaderVersion, javaPath, onComplete);
     else if (onComplete) onComplete(false, "Unsupported loader: " + loaderType);
 }
 

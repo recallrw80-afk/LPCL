@@ -342,9 +342,6 @@ static void installCurseForge(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    // 在 tmp 下工作，下载完成前不放入游戏目录
-    
-    
     markIncomplete(finalDir);
 
     // 复制 overrides
@@ -400,8 +397,6 @@ static void installHMCL(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    
-    
     markIncomplete(finalDir);
 
     // 复制 minecraft/ 文件夹
@@ -448,8 +443,6 @@ static void installMultiMC(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    
-    
     markIncomplete(finalDir);
 
     // 复制 .minecraft/ 文件夹
@@ -509,8 +502,6 @@ static void installMCBBS(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    
-    
     markIncomplete(finalDir);
 
     // 复制 overrides
@@ -544,6 +535,7 @@ static void installModrinth(const QString &filePath, const QString &packDir,
     QString mcVersion, forgeVer, neoVer, fabricVer;
     if (index.contains("dependencies")) {
         for (const auto &[key, val] : index["dependencies"].items()) {
+            if (!val.is_string()) continue;
             QString ver = QString::fromStdString(val.get<std::string>());
             if (key == "minecraft") mcVersion = ver;
             else if (key == "forge") forgeVer = ver;
@@ -559,8 +551,6 @@ static void installModrinth(const QString &filePath, const QString &packDir,
     QString finalDir = VersionManager::instance().mcFolder() + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    
-    
     markIncomplete(finalDir);
 
     // 复制 overrides 和 client-overrides
@@ -577,7 +567,8 @@ static void installModrinth(const QString &filePath, const QString &packDir,
         for (const auto &f : index["files"]) {
             ModDownloadEntry m;
             m.savePath = QString::fromStdString(f.value("path", "mods/unknown.jar"));
-            if (f.contains("downloads") && f["downloads"].is_array() && !f["downloads"].empty()) {
+            if (f.contains("downloads") && f["downloads"].is_array() && !f["downloads"].empty()
+                && f["downloads"][0].is_string()) {
                 m.url = QString::fromStdString(f["downloads"][0].get<std::string>());
             }
             if (!m.url.isEmpty()) mods.append(m);
@@ -669,8 +660,6 @@ static void installLauncherPack(const QString &filePath, const QString &packDir,
     QString instanceDir = generateInstanceDir();
     QString finalDir = mcFolder + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
-    
-    
     markIncomplete(finalDir);
 
     if (onProgress) onProgress("Copying game files...", 18);
@@ -808,13 +797,10 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
     if (hasMcFolder)
         mcSource = rootDir + "/.minecraft/";
 
-    // tmp 工作目录，下载完成前不放入游戏目录
     QString instanceDir = generateInstanceDir();
     QString finalDir = mcFolder + "instances/" + instanceDir + "/";
     if (!checkNameConflict(finalDir, name, !instanceName.isEmpty(), onComplete)) return;
 
-    
-    
     markIncomplete(finalDir);
 
     if (onProgress) onProgress("Copying modpack files...", 20);
@@ -945,8 +931,6 @@ static void installCompressed(const QString &filePath, const QString &packDir,
     QString workDir = mcFolder + "tmp/extract_" + instanceDir + "/";
     QDir(workDir).removeRecursively();
     QDir().mkpath(workDir);
-    
-    
     markIncomplete(finalDir);
     if (onProgress) onProgress("Extracting...", 20);
     if (!extractZip(filePath, workDir, onProgress, 25)) {
@@ -1103,7 +1087,13 @@ static void downloadAndFinalize(const QString &mcVersion,
                         }
 
                         if (onProgress) onProgress("Installing " + loaderType + "...", 65);
-                        auto javaList = JavaManager::instance().javaList();
+                        auto &jm = JavaManager::instance();
+                        if (jm.javaList().isEmpty()) {
+                            // inpack 流程此前不会触发 Java 扫描，这里补扫并等待
+                            jm.scanSystemJava();
+                            jm.waitForScanFinished();
+                        }
+                        auto javaList = jm.javaList();
                         if (javaList.isEmpty()) {
                             qWarning() << "No Java found, skipping modloader install";
                             startModDownloads();
@@ -1112,7 +1102,7 @@ static void downloadAndFinalize(const QString &mcVersion,
                         QString javaPath = javaList.first().pathJava;
 
                         Installer::instance().installLoader(loaderType,
-                            ver.pathVersion, loaderVer, javaPath,
+                            VersionManager::instance().mcFolder(), vanilla, loaderVer, javaPath,
                             [=](bool ok3, QString err3) {
                                 if (!ok3)
                                     qWarning() << "Modloader install issue:" << err3;
@@ -1213,7 +1203,6 @@ void installModpack(const QString &filePath,
 
     installModpackFromDir(filePath, packDir, type, instanceName, onProgress, onComplete);
 
-    // 注意：不能在此清理 tmp/——installModpackFromDir 内部启动了异步下载，
-    // 回调中 finalizeNow() 需要从 tmp/import/{name}/ 复制到最终目录。
-    // tmp/ 会在下次 import 时由 line 1062 清理。
+    // 注意：tmp/ 不在此清理——异步下载链末尾的 finalizeNow() 会统一清理；
+    // 同步路径（Compressed Step 3）已自行清理。
 }

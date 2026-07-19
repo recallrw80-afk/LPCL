@@ -78,11 +78,11 @@ LPCLCORE_EXPORT QList<PlayerEntry> listPlayers();
 /// 添加玩家配置（返回生成的条目）
 LPCLCORE_EXPORT PlayerEntry addPlayer(const QString &name, const QString &avatar = QString());
 
-/// 删除玩家配置
+/// 删除玩家配置（UUID 不存在时返回 false）
 LPCLCORE_EXPORT bool removePlayer(const QString &uuid);
 
-/// 选择当前玩家
-LPCLCORE_EXPORT void selectPlayer(const QString &uuid);
+/// 选择当前玩家（UUID 不存在时返回 false，不修改选中项）
+LPCLCORE_EXPORT bool selectPlayer(const QString &uuid);
 
 } // namespace lpcl
 

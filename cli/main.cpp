@@ -250,9 +250,6 @@ static QList<TestItem> runCommandTests() {
             {"/home/recall/Downloads/other/勇者之章Ⅲ v3.11.5 客户端导入包.zip", "勇者之章Ⅲ"},
         };
 
-        QString folder = Settings::instance().getString("LaunchFolderSelect");
-        if (!folder.endsWith('/')) folder += '/';
-
         for (const auto &pack : packs) {
             if (!QFile::exists(pack.filePath)) {
                 warn("inpack", "文件不存在: " + pack.filePath.split('/').last());
@@ -268,14 +265,16 @@ static QList<TestItem> runCommandTests() {
             QString message;
             QEventLoop loop;
 
+            bool importDone = false;
             lpcl::importModpack(pack.filePath, pack.instanceName,
                 [](const lpcl::ImportProgress &) {},
                 [&](bool ok, const QString &msg) {
                     success = ok;
                     message = msg;
+                    importDone = true;
                     loop.quit();
                 });
-            loop.exec();
+            if (!importDone) loop.exec();  // 同步失败路径下 quit 先于 exec，不能裸等
 
             QString elapsed = QString("%1s").arg(timer.elapsed() / 1000.0, 0, 'f', 1);
             if (success) {
@@ -283,14 +282,8 @@ static QList<TestItem> runCommandTests() {
                 auto ids = VersionManager::instance().versionIds();
                 if (ids.contains(pack.instanceName)) {
                     ok("inpack", pack.instanceName + ": 导入成功 (" + elapsed + ")");
-                    // 清理实例
+                    // 清理实例（versions/ 是全局共享缓存，保留——不能误删原版 MC）
                     lpcl::removeInstance(pack.instanceName);
-                    // 清理 import 产生的全局 version 缓存
-                    QDir versionsDir(folder + "versions/");
-                    if (versionsDir.exists()) {
-                        for (const auto &entry : versionsDir.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot))
-                            QDir(entry.absoluteFilePath()).removeRecursively();
-                    }
                 } else {
                     fail("inpack", pack.instanceName + ": list 中未找到");
                 }
@@ -419,7 +412,10 @@ static int handlePlayerSelect(const QStringList &args) {
                        "error:  lpcl-cli player-select <uuid>\n");
         return 1;
     }
-    lpcl::selectPlayer(args[1]);
+    if (!lpcl::selectPlayer(args[1])) {
+        std::cerr << _("error:  玩家 UUID 不存在\n", "error:  player UUID not found\n");
+        return 1;
+    }
     std::cout << "success" << std::endl;
     return 0;
 }
@@ -481,6 +477,11 @@ static int handleInpack(QStringList &args) {
         return 1;
     }
     QString rename = extractRename(args);
+    if (args.size() < 2) {  // --r/--folder 移除后可能没有文件参数
+        std::cerr << _("error:  lpcl-cli inpack <文件> [--r <名称>] [--folder <路径>]\n",
+                       "error:  lpcl-cli inpack <file> [--r <name>] [--folder <path>]\n");
+        return 1;
+    }
     std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
 
     bool done = false;

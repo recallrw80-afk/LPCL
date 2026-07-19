@@ -213,6 +213,33 @@ void AssetDownloader::downloadClientJar(const McVersion &version,
 
 // Libraries
 
+// 判断库的 rules 是否允许在当前平台使用（libraries 与 natives 共用）
+static bool rulesAllowOnThisPlatform(const json &lib) {
+    if (!lib.contains("rules")) return true;
+    bool allowed = false;
+    for (const auto &rule : lib["rules"]) {
+        bool ruleAllows = (rule.value("action", "allow") == "allow");
+        bool matches = true;
+        if (rule.contains("os")) {
+            std::string osName = rule["os"].value("name", "");
+            std::string osArch = rule["os"].value("arch", "");
+            if (!osName.empty()) {
+                switch (currentPlatform()) {
+                case Platform::Windows: matches = (osName == "windows"); break;
+                case Platform::Linux:   matches = (osName == "linux"); break;
+                case Platform::MacOS:   matches = (osName == "osx"); break;
+                default: break;
+                }
+            }
+            if (!osArch.empty()) {
+                matches = matches && (osArch == (is64BitSystem() ? "x86_64" : "x86"));
+            }
+        }
+        if (matches) allowed = ruleAllows;
+    }
+    return allowed;
+}
+
 void AssetDownloader::downloadLibraries(const McVersion &version,
                                           const json &versionJson,
                                           std::function<void(bool, QString)> onComplete) {
@@ -226,31 +253,7 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
     QList<std::pair<QString, QString>> toDownload; // <url, savePath>
 
     for (const auto &lib : versionJson["libraries"]) {
-        // Check rules
-        if (lib.contains("rules")) {
-            bool allowed = false;
-            for (const auto &rule : lib["rules"]) {
-                bool ruleAllows = (rule.value("action", "allow") == "allow");
-                bool matches = true;
-                if (rule.contains("os")) {
-                    std::string osName = rule["os"].value("name", "");
-                    std::string osArch = rule["os"].value("arch", "");
-                    if (!osName.empty()) {
-                        switch (currentPlatform()) {
-                        case Platform::Windows: matches = (osName == "windows"); break;
-                        case Platform::Linux:   matches = (osName == "linux"); break;
-                        case Platform::MacOS:   matches = (osName == "osx"); break;
-                        default: break;
-                        }
-                    }
-                    if (!osArch.empty()) {
-                        matches = matches && (osArch == (is64BitSystem() ? "x86_64" : "x86"));
-                    }
-                }
-                if (matches) allowed = ruleAllows;
-            }
-            if (!allowed) continue;
-        }
+        if (!rulesAllowOnThisPlatform(lib)) continue;
 
         if (!lib.contains("downloads") || !lib["downloads"].contains("artifact")) continue;
 
@@ -300,7 +303,7 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
                     if (f > 0) {
                         QString msg = QString("%1/%2 libraries failed").arg(f).arg(t);
                         emit downloadLog(msg);
-                        if (onComplete) onComplete(t - f > 0, msg);
+                        if (onComplete) onComplete(false, msg);
                     } else {
                         emit downloadLog("All libraries downloaded");
                         if (onComplete) onComplete(true, QString());
@@ -350,7 +353,18 @@ void AssetDownloader::downloadAssets(const McVersion &version,
 
     emit downloadLog("Downloading asset index: " + assetIndexId);
 
-    auto doAssetDownload = [this, version, onComplete](json assetIndexJson) {
+    auto doAssetDownload = [this, version, assetIndexId, onComplete](json assetIndexJson) {
+        // 资产索引落盘：游戏启动需要 {mc}/assets/indexes/{id}.json
+        QString idxPath = version.pathIndie + "assets/indexes/" + assetIndexId + ".json";
+        QDir().mkpath(QFileInfo(idxPath).absolutePath());
+        QFile idxFile(idxPath);
+        if (idxFile.open(QIODevice::WriteOnly)) {
+            idxFile.write(QString::fromStdString(assetIndexJson.dump()).toUtf8());
+            idxFile.close();
+        } else {
+            emit downloadLog("Cannot write asset index: " + idxPath);
+        }
+
         if (!assetIndexJson.contains("objects")) {
             if (onComplete) onComplete(true, QString());
             return;
@@ -405,33 +419,31 @@ void AssetDownloader::downloadAssets(const McVersion &version,
                         } else {
                             emit downloadLog("All assets downloaded");
                         }
-                        if (onComplete) onComplete(true, QString());
+                        // 部分资产失败不致命（缺贴图/声音游戏仍可运行），全部失败才算失败
+                        if (onComplete) onComplete(f < total, f >= total
+                            ? QString("All %1 assets failed").arg(total) : QString());
                     }
                 });
         }
     };
 
-    // Download asset index JSON
+    // Download asset index JSON — 所有路径都必须触发 onComplete
+    auto handleIndex = [this, doAssetDownload, onComplete](bool ok, QString err, json idxJson) {
+        if (!ok) {
+            emit downloadLog("Failed to download asset index: " + err);
+            if (onComplete) onComplete(false, "Failed to download asset index: " + err);
+            return;
+        }
+        doAssetDownload(idxJson);
+    };
+
     if (!assetIndexUrl.isEmpty()) {
-        DownloadManager::instance().downloadJson(
-            assetIndexUrl,
-            [doAssetDownload](bool ok, QString, json idxJson) {
-                if (ok) doAssetDownload(idxJson);
-            });
+        DownloadManager::instance().downloadJson(assetIndexUrl, handleIndex);
     } else {
         // Fallback: construct URL from asset index ID
         QString fallbackUrl = QString("https://launchermeta.mojang.com/v1/packages/%1.json")
                                   .arg(assetIndexId);
-        DownloadManager::instance().downloadJson(
-            fallbackUrl,
-            [this, doAssetDownload, onComplete](bool ok, QString err, json idxJson) {
-                if (!ok) {
-                    emit downloadLog("Failed to download asset index: " + err);
-                    if (onComplete) onComplete(false, err);
-                    return;
-                }
-                doAssetDownload(idxJson);
-            });
+        DownloadManager::instance().downloadJson(fallbackUrl, handleIndex);
     }
 }
 
@@ -456,26 +468,35 @@ void AssetDownloader::downloadNatives(const McVersion &version,
 
     // Find native libraries matching current platform
     QList<std::pair<QString, QString>> nativesToDownload; // <url, savePath>
+    QStringList allNativeJars;  // 所有本机平台 native jar（含已缓存的，解压用）
 
     QString nativeClassifier;
+    QString osName;
     switch (currentPlatform()) {
-    case Platform::Windows: nativeClassifier = "natives-windows"; break;
-    case Platform::Linux:   nativeClassifier = "natives-linux"; break;
-    case Platform::MacOS:   nativeClassifier = "natives-macos"; break;
+    case Platform::Windows: nativeClassifier = "natives-windows"; osName = "windows"; break;
+    case Platform::Linux:   nativeClassifier = "natives-linux";   osName = "linux"; break;
+    case Platform::MacOS:   nativeClassifier = "natives-macos";   osName = "osx"; break;
     default: break;
     }
+    // 新格式（1.19+）：natives 是独立库条目，name 带 ":natives-<os>" 后缀
+    const std::string nativesSuffix = ":natives-" + osName.toStdString();
 
     for (const auto &lib : verJson["libraries"]) {
-        // Check rules
-        if (lib.contains("rules")) {
-            bool allowed = false;
-            for (const auto &rule : lib["rules"]) {
-                if (rule.value("action", "allow") == "allow") allowed = true;
-                else allowed = false;
+        if (!rulesAllowOnThisPlatform(lib)) continue;
+
+        std::string libName = lib.value("name", "");
+
+        // 新格式：jar 已由 downloadLibraries 按普通 artifact 下载，此处只收集路径待解压
+        if (libName.size() > nativesSuffix.size() && libName.ends_with(nativesSuffix)) {
+            if (lib.contains("downloads") && lib["downloads"].contains("artifact")) {
+                std::string p = lib["downloads"]["artifact"].value("path", "");
+                if (!p.empty())
+                    allNativeJars.append(version.pathIndie + "libraries/" + QString::fromStdString(p));
             }
-            if (!allowed) continue;
+            continue;
         }
 
+        // 旧格式（≤1.18）：downloads.classifiers 里的 natives-<os> 条目
         if (!lib.contains("natives") && !lib.contains("downloads")) continue;
 
         auto &downloads = lib["downloads"];
@@ -496,14 +517,14 @@ void AssetDownloader::downloadNatives(const McVersion &version,
 
         auto &native = classifiers[classifierKey];
         std::string url = native.value("url", "");
-        std::string path = lib.contains("name")
-            ? std::string("libraries/") + lib["name"].get<std::string>()
-            : native.value("path", "");
+        // 必须用 classifier 产物的 maven 路径（形如 org/lwjgl/.../x-natives-linux.jar），
+        // 不能用 lib["name"]（maven 坐标，不是文件路径）
+        std::string path = native.value("path", "");
 
-        if (url.empty()) continue;
+        if (url.empty() || path.empty()) continue;
 
-        QString savePath = version.pathIndie +
-                           QString::fromStdString(path).replace('/', QDir::separator());
+        QString savePath = version.pathIndie + "libraries/" + QString::fromStdString(path);
+        allNativeJars.append(savePath);
         QDir().mkpath(QFileInfo(savePath).absolutePath());
 
         // Check if the native JAR already exists
@@ -517,8 +538,25 @@ void AssetDownloader::downloadNatives(const McVersion &version,
         nativesToDownload.append({QString::fromStdString(url), savePath});
     }
 
+    QString nativesDir = version.pathVersion + "natives/";
+
+    // 解压全部本机平台 native jar（含已缓存的——jar 在 libraries/ 但 natives/ 可能从未解压）
+    auto extractAll = [this, allNativeJars, nativesDir]() {
+        if (allNativeJars.isEmpty()) return;
+        emit downloadLog("Extracting native libraries...");
+        for (const QString &jarPath : allNativeJars) {
+            if (!QFileInfo::exists(jarPath)) continue;
+            QStringList extracted = FileUtils::extractNativesJar(jarPath, nativesDir);
+            for (const QString &f : extracted) {
+                emit downloadLog("  Extracted: " + QFileInfo(f).fileName());
+            }
+        }
+        emit downloadLog("Native libraries extracted to: " + nativesDir);
+    };
+
     if (nativesToDownload.isEmpty()) {
-        emit downloadLog("No native libraries to download");
+        emit downloadLog("All native libraries up-to-date");
+        extractAll();
         if (onComplete) onComplete(true, QString());
         return;
     }
@@ -527,37 +565,20 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     auto completed = QSharedPointer<int>::create(0);
     auto failed = QSharedPointer<int>::create(0);
 
-    QString nativesDir = version.pathVersion + "natives/";
-    QDir().mkpath(nativesDir);
-
     emit downloadLog(QString("Downloading %1 native libraries...").arg(total));
     emit downloadProgress("Natives", 0, total);
-
-    auto downloadedJars = QSharedPointer<QStringList>::create();
 
     for (const auto &item : nativesToDownload) {
         DownloadManager::instance().download(
             item.first, item.second,
             nullptr,
-            [this, completed, failed, total, nativesDir, downloadedJars, onComplete](bool success, QString savePath) {
+            [this, completed, failed, total, extractAll, onComplete](bool success, QString) {
                 (*completed)++;
                 emit downloadProgress("Natives", *completed, total);
-                if (!success) {
-                    (*failed)++;
-                } else if (savePath.endsWith(".jar")) {
-                    downloadedJars->append(savePath);
-                }
+                if (!success) (*failed)++;
 
                 if (*completed >= total) {
-                    // Extract only from JARs we just downloaded, not all JARs on disk
-                    emit downloadLog("Extracting native libraries...");
-                    for (const QString &jarPath : *downloadedJars) {
-                        QStringList extracted = FileUtils::extractNativesJar(jarPath, nativesDir);
-                        for (const QString &f : extracted) {
-                            emit downloadLog("  Extracted: " + QFileInfo(f).fileName());
-                        }
-                    }
-                    emit downloadLog("Native libraries extracted to: " + nativesDir);
+                    extractAll();
                     int f = *failed;
                     if (onComplete) onComplete(f == 0, f > 0 ? QString("%1/%2 failed").arg(f).arg(total) : QString());
                 }

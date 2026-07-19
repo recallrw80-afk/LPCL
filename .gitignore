@@ -99,3 +99,4 @@ CMakeUserPresets.json
 /html
 dist
 /docs
+.env

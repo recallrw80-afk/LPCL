@@ -161,7 +161,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
             QTimer::singleShot(500, this, [this, url, savePath, onProgress, onComplete, retriesRemaining]() {
                 downloadInternal(url, savePath, onProgress, onComplete, retriesRemaining - 1);
             });
-            emit downloadFinished(url, false, "Retrying...");
+            // 重试期间不发 downloadFinished——任务尚未终结，误报失败会误导上层
             return;
         }
 

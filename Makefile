@@ -35,7 +35,7 @@ package: package-cli
 
 package-cli:
 	rm -rf $(CLI_PKG_BUILD)
-	cmake -B $(CLI_PKG_BUILD) -S . -G Ninja -DCMAKE_PREFIX_PATH=$(QT_PREFIX) -DCMAKE_BUILD_TYPE=Release
+	cmake -B $(CLI_PKG_BUILD) -S . -G Ninja -DCMAKE_PREFIX_PATH=$(QT_PREFIX) -DCMAKE_BUILD_TYPE=Release -DLPCL_EMBED_CF_KEY=OFF
 	cmake --build $(CLI_PKG_BUILD) --target lpclcore lpcl-cli
 	mkdir -p $(CLI_PKG_DIR)
 	cp $(CLI_PKG_BUILD)/cli/lpcl-cli $(CLI_PKG_DIR)/

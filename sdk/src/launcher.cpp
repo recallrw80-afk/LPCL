@@ -162,7 +162,8 @@ void Launcher::doLaunch() {
     // Log the command
     QString cmdLog = javaExe;
     for (const auto &arg : allArgs) {
-        cmdLog += " " + arg;
+        // 仅显示用：含空格的参数加引号（exec 参数本身保持原样）
+        cmdLog += " " + (arg.contains(' ') ? "\"" + arg + "\"" : arg);
     }
     qCInfo(logLaunch) << "Launch command:" << cmdLog.toUtf8().constData();
     appendLog("> " + cmdLog);

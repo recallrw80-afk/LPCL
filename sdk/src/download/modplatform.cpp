@@ -2,6 +2,7 @@
 #include "download/downloadmanager.h"
 #include "core/settings.h"
 #include "util/crypto_utils.h"
+#include "cf_key_embedded.h"  // CMake 生成：编译期嵌入的 CF key（发布构建为空串）
 
 #include <QJsonDocument>
 #include <QJsonObject>
@@ -11,13 +12,20 @@
 
 static Q_LOGGING_CATEGORY(logMod, "lpcl.mod")
 
+// 安全读取字符串字段：键缺失、为 null 或类型不符时返回空串
+// （nlohmann 的 value(key, "") 在键存在但为 null 时会抛 type_error）
+static QString jsonStr(const json &j, const char *key) {
+    if (!j.contains(key) || !j[key].is_string()) return {};
+    return QString::fromStdString(j[key].get<std::string>());
+}
+
 const QString ModPlatform::CF_API = "https://api.curseforge.com/v1";
 const QString ModPlatform::CF_MIRROR = "https://mod.mcimirror.top/curseforge/v1";
 const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
 ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
-    // 初始化 CurseForge API key：环境变量 → 设置项
+    // 初始化 CurseForge API key：环境变量 → 设置项 → 编译期嵌入（.env）
     // 均无则留空——CF 请求会自动改走 MCIM 镜像（无需鉴权，同 PCL-CE 方案）
     static bool keyResolved = false;
     if (!keyResolved) {
@@ -28,6 +36,8 @@ ModPlatform& ModPlatform::instance() {
             if (!key.isEmpty())
                 m.m_cfApiKey = CryptoUtils::pclDecrypt(key);
         }
+        if (m.m_cfApiKey.isEmpty())
+            m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
         if (m.m_cfApiKey.isEmpty())
             qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
     }
@@ -106,10 +116,11 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
                                 std::function<void(qint64, qint64)> onProgress) {
     if (platform == CurseForge) {
         // CurseForge：先解析下载 URL，再下载文件
+        // 受限文件的 data 字段为 null（禁止第三方分发），jsonStr 安全处理
         QString url = getFileDownloadUrl(platform, modId, fileId);
         cfJsonGet(url, [savePath, onComplete, onProgress](bool ok, QString, json result) {
                 if (!ok) { onComplete(false, "Failed to get download URL"); return; }
-                QString dlUrl = QString::fromStdString(result.value("data", ""));
+                QString dlUrl = jsonStr(result, "data");
                 if (dlUrl.isEmpty()) { onComplete(false, "Empty download URL"); return; }
 
                 DownloadManager::instance().download(dlUrl, savePath, onProgress, onComplete);
@@ -123,7 +134,8 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
                 if (!ver.contains("files") || ver["files"].empty()) {
                     onComplete(false, "No files in version"); return;
                 }
-                QString dlUrl = QString::fromStdString(ver["files"][0].value("url", ""));
+                QString dlUrl = jsonStr(ver["files"][0], "url");
+                if (dlUrl.isEmpty()) { onComplete(false, "Empty download URL"); return; }
                 DownloadManager::instance().download(dlUrl, savePath, onProgress, onComplete);
             });
     }
@@ -151,20 +163,20 @@ void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
             for (const auto &item : result["data"]) {
                 ModResource r;
                 r.id = QString::number(item.value("id", 0));
-                r.name = QString::fromStdString(item.value("name", ""));
-                r.summary = QString::fromStdString(item.value("summary", ""));
-                r.author = QString::fromStdString(
-                    item.value("authors", json::array()).empty() ? ""
-                    : item["authors"][0].value("name", ""));
-                r.iconUrl = QString::fromStdString(item.value("logo", json::object())
-                    .value("thumbnailUrl", ""));
+                r.name = jsonStr(item, "name");
+                r.summary = jsonStr(item, "summary");
+                r.author = (item.contains("authors") && item["authors"].is_array() && !item["authors"].empty())
+                    ? jsonStr(item["authors"][0], "name") : QString();
+                r.iconUrl = (item.contains("logo") && item["logo"].is_object())
+                    ? jsonStr(item["logo"], "thumbnailUrl") : QString();
                 r.downloadCount = item.value("downloadCount", 0);
-                r.websiteUrl = QString::fromStdString(item.value("links", json::object())
-                    .value("websiteUrl", ""));
+                r.websiteUrl = (item.contains("links") && item["links"].is_object())
+                    ? jsonStr(item["links"], "websiteUrl") : QString();
                 r.lastUpdated = 0;
                 if (item.contains("latestFiles") && !item["latestFiles"].empty()) {
                     for (const auto &gv : item["latestFiles"][0].value("gameVersions", json::array())) {
-                        r.versions.append(QString::fromStdString(gv.get<std::string>()));
+                        if (gv.is_string())
+                            r.versions.append(QString::fromStdString(gv.get<std::string>()));
                     }
                 }
                 mods.append(r);
@@ -182,9 +194,9 @@ void ModPlatform::getCurseForgeModDetails(const QString &modId,
             if (!ok || !result.contains("data")) { onComplete(false, r); return; }
             auto &item = result["data"];
             r.id = QString::number(item.value("id", 0));
-            r.name = QString::fromStdString(item.value("name", ""));
-            r.summary = QString::fromStdString(item.value("summary", ""));
-            r.description = QString::fromStdString(item.value("description", ""));
+            r.name = jsonStr(item, "name");
+            r.summary = jsonStr(item, "summary");
+            r.description = jsonStr(item, "description");
             r.downloadCount = item.value("downloadCount", 0);
             onComplete(true, r);
         });
@@ -200,15 +212,22 @@ void ModPlatform::getCurseForgeFiles(const QString &modId,
             for (const auto &item : result["data"]) {
                 ModFileInfo f;
                 f.id = QString::number(item.value("id", 0));
-                f.displayName = QString::fromStdString(item.value("displayName", ""));
-                f.fileName = QString::fromStdString(item.value("fileName", ""));
-                f.downloadUrl = QString::fromStdString(item.value("downloadUrl", ""));
+                f.displayName = jsonStr(item, "displayName");
+                f.fileName = jsonStr(item, "fileName");
+                f.downloadUrl = jsonStr(item, "downloadUrl");
                 f.fileSize = item.value("fileLength", 0);
-                f.sha1 = QString::fromStdString(
-                    item.value("hashes", json::array()).empty() ? ""
-                    : item["hashes"][0].value("value", ""));
+                // 哈希优先取 SHA1（algo=1），盲取 [0] 可能拿到 MD5
+                if (item.contains("hashes") && item["hashes"].is_array()) {
+                    for (const auto &h : item["hashes"]) {
+                        QString v = jsonStr(h, "value");
+                        if (v.isEmpty()) continue;
+                        if (h.value("algo", 0) == 1) { f.sha1 = v; break; }
+                        if (f.sha1.isEmpty()) f.sha1 = v;
+                    }
+                }
                 for (const auto &gv : item.value("gameVersions", json::array())) {
-                    f.gameVersions.append(QString::fromStdString(gv.get<std::string>()));
+                    if (gv.is_string())
+                        f.gameVersions.append(QString::fromStdString(gv.get<std::string>()));
                 }
                 files.append(f);
             }
@@ -234,16 +253,17 @@ void ModPlatform::searchModrinth(const QString &query, int page, int pageSize,
             if (!ok || !result.contains("hits")) { onComplete(false, mods); return; }
             for (const auto &item : result["hits"]) {
                 ModResource r;
-                r.id = QString::fromStdString(item.value("project_id", ""));
-                r.name = QString::fromStdString(item.value("title", ""));
-                r.summary = QString::fromStdString(item.value("description", ""));
-                r.author = QString::fromStdString(item.value("author", ""));
-                r.iconUrl = QString::fromStdString(item.value("icon_url", ""));
+                r.id = jsonStr(item, "project_id");
+                r.name = jsonStr(item, "title");
+                r.summary = jsonStr(item, "description");
+                r.author = jsonStr(item, "author");
+                r.iconUrl = jsonStr(item, "icon_url");
                 r.downloadCount = item.value("downloads", 0);
                 r.websiteUrl = QString("https://modrinth.com/mod/%1").arg(r.id);
                 if (item.contains("versions")) {
                     for (const auto &v : item["versions"]) {
-                        r.versions.append(QString::fromStdString(v.get<std::string>()));
+                        if (v.is_string())
+                            r.versions.append(QString::fromStdString(v.get<std::string>()));
                     }
                 }
                 mods.append(r);
@@ -259,10 +279,10 @@ void ModPlatform::getModrinthModDetails(const QString &modId,
         url, [onComplete](bool ok, QString, json item) {
             ModResource r;
             if (!ok) { onComplete(false, r); return; }
-            r.id = QString::fromStdString(item.value("id", ""));
-            r.name = QString::fromStdString(item.value("title", ""));
-            r.summary = QString::fromStdString(item.value("description", ""));
-            r.description = QString::fromStdString(item.value("body", ""));
+            r.id = jsonStr(item, "id");
+            r.name = jsonStr(item, "title");
+            r.summary = jsonStr(item, "description");
+            r.description = jsonStr(item, "body");
             r.downloadCount = item.value("downloads", 0);
             r.websiteUrl = QString("https://modrinth.com/mod/%1").arg(r.id);
             onComplete(true, r);
@@ -279,18 +299,20 @@ void ModPlatform::getModrinthFiles(const QString &modId,
             for (const auto &ver : result) {
                 if (!ver.contains("files") || ver["files"].empty()) continue;
                 ModFileInfo f;
-                f.id = QString::fromStdString(ver.value("id", ""));
-                f.displayName = QString::fromStdString(ver.value("name", ""));
-                f.fileName = QString::fromStdString(ver["files"][0].value("filename", ""));
-                f.downloadUrl = QString::fromStdString(ver["files"][0].value("url", ""));
+                f.id = jsonStr(ver, "id");
+                f.displayName = jsonStr(ver, "name");
+                f.fileName = jsonStr(ver["files"][0], "filename");
+                f.downloadUrl = jsonStr(ver["files"][0], "url");
                 f.fileSize = ver["files"][0].value("size", 0);
-                f.sha1 = QString::fromStdString(ver["files"][0].value("hashes", json::object())
-                    .value("sha1", ""));
+                f.sha1 = (ver["files"][0].contains("hashes") && ver["files"][0]["hashes"].is_object())
+                    ? jsonStr(ver["files"][0]["hashes"], "sha1") : QString();
                 for (const auto &gv : ver.value("game_versions", json::array())) {
-                    f.gameVersions.append(QString::fromStdString(gv.get<std::string>()));
+                    if (gv.is_string())
+                        f.gameVersions.append(QString::fromStdString(gv.get<std::string>()));
                 }
                 for (const auto &ld : ver.value("loaders", json::array())) {
-                    f.loaders.append(QString::fromStdString(ld.get<std::string>()));
+                    if (ld.is_string())
+                        f.loaders.append(QString::fromStdString(ld.get<std::string>()));
                 }
                 files.append(f);
             }

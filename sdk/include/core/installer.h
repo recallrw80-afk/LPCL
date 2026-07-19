@@ -33,25 +33,27 @@ public:
 
     // ---- Installation ----
 
-    /// Install a mod loader into the current Minecraft version
+    /// Install a mod loader into the given game root directory (.minecraft)
     /// loaderType: "forge", "fabric", "neoforge", "optifine", "liteloader"
-    void installLoader(const QString &loaderType, const QString &mcVersionDir,
+    /// mcDir: 游戏根目录（loader 版本装进 {mcDir}/versions/）；mcVersion: 原版 MC 版本号
+    void installLoader(const QString &loaderType, const QString &mcDir,
+                       const QString &mcVersion,
                        const QString &loaderVersion,
                        const QString &javaPath,
                        std::function<void(bool, QString)> onComplete);
 
-    /// Install Fabric loader (uses installer JAR or direct JSON generation)
-    void installFabric(const QString &mcVersionDir, const QString &mcVersion,
+    /// Install Fabric loader (官方安装器 jar，client 模式)
+    void installFabric(const QString &mcDir, const QString &mcVersion,
                        const QString &loaderVersion, const QString &javaPath,
                        std::function<void(bool, QString)> onComplete);
 
     /// Install Forge loader
-    void installForge(const QString &mcVersionDir, const QString &mcVersion,
+    void installForge(const QString &mcDir, const QString &mcVersion,
                       const QString &forgeVersion, const QString &javaPath,
                       std::function<void(bool, QString)> onComplete);
 
     /// Install NeoForge loader
-    void installNeoForge(const QString &mcVersionDir, const QString &mcVersion,
+    void installNeoForge(const QString &mcDir, const QString &mcVersion,
                           const QString &neoVersion, const QString &javaPath,
                           std::function<void(bool, QString)> onComplete);
 

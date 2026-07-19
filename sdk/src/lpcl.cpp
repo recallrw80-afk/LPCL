@@ -61,6 +61,7 @@ bool launchVersion(const QString &versionId,
 QStringList listJavas() {
     auto &jm = JavaManager::instance();
     jm.scanSystemJava();
+    jm.waitForScanFinished();  // 扫描是异步的，读结果前必须等完成
     return jm.javaNames();
 }
 
@@ -139,14 +140,17 @@ PlayerEntry addPlayer(const QString &name, const QString &avatar) {
 
 bool removePlayer(const QString &uuid) {
     if (uuid.isEmpty()) return false;
+    if (!Settings::instance().playerProfiles().contains(uuid)) return false;
     Settings::instance().removeProfile(uuid);
     if (Settings::instance().selectedPlayer() == uuid)
         Settings::instance().selectPlayer(QString());
     return true;
 }
 
-void selectPlayer(const QString &uuid) {
+bool selectPlayer(const QString &uuid) {
+    if (!Settings::instance().playerProfiles().contains(uuid)) return false;
     Settings::instance().selectPlayer(uuid);
+    return true;
 }
 
 } // namespace lpcl

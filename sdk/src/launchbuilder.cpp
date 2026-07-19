@@ -294,7 +294,9 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
             if (lib.contains("rules") && !checkRules(lib["rules"])) continue;
             // Try to build the library path
             if (lib.contains("downloads") && lib["downloads"].contains("artifact")) {
-                std::string libPath = lib["downloads"]["artifact"]["path"].get<std::string>();
+                // const json 上用 operator[] 取缺失键是 UB，用 value() 兜底
+                std::string libPath = lib["downloads"]["artifact"].value("path", "");
+                if (libPath.empty()) continue;
                 classpathParts.append(version.pathIndie + "libraries/" +
                                        QString::fromStdString(libPath));
             }
@@ -326,11 +328,8 @@ QStringList LaunchBuilder::applyReplacements(const QStringList &args,
         for (auto it = repl.begin(); it != repl.end(); ++it) {
             a.replace("${" + it.key() + "}", it.value());
         }
-        // Quote args with special characters
-        if (a.contains(QRegularExpression("[&|<>^ ]")) &&
-            !a.startsWith('"') && !a.endsWith('"')) {
-            a = "\"" + a.replace('"', "\\\"") + "\"";
-        }
+        // 注意：不要在此加引号——参数直接传给 QProcess::setArguments()，
+        // 它不做 shell 解析，字面引号会成为参数本身的一部分
         result.append(a);
     }
     return result;

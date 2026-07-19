@@ -385,8 +385,13 @@ McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson) {
         QString qVerId = QString::fromStdString(versionId).toLower();
         QString qInherit = QString::fromStdString(inherit).toLower();
 
-        // Forge detection
-        if (qVerId.contains("forge") || qVerId.contains("forge_")) {
+        // NeoForge detection（必须先于 Forge："neoforge" 包含 "forge" 子串）
+        if (qVerId.contains("neoforge")) {
+            info.hasNeoForge = true;
+        }
+
+        // Forge detection（排除 neoforge，否则版本号会被误提取）
+        if (!info.hasNeoForge && qVerId.contains("forge")) {
             info.hasForge = true;
             // Extract Forge version from the version ID
             // Format: 1.20.1-forge-47.2.0
@@ -400,11 +405,6 @@ McModLoaderInfo VersionManager::detectModLoaders(const json &versionJson) {
         // Fabric detection
         if (qVerId.contains("fabric")) {
             info.hasFabric = true;
-        }
-
-        // NeoForge detection
-        if (qVerId.contains("neoforge")) {
-            info.hasNeoForge = true;
         }
 
         // OptiFine detection

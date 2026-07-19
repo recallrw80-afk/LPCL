@@ -5,6 +5,7 @@
 #include <QList>
 #include <QVersionNumber>
 #include <QMutex>
+#include <atomic>
 #include "core/types.h"
 #include "core/lpclcore_export.h"
 
@@ -27,6 +28,9 @@ public:
 
     /// Scan system for all Java installations (async)
     Q_INVOKABLE void scanSystemJava();
+
+    /// 同步等待进行中的扫描结束（CLI 等需要立即读取结果的场景）
+    void waitForScanFinished();
 
     /// Scan a specific folder for java
     Q_INVOKABLE void scanFolder(const QString &folder, bool isUserImport = false);
@@ -95,7 +99,7 @@ private:
 
     QList<JavaEntry> m_javaList;
     JavaEntry *m_selectedJava = nullptr;
-    bool m_isScanning = false;
+    std::atomic<bool> m_isScanning{false};
     mutable QMutex m_mutex;
 };
 

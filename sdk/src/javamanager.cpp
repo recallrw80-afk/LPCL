@@ -126,6 +126,11 @@ void JavaManager::scanSystemJava() {
     });
 }
 
+void JavaManager::waitForScanFinished() {
+    while (m_isScanning.load())
+        QThread::msleep(20);
+}
+
 void JavaManager::scanPathVariable() {
     QString pathEnv = qEnvironmentVariable("PATH");
     if (pathEnv.isEmpty()) {
@@ -409,20 +414,36 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
     // Default: no restrictions
     outMin = QVersionNumber();
     outMax = QVersionNumber();
-    int major = version.vanillaVersion.majorVersion();
-    int minor = version.vanillaVersion.minorVersion();
 
-    // Vanilla version checks
-    if (!version.modLoader.hasAny() || !version.isValid) {
-        if (major < 7) {
-            outMax = QVersionNumber({1, 8, 999, 999}); // <= Java 8
-        } else if (major >= 8 && major < 12) {
-            outMin = QVersionNumber({1, 8, 0, 0});
-            outMax = QVersionNumber({1, 8, 999, 999}); // Java 8
-        } else if (major == 12) {
-            outMax = QVersionNumber({1, 8, 999, 999}); // <= Java 8
-        }
-        // 1.13+: generally no restriction, but older Forge may have
+    // MC 1.x 的特性版本号在第二段（"1.20.1" → 20）
+    int feature = version.vanillaVersion.majorVersion() == 1
+        ? version.vanillaVersion.minorVersion()
+        : version.vanillaVersion.majorVersion();
+    int patch = version.vanillaVersion.segmentCount() > 2
+        ? version.vanillaVersion.segmentAt(2) : 0;
+
+    // 上限约束：null 表示无限制，直接赋值；否则取更严格者
+    // （qMin(null, X) 会返回 null——null 比任何版本都小——上限永远写不进去）
+    auto applyMax = [&outMax](const QVersionNumber &v) {
+        if (outMax.isNull() || v < outMax) outMax = v;
+    };
+
+    // 原版基线约束（对 modloader 版本同样适用——modded 也跑在同一个 MC 上）
+    // 注意 Java 9+ 的版本号首段即主版本（17.0.x），只有 Java 8 及以前是 1.x 格式
+    if (feature < 7) {
+        applyMax(QVersionNumber({1, 8, 999, 999})); // <= Java 8
+    } else if (feature >= 8 && feature <= 12) {
+        outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0}));
+        applyMax(QVersionNumber({1, 8, 999, 999})); // Java 8
+    } else if (feature >= 13 && feature <= 16) {
+        outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0})); // Java 8+
+    } else if (feature == 17) {
+        outMin = qMax(outMin, QVersionNumber({16, 0, 0, 0})); // 1.17 → Java 16+
+    } else if (feature >= 18) {
+        outMin = qMax(outMin, QVersionNumber({17, 0, 0, 0})); // 1.18–1.20.4 → Java 17+
+    }
+    if (feature >= 21 || (feature == 20 && patch >= 5)) {
+        outMin = qMax(outMin, QVersionNumber({21, 0, 0, 0})); // 1.20.5+/1.21+ → Java 21+
     }
 
     // Forge checks
@@ -430,63 +451,62 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
         auto forge = version.modLoader.forgeVersion;
         auto forgeVer = QVersionNumber::fromString(forge);
 
-        if (major >= 6 && major <= 7 && minor <= 2) {
+        if (feature >= 6 && feature <= 7 && patch <= 2) {
             outMin = qMax(outMin, QVersionNumber({1, 7, 0, 0}));
-            outMax = qMin(outMax, QVersionNumber({1, 7, 999, 999})); // Java 7
-        } else if (major <= 12 || !version.isValid) {
-            outMax = qMin(outMax, QVersionNumber({1, 8, 999, 999})); // <= Java 8
-        } else if (major <= 14) {
+            applyMax(QVersionNumber({1, 7, 999, 999})); // Java 7
+        } else if (feature <= 12) {
+            applyMax(QVersionNumber({1, 8, 999, 999})); // <= Java 8
+        } else if (feature <= 14) {
             outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0}));
-            outMax = qMin(outMax, QVersionNumber({1, 10, 999, 999})); // Java 8-10
-        } else if (major == 15) {
+            applyMax(QVersionNumber({10, 999, 999, 999})); // Java 8-10
+        } else if (feature == 15) {
             outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0}));
-            outMax = qMin(outMax, QVersionNumber({1, 15, 999, 999})); // Java 8-15
-        } else if (major == 16 && !forgeVer.isNull()) {
+            applyMax(QVersionNumber({15, 999, 999, 999})); // Java 8-15
+        } else if (feature == 16 && !forgeVer.isNull()) {
             // Forge 34.0.0 ~ 36.2.25: max Java 8u320
             if (forgeVer >= QVersionNumber({34, 0, 0}) && forgeVer <= QVersionNumber({36, 2, 25})) {
-                outMax = qMin(outMax, QVersionNumber({1, 8, 0, 320}));
+                applyMax(QVersionNumber({1, 8, 0, 320}));
             }
             // Forge 36.2.26+ and < 37: max Java 23
             else if (forgeVer >= QVersionNumber({36, 2, 26}) && forgeVer < QVersionNumber({37, 0, 0})) {
-                outMax = qMin(outMax, QVersionNumber({1, 23, 999, 999}));
+                applyMax(QVersionNumber({23, 999, 999, 999}));
             }
-        } else if (major == 17 && !forgeVer.isNull()) {
+        } else if (feature == 17 && !forgeVer.isNull()) {
             // Forge 37.0.0 ~ 37.0.79: max Java 16
             if (forgeVer >= QVersionNumber({37, 0, 0}) && forgeVer <= QVersionNumber({37, 0, 79})) {
-                outMax = qMin(outMax, QVersionNumber({1, 16, 999, 999}));
+                applyMax(QVersionNumber({16, 999, 999, 999}));
             }
-        } else if (major == 18 && version.modLoader.hasOptiFine) {
-            outMax = qMin(outMax, QVersionNumber({1, 18, 999, 999})); // Java 18 max with OptiFine
-        } else if (major == 19 && !forgeVer.isNull()) {
+        } else if (feature == 18 && version.modLoader.hasOptiFine) {
+            applyMax(QVersionNumber({18, 999, 999, 999})); // Java 18 max with OptiFine
+        } else if (feature == 19 && !forgeVer.isNull()) {
             // Forge 45.0.21 ~ 45.0.65: max Java 19
             if (forgeVer >= QVersionNumber({45, 0, 21}) && forgeVer <= QVersionNumber({45, 0, 65})) {
-                outMax = qMin(outMax, QVersionNumber({1, 19, 999, 999}));
+                applyMax(QVersionNumber({19, 999, 999, 999}));
             }
         }
         // Forge 45.0.66 ~ 47.4.8: max Java 21
         if (!forgeVer.isNull() && forgeVer >= QVersionNumber({45, 0, 66}) && forgeVer <= QVersionNumber({47, 4, 8})) {
-            outMax = qMin(outMax, QVersionNumber({1, 21, 999, 999}));
+            applyMax(QVersionNumber({21, 999, 999, 999}));
         }
     }
 
-    // NeoForge checks
-    if (version.modLoader.hasNeoForge) {
-        // 1.20.1 and early 1.20.2: max Java 21
-        outMax = qMin(outMax, QVersionNumber({1, 21, 999, 999}));
+    // NeoForge checks（1.20.x: max Java 21）
+    if (version.modLoader.hasNeoForge && feature == 20) {
+        applyMax(QVersionNumber({21, 999, 999, 999}));
     }
 
     // Fabric checks
     if (version.modLoader.hasFabric && version.isValid) {
-        if (major >= 15 && major <= 16) {
+        if (feature >= 15 && feature <= 16) {
             outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0})); // Java 8+
-        } else if (major >= 18) {
-            outMin = qMax(outMin, QVersionNumber({1, 17, 0, 0})); // Java 17+
+        } else if (feature >= 18) {
+            outMin = qMax(outMin, QVersionNumber({17, 0, 0, 0})); // Java 17+
         }
     }
 
     // LiteLoader: always max Java 8
     if (version.modLoader.hasLiteLoader) {
-        outMax = qMin(outMax, QVersionNumber({1, 8, 999, 999}));
+        applyMax(QVersionNumber({1, 8, 999, 999}));
     }
 }
 
