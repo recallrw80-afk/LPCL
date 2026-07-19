@@ -13,14 +13,20 @@
 #include <QElapsedTimer>
 #include <QEventLoop>
 #include <QFile>
+#include <QPointer>
+#include <QProcess>
+#include <QTimer>
 #include <QUuid>
 #include <QLoggingCategory>
 #include <iostream>
 
 #include "lpcl.h"
+#include "modpack.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "core/javamanager.h"
+#include "util/arg_utils.h"
+#include "util/file_utils.h"
 #include <QDir>
 
 // ---- 中英文切换 ----
@@ -88,6 +94,74 @@ static int handleListJavas() {
 }
 
 // ---- test 自检（CLI 层，逐条验证命令） ----
+
+// ---- 冒烟测试辅助（合成包，几 KB，不依赖本机大文件） ----
+
+struct ImportResult { bool success = false; bool done = false; QString message; };
+
+// 同步等待一次导入完成（带超时；回调捕获 QSharedPointer/QPointer，超时后回调不再访问栈对象）
+static ImportResult importAndWait(const QString &filePath, const QString &name, int timeoutMs = 600000) {
+    auto state = QSharedPointer<ImportResult>::create();
+    QEventLoop loop;
+    QPointer<QEventLoop> loopGuard = &loop;
+    lpcl::importModpack(filePath, name,
+        [](const lpcl::ImportProgress &) {},
+        [state, loopGuard](bool ok, const QString &msg) {
+            state->success = ok; state->message = msg; state->done = true;
+            if (loopGuard) loopGuard->quit();
+        });
+    QTimer::singleShot(timeoutMs, &loop, &QEventLoop::quit);
+    if (!state->done) loop.exec();  // 同步失败路径下 quit 先于 exec，不能裸等
+    if (!state->done) { state->message = "import timeout"; }
+    return *state;
+}
+
+// 生成最小 CurseForge 整合包（1 个真实小 mod JEI；badMod=true 时附加一个必失败的 mod；
+// forgeVer 可用于构造必失败的 modloader 版本）
+static QString makeSyntheticCfPack(const QString &workDir, bool badMod,
+                                   const QString &forgeVer = "47.4.10") {
+    QDir().mkpath(workDir + "/overrides");
+    QFile mf(workDir + "/manifest.json");
+    if (!mf.open(QIODevice::WriteOnly)) return {};
+    QByteArray files = R"({"projectID": 238222, "fileID": 8419086, "required": true})";
+    if (badMod)
+        files += R"(, {"projectID": 999999999, "fileID": 1, "required": true})";
+    mf.write(QByteArray(R"({
+  "minecraft": {"version": "1.20.1", "modLoaders": [{"id": "forge-)" + forgeVer.toUtf8() + R"(", "primary": true}]},
+  "manifestType": "minecraftModpack",
+  "manifestVersion": 1,
+  "name": "LPCLSmokeCF",
+  "version": "1.0",
+  "author": "lpcl-test",
+  "overrides": "overrides",
+  "files": [)" + files + "]\n}"));
+    mf.close();
+    QFile f(workDir + "/overrides/keepme.txt");
+    if (f.open(QIODevice::WriteOnly)) { f.write("test"); f.close(); }
+
+    QString zipPath = workDir + "/pack.zip";
+    QProcess zip;
+    zip.setWorkingDirectory(workDir);
+    zip.start("zip", {"-qr", zipPath, "."});
+    zip.waitForFinished(15000);
+    return zip.exitCode() == 0 ? zipPath : QString();
+}
+
+// 生成最小 HMCL 整合包（1.12.2，验证旧格式下载链）
+static QString makeSyntheticHmclPack(const QString &workDir) {
+    QDir().mkpath(workDir);
+    QFile mf(workDir + "/modpack.json");
+    if (!mf.open(QIODevice::WriteOnly)) return {};
+    mf.write(R"({"name": "LPCLSmoke112", "gameVersion": "1.12.2", "version": "1.0"})");
+    mf.close();
+
+    QString zipPath = workDir + "/pack.zip";
+    QProcess zip;
+    zip.setWorkingDirectory(workDir);
+    zip.start("zip", {"-qr", zipPath, "modpack.json"});
+    zip.waitForFinished(15000);
+    return zip.exitCode() == 0 ? zipPath : QString();
+}
 
 struct TestItem {
     QString cmd;
@@ -241,55 +315,134 @@ static QList<TestItem> runCommandTests() {
         }
     }
 
-    // inpack（多整合包导入测试）
+    // ---- 纯函数单测（无网络） ----
+
+    // mavenNameToPath：maven 坐标 → 仓库路径
     {
-        struct PackTest { QString filePath; QString instanceName; };
-        const QList<PackTest> packs = {
-            {"/home/recall/Downloads/other/蛊真人.zip",                          "蛊真人"},
-            {"/home/recall/Downloads/other/农场物语v1.3.3客户端.mrpack",         "农场物语v1.3.3"},
-            {"/home/recall/Downloads/other/勇者之章Ⅲ v3.11.5 客户端导入包.zip", "勇者之章Ⅲ"},
+        struct Case { const char *in; const char *expect; };
+        const Case cases[] = {
+            {"org.lwjgl:lwjgl:3.2.2", "org/lwjgl/lwjgl/3.2.2/lwjgl-3.2.2.jar"},
+            {"org.lwjgl:lwjgl-glfw:3.3.1:natives-linux",
+             "org/lwjgl/lwjgl-glfw/3.3.1/lwjgl-glfw-3.3.1-natives-linux.jar"},
+            {"net.minecraftforge:forge:1.12.2-14.23.5.2860:universal@zip",
+             "net/minecraftforge/forge/1.12.2-14.23.5.2860/forge-1.12.2-14.23.5.2860-universal.zip"},
         };
+        int bad = 0;
+        for (const auto &c : cases)
+            if (FileUtils::mavenNameToPath(c.in) != c.expect) bad++;
+        if (bad == 0) ok("mavenNameToPath", "3 例通过");
+        else fail("mavenNameToPath", QString("%1/3 例失败").arg(bad));
+    }
 
-        for (const auto &pack : packs) {
-            if (!QFile::exists(pack.filePath)) {
-                warn("inpack", "文件不存在: " + pack.filePath.split('/').last());
-                continue;
-            }
+    // deduplicateArgs：--add-opens 可重复保留、-Xmx 后者覆盖
+    {
+        QStringList in = {"--add-opens", "java.base/java.util=ALL-UNNAMED",
+                          "--add-opens", "java.base/java.lang=ALL-UNNAMED",
+                          "-Xmx1G", "-Xmx2G"};
+        auto out = ArgUtils::deduplicateArgs(in);
+        int opens = out.count("--add-opens");
+        int xmxCount = 0;
+        for (const auto &a : out) if (a.startsWith("-Xmx")) xmxCount++;
+        if (opens == 2 && xmxCount == 1 && out.contains("-Xmx2G"))
+            ok("deduplicateArgs", "可重复 flag 保留 + -Xmx 去重 正常");
+        else
+            fail("deduplicateArgs", "输出异常: " + out.join(" "));
+    }
 
-            // 清理旧实例残留
-            lpcl::removeInstance(pack.instanceName);
+    // ---- 合成包冒烟（inpack 端到端，需要网络与游戏目录） ----
+    {
+        QString folder = Settings::instance().getString("LaunchFolderSelect");
+        if (folder.isEmpty()) {
+            warn("inpack-smoke", "游戏目录未设置，跳过合成包冒烟");
+        } else {
+            VersionManager::instance().setMcFolder(folder);
+            QString base = QDir::temp().filePath("_lpcl_smoke_"
+                + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8));
 
-            QElapsedTimer timer;
-            timer.start();
-            bool success = false;
-            QString message;
-            QEventLoop loop;
+            QString cfOkZip  = makeSyntheticCfPack(base + "/cf_ok", false);
+            QString cfBadZip = makeSyntheticCfPack(base + "/cf_bad", true);
+            QString hmclZip  = makeSyntheticHmclPack(base + "/hmcl");
 
-            bool importDone = false;
-            lpcl::importModpack(pack.filePath, pack.instanceName,
-                [](const lpcl::ImportProgress &) {},
-                [&](bool ok, const QString &msg) {
-                    success = ok;
-                    message = msg;
-                    importDone = true;
-                    loop.quit();
-                });
-            if (!importDone) loop.exec();  // 同步失败路径下 quit 先于 exec，不能裸等
-
-            QString elapsed = QString("%1s").arg(timer.elapsed() / 1000.0, 0, 'f', 1);
-            if (success) {
-                VersionManager::instance().loadLocalVersions();
-                auto ids = VersionManager::instance().versionIds();
-                if (ids.contains(pack.instanceName)) {
-                    ok("inpack", pack.instanceName + ": 导入成功 (" + elapsed + ")");
-                    // 清理实例（versions/ 是全局共享缓存，保留——不能误删原版 MC）
-                    lpcl::removeInstance(pack.instanceName);
-                } else {
-                    fail("inpack", pack.instanceName + ": list 中未找到");
-                }
+            // detectPackType：合成包类型识别
+            if (!cfOkZip.isEmpty() && !hmclZip.isEmpty()) {
+                bool typeOk = detectPackType(cfOkZip) == PackType::CurseForge
+                           && detectPackType(hmclZip) == PackType::HMCL;
+                if (typeOk) ok("detectPackType", "CF/HMCL 合成包识别正确");
+                else fail("detectPackType", "类型识别错误");
             } else {
-                fail("inpack", pack.instanceName + ": " + message + " (" + elapsed + ")");
+                fail("detectPackType", "合成测试包失败（zip 命令不可用？）");
             }
+
+            // CF 成功路：1 个真实 mod（JEI）→ 导入成功 + 实例可见
+            const QString cfName = "__lpcl_smoke_cf__";
+            lpcl::removeInstance(cfName);
+            if (!cfOkZip.isEmpty()) {
+                auto r = importAndWait(cfOkZip, cfName);
+                if (r.success && lpcl::listVersions().contains(cfName))
+                    ok("inpack-cf", "CF 合成包导入成功（mod 下载链路正常）");
+                else
+                    fail("inpack-cf", "导入失败: " + r.message);
+                lpcl::removeInstance(cfName);
+            } else {
+                skip("inpack-cf", "合成包失败");
+            }
+
+            // CF 回滚路：假 mod → 必须导入失败且实例无残留
+            const QString badName = "__lpcl_smoke_bad__";
+            lpcl::removeInstance(badName);
+            if (!cfBadZip.isEmpty()) {
+                auto r = importAndWait(cfBadZip, badName);
+                bool listed = lpcl::listVersions().contains(badName);
+                if (!r.success && !listed)
+                    ok("inpack-rollback", "mod 失败 → 导入失败且无残留");
+                else
+                    fail("inpack-rollback",
+                         QString("预期失败且无残留，实际 success=%1 listed=%2")
+                             .arg(r.success).arg(listed));
+                lpcl::removeInstance(badName);
+            } else {
+                skip("inpack-rollback", "合成包失败");
+            }
+
+            // modloader 回滚路：假 Forge 版本 → 安装必须失败且无残留
+            const QString loaderName = "__lpcl_smoke_loader__";
+            lpcl::removeInstance(loaderName);
+            QString cfLoaderZip = makeSyntheticCfPack(base + "/cf_loader", false, "99.99.99");
+            if (!cfLoaderZip.isEmpty()) {
+                auto r = importAndWait(cfLoaderZip, loaderName);
+                bool listed = lpcl::listVersions().contains(loaderName);
+                if (!r.success && !listed)
+                    ok("inpack-loader-rollback", "modloader 失败 → 导入失败且无残留");
+                else
+                    fail("inpack-loader-rollback",
+                         QString("预期失败且无残留，实际 success=%1 listed=%2")
+                             .arg(r.success).arg(listed));
+                lpcl::removeInstance(loaderName);
+            } else {
+                skip("inpack-loader-rollback", "合成包失败");
+            }
+
+            // HMCL 1.12.2：旧格式库下载 + 老格式 natives 解压
+            const QString hmclName = "__lpcl_smoke_112__";
+            lpcl::removeInstance(hmclName);
+            if (!hmclZip.isEmpty()) {
+                auto r = importAndWait(hmclZip, hmclName);
+                if (!folder.endsWith('/')) folder += '/';
+                bool verOk = QFile::exists(folder + "versions/1.12.2/1.12.2.json")
+                          && QFile::exists(folder + "versions/1.12.2/1.12.2.jar");
+                bool nativesOk = !QDir(folder + "versions/1.12.2/natives")
+                                      .entryList(QDir::Files | QDir::NoDotAndDotDot).isEmpty();
+                if (r.success && verOk && nativesOk)
+                    ok("inpack-112", "1.12.2 旧格式下载 + natives 解压正常");
+                else
+                    fail("inpack-112", QString("success=%1 verOk=%2 nativesOk=%3 (%4)")
+                                         .arg(r.success).arg(verOk).arg(nativesOk).arg(r.message));
+                lpcl::removeInstance(hmclName);
+            } else {
+                skip("inpack-112", "合成包失败");
+            }
+
+            QDir(base).removeRecursively();
         }
     }
 

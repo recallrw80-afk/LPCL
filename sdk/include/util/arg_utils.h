@@ -7,10 +7,10 @@
 namespace ArgUtils {
 
 /// Split Java argument string respecting quotes
-QStringList splitJavaArgs(const QString &str);
+LPCLCORE_EXPORT QStringList splitJavaArgs(const QString &str);
 
 /// Deduplicate Java arguments (last occurrence wins for same prefix)
-QStringList deduplicateArgs(const QStringList &args);
+LPCLCORE_EXPORT QStringList deduplicateArgs(const QStringList &args);
 
 } // namespace ArgUtils
 

@@ -1,0 +1,170 @@
+// 下载管线：MC 本体 → natives → modloader → mods → finalize
+#include "modpack_common.h"
+#include "core/settings.h"
+#include "core/versionmanager.h"
+#include "core/javamanager.h"
+#include "core/installer.h"
+#include "download/downloadmanager.h"
+#include "download/assetdownloader.h"
+#include "download/modplatform.h"
+#include <QDir>
+#include <QRegularExpression>
+#include <QSettings>
+
+void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
+                               const QString &finalDir, const QString &name,
+                               PackProgressCallback onProgress,
+                               PackCompleteCallback onComplete) {
+    // 所有 mod 下载完成后的 finalize
+    auto finalizeNow = [=]() {
+        QDir(finalDir + "PCL/").mkpath(".");
+        QSettings ini(finalDir + "PCL/Setup.ini", QSettings::IniFormat);
+        ini.beginGroup("Setup");
+        ini.setValue("Name", name);
+        ini.setValue("VersionArgumentIndie", 1);
+        ini.setValue("VersionArgumentIndieV2", true);
+        ini.endGroup();
+        ini.sync();
+        // 写入 INI 实例映射（随机目录名 → 显示名）
+        writeInstanceMapping(QDir(finalDir).dirName(), name);
+        // 清理 tmp 目录 + 移除 .incomplete 标记
+        QDir(VersionManager::instance().mcFolder() + "tmp/").removeRecursively();
+        markComplete(finalDir);
+        if (onProgress) onProgress("Complete", 100);
+        if (onComplete) onComplete(true, name);
+    };
+
+    if (index >= mods.size()) {
+        if (onProgress) onProgress("Finalizing...", 95);
+        finalizeNow();
+        return;
+    }
+
+    const auto &mod = mods[index];
+    if (onProgress) onProgress(QString("Downloading mod (%1/%2)...").arg(index + 1).arg(mods.size()),
+                                70 + (30 * index / mods.size()));
+
+    // 任一 mod 下载失败 = 整合包导入失败：回滚删除实例，不再继续
+    auto failNow = [=](const QString &what) {
+        qWarning() << "Mod download failed, rolling back:" << what;
+        cleanupOnError(finalDir);
+        if (onComplete) onComplete(false, "Mod download failed: " + what);
+    };
+
+    if (!mod.url.isEmpty()) {
+        // 直接 URL（Modrinth）
+        DownloadManager::instance().download(mod.url, finalDir + mod.savePath,
+            nullptr,
+            [=](bool ok, QString) {
+                if (!ok) { failNow(mod.url); return; }
+                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+            });
+    } else if (!mod.cfModId.isEmpty()) {
+        // CurseForge — 通过 ModPlatform 解析下载 URL
+        ModPlatform::instance().downloadMod(ModPlatform::CurseForge,
+            mod.cfModId, mod.cfFileId, finalDir + mod.savePath,
+            [=](bool ok, QString) {
+                if (!ok) { failNow("CF mod " + mod.cfModId); return; }
+                downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+            });
+    } else {
+        downloadModsAsync(mods, index + 1, finalDir, name, onProgress, onComplete);
+    }
+}
+
+void downloadAndFinalize(const QString &mcVersion,
+                                 const QString &forgeVer, const QString &neoVer, const QString &fabricVer,
+                                 const QString &finalDir, const QString &name,
+                                 const QList<ModDownloadEntry> &mods,
+                                 PackProgressCallback onProgress,
+                                 PackCompleteCallback onComplete) {
+    // 提取纯净 MC 版本号（去掉 modloader 前缀，如 "1.21.1-NeoForge_21.1.226" → "1.21.1"）
+    auto vanillaVersion = [](const QString &v) -> QString {
+        QRegularExpression re(R"(^\d+\.\d+(?:\.\d+)?)");
+        auto m = re.match(v);
+        return m.hasMatch() ? m.captured(0) : v;
+    };
+
+    auto startModDownloads = [=]() {
+        downloadModsAsync(mods, 0, finalDir, name, onProgress, onComplete);
+    };
+
+    if (mcVersion.isEmpty()) {
+        startModDownloads();
+        return;
+    }
+
+    // Step 1: 下载 MC 版本（JSON + JAR + libraries + assets）
+    QString vanilla = vanillaVersion(mcVersion);
+    if (onProgress) onProgress("Downloading Minecraft " + vanilla + "...", 35);
+    AssetDownloader::instance().downloadVersion(vanilla,
+        [=](bool ok, QString err) {
+            if (!ok) {
+                cleanupOnError(finalDir);
+                if (onComplete) onComplete(false, "Download Minecraft failed: " + err);
+                return;
+            }
+
+            // Step 2: 下载 natives（平台相关原生库）
+            if (onProgress) onProgress("Downloading native libraries...", 55);
+            McVersion ver;
+            ver.id = vanilla;
+            ver.pathVersion = VersionManager::instance().mcFolder() + "versions/" + vanilla + "/";
+            ver.pathJar = ver.pathVersion + vanilla + ".jar";
+            ver.pathIndie = VersionManager::instance().mcFolder();
+            AssetDownloader::instance().downloadNatives(ver,
+                [=](bool ok2, QString err2) {
+                    // natives 失败 = 导入失败（缺 .so 启动必崩，不存在"部分成功"）
+                    if (!ok2) {
+                        cleanupOnError(finalDir);
+                        if (onComplete) onComplete(false, "Download natives failed: " + err2);
+                        return;
+                    }
+
+                    // Step 3: Installing modloader
+                    auto installLoader = [=]() {
+                        QString loaderType;
+                        QString loaderVer;
+                        if (!forgeVer.isEmpty())   { loaderType = "forge"; loaderVer = forgeVer; }
+                        else if (!neoVer.isEmpty()) { loaderType = "neoforge"; loaderVer = neoVer; }
+                        else if (!fabricVer.isEmpty()) { loaderType = "fabric"; loaderVer = fabricVer; }
+
+                        if (loaderType.isEmpty()) {
+                            startModDownloads();
+                            return;
+                        }
+
+                        if (onProgress) onProgress("Installing " + loaderType + "...", 65);
+                        auto &jm = JavaManager::instance();
+                        if (jm.javaList().isEmpty()) {
+                            // inpack 流程此前不会触发 Java 扫描，这里补扫并等待
+                            jm.scanSystemJava();
+                            jm.waitForScanFinished();
+                        }
+                        auto javaList = jm.javaList();
+                        if (javaList.isEmpty()) {
+                            // 没有 Java 装不了 modloader，按失败处理
+                            cleanupOnError(finalDir);
+                            if (onComplete) onComplete(false, "No Java runtime found for modloader install");
+                            return;
+                        }
+                        QString javaPath = javaList.first().pathJava;
+
+                        Installer::instance().installLoader(loaderType,
+                            VersionManager::instance().mcFolder(), vanilla, loaderVer, javaPath,
+                            [=](bool ok3, QString err3) {
+                                // modloader 失败 = 导入失败（mod 全不生效）
+                                if (!ok3) {
+                                    cleanupOnError(finalDir);
+                                    if (onComplete) onComplete(false, "Install modloader failed: " + err3);
+                                    return;
+                                }
+                                startModDownloads();
+                            });
+                    };
+
+                    installLoader();
+                });
+        });
+}
+

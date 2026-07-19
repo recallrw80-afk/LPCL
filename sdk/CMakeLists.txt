@@ -29,7 +29,11 @@ endif()
 # Core sources (no GUI, no QML)
 set(LPCLCORE_SOURCES
     src/lpcl.cpp
-    src/modpack.cpp
+    src/modpack/modpack.cpp
+    src/modpack/common.cpp
+    src/modpack/detect.cpp
+    src/modpack/installers.cpp
+    src/modpack/pipeline.cpp
     src/settings.cpp
     src/javamanager.cpp
     src/versionmanager.cpp
