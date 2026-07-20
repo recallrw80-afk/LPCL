@@ -1,103 +1,124 @@
-# lpcl-cli — LPCL 命令行启动器
+# lpcl-cli — Linux 上的 Minecraft 启动器
 
-纯 C++ 命令行 Minecraft 启动器，链接 `liblpclcore`（QtCore + QtNetwork，无 GUI/QML 依赖），RSS 基线 ~13MB。
+**LPCL（Linux Plain Craft Launcher）** 是 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的跨平台移植版——一个用 C++/Qt 编写的 Minecraft 启动器。`lpcl-cli` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
 
-## 构建与运行
+## 功能特性
+
+- **整合包导入**：CurseForge / Modrinth / MCBBS / MultiMC / HMCL / 启动器外壳包 / 压缩 `.minecraft` / 纯 Mod 包，自动完成游戏本体、Modloader（Forge/NeoForge/Fabric）、Mod 下载
+- **多实例管理**：每个实例独立目录，互不干扰；支持批量删除
+- **原版下载**：任意 MC 版本一键下载安装、校验补齐
+- **Java 管理**：自动检测系统 Java，按 MC 版本自动选择；缺失时自动从 Adoptium 下载安装
+- **多玩家配置**：多个离线玩家档案，支持皮肤类型（slim/wide）
+- **断点续传与校验**：所有下载按 SHA1 校验，重复操作自动跳过已有文件
+- **中文/英文界面**：`set-lang zh` 一键切换中文
+
+## 环境要求
+
+- Linux（x86_64 / aarch64）
+- 运行游戏需要 Java 运行时（没有也没关系，启动时会自动下载）
+
+## 构建
 
 ```bash
 cd LPCL
-make cli                 # 构建 liblpclcore.so + lpcl-cli（Debug）
-make run-cli ARGS=list   # 构建并运行
-make package-cli         # Release 打包 → dist/cli/（lpcl-cli + liblpclcore.so，rpath=$ORIGIN，可独立分发）
+make cli            # 构建 lpcl-cli + liblpclcore.so
+make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
 ```
 
-产物：`LPCL/cmake-build-debug/cli/lpcl-cli`（默认游戏目录为可执行文件旁的 `./mc/`，可用 `set-folder` 修改）。
+## 快速上手
 
-## 命令一览
+```bash
+# 1. 设置游戏目录（默认是程序旁的 ./mc/，可省略）
+./lpcl-cli set-folder /home/yourname/mc
 
-### 实例管理
+# 2. 导入一个整合包
+./lpcl-cli inpack ~/Downloads/某某整合包.zip
+
+# 3. 看看有哪些实例
+./lpcl-cli list
+
+# 4. 启动！
+./lpcl-cli launch
+# 或者直接指定：
+./lpcl-cli launch 实例名
+```
+
+没有整合包？先装个原版：
+
+```bash
+./lpcl-cli install 1.20.1
+./lpcl-cli launch 1.20.1
+```
+
+## 命令参考
+
+### 实例
 
 | 命令 | 说明 |
 |---|---|
-| `list` | 列出已导入的整合包实例 |
-| `list-rm <名称\|*>` | 删除实例（`*` 清空全部，需加引号防 shell 展开） |
-| `mc-list` | 列出原版 MC 版本（全局 `versions/`） |
-| `launch [名称]` | 启动游戏；省略名称时列出实例按序号选择 |
+| `list` | 列出所有实例 |
+| `list-rm <名称\|*>` | 删除实例（`*` 删除全部，注意加引号） |
+| `mc-list` | 列出已下载的原版 MC 版本 |
+| `launch [名称]` | 启动游戏；不填名称则从列表中选择 |
 
-### 导入与下载
+### 下载与导入
 
 | 命令 | 说明 |
 |---|---|
-| `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包 |
-| `install <版本>` | 下载原版 MC 版本（json/jar/libraries/assets/natives；重复调用即校验补齐） |
-| `install-java <大版本>` | 从 Adoptium 下载安装 JRE 到 `{mcFolder}/javas/` 并注册 |
-
-`inpack` 支持的类型：CurseForge / HMCL / MultiMC / MCBBS / Modrinth / LauncherPack（外壳包）/ Compressed `.minecraft` / **Mod 包**（仅 jar，需 `--to <实例名>` 指定目标实例）。
+| `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包；`--r` 重命名实例；Mod 包需 `--to` 指定目标实例 |
+| `install <版本>` | 下载原版 MC 版本 |
+| `install-java <大版本>` | 下载安装 Java（Adoptium JRE） |
 
 ### Java
 
 | 命令 | 说明 |
 |---|---|
-| `list-javas` | 列出可用 Java（PATH、JAVA_HOME、系统目录、`{mcFolder}/javas/`） |
+| `list-javas` | 列出检测到的 Java |
 
-启动时按 MC 版本兼容矩阵自动选择 Java（区间内取最低满足版本）；一个 Java 都没有时自动从 Adoptium 下载所需 JRE。
-
-### 玩家配置
+### 玩家
 
 | 命令 | 说明 |
 |---|---|
-| `player-add <名称> [--avatar <路径>]` | 添加玩家（生成 UUID，首个自动选中） |
+| `player-add <名称> [--avatar <路径>] [--skin <slim\|wide\|default>]` | 添加玩家 |
 | `player-rm <uuid>` | 删除玩家 |
-| `player-list` | 列出玩家（`*` 标记当前选中） |
+| `player-list` | 列出玩家（`*` 为当前选中） |
 | `player-select <uuid>` | 选择当前玩家 |
 
-启动使用选中的玩家 Profile（离线登录）。
-
-### 配置与信息
+### 配置与其他
 
 | 命令 | 说明 |
 |---|---|
-| `set-folder <路径>` | 设置默认游戏目录（持久保存） |
+| `set-folder <路径>` | 设置默认游戏目录 |
 | `set-player <名称>` | 设置玩家名称 |
-| `set-lang <en\|zh>` | 设置界面语言（持久保存，默认英文） |
-| `config` | 查看当前配置（版本、目录、玩家、实例映射） |
-| `test` | 全系统自检（纯函数单测 + 合成包端到端冒烟） |
+| `set-lang <en\|zh>` | 设置界面语言（默认英文） |
+| `config` | 查看当前配置 |
+| `test` | 全系统自检 |
 | `help` / `version` | 帮助 / 版本号 |
 
-无任何 `--` 选项 flag；一次性覆盖游戏目录用 `inpack ... --folder <路径>`（不写回配置）。
+## 游戏文件放在哪
 
-## 存储模型
-
-```
-{mcFolder}/
-├── instances/{随机8位}/        ← 整合包实例（mods/config/PCL/版本文件）
-│   └── .incomplete             ← 导入中标记（成功即删，失败回滚删除整个实例）
-├── versions/                   ← 全局 MC 版本（原版 + loader 安装的版本）
-├── libraries/                  ← 全局共享库（含整合包合并来的依赖）
-├── assets/                     ← 全局共享资源（indexes/objects）
-├── javas/                      ← 自动下载的 JRE
-└── tmp/                        ← 导入临时文件（自动清理）
-```
-
-实例显示名 ↔ 随机目录名的映射存在 `LPCL.ini`（QSettings group 操作）；`list` 只显示映射存在且目录真实的实例，失效映射自动清理。
-
-## 关键行为约定
-
-- **导入必须含下载**：MC 本体 + natives + modloader（Forge/NeoForge/Fabric）+ mod（CurseForge/Modrinth）
-- **失败即回滚**：任一下载步骤失败（MC/natives/modloader/mod）= 整个导入失败，删除半成品实例
-- **启动预检**：launch 前校验主 jar/libraries/assets/natives，vanilla 缺失自动补齐，loader 库缺失明确报错
-- **CurseForge key**：环境变量 `LPCL_CURSEFORGE_API_KEY` → Settings（加密）→ `LPCL/.env` 编译期嵌入（发布构建不含）→ 均无则走 MCIM 镜像（`mod.mcimirror.top`，无需 key）；forgecdn 下载失败自动回退镜像
-- **语言**：`set-lang zh` 后全中文输出
-
-## 目录结构（本目录）
+默认在启动器旁的 `mc/` 目录（可用 `set-folder` 修改）：
 
 ```
-cli/
-├── main.cpp        # 入口、选项解析、命令 handler、dispatchCommand、printHelp
-├── test.cpp        # test 自检子系统（单测 + 合成包冒烟）
-├── i18n.h          # 中英文切换共享
-├── CMakeLists.txt
-└── dist/           # package-cli 产物
+mc/
+├── instances/      # 你导入的每个整合包实例（独立目录）
+├── versions/       # 下载的 MC 版本
+├── libraries/      # 游戏依赖库（多实例共享）
+├── assets/         # 游戏资源（多实例共享）
+└── javas/          # 自动下载的 Java
 ```
 
-业务逻辑一律在 `sdk/`（liblpclcore，`lpcl::` 命名空间返回结构化数据），CLI 只做参数解析和派发。
+## 常见问题
+
+**导入 CurseForge 整合包需要 API key 吗？**
+不需要。未配置 key 时自动使用 MCIM 镜像下载。有 key 的话可以通过环境变量 `LPCL_CURSEFORGE_API_KEY` 配置走官方 API。
+
+**界面怎么变成中文？**
+`./lpcl-cli set-lang zh`（一次设置，永久生效）。
+
+**导入失败会怎样？**
+任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。
+
+## 许可
+
+本项目基于 Qt（LGPL）构建。Windows 原版 [PCL2](https://github.com/Hex-Dragon/PCL2) 与本项目的关系见其原仓库说明。

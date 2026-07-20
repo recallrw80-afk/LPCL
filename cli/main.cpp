@@ -88,24 +88,28 @@ static int handleListJavas() {
 
 // ---- 玩家 Profile 命令 ----
 
-static int handlePlayerAdd(const QStringList &args) {
+static int handlePlayerAdd(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-add <名称> [--avatar <路径>]\n",
-                       "error:  lpcl-cli player-add <name> [--avatar <path>]\n");
+        std::cerr << _("error:  lpcl-cli player-add <名称> [--avatar <路径>] [--skin <slim|wide|default>]\n",
+                       "error:  lpcl-cli player-add <name> [--avatar <path>] [--skin <slim|wide|default>]\n");
         return 1;
     }
-    // 检查 --avatar 标志
-    QString avatar;
-    for (int i = 1; i < args.size(); ++i) {
-        if (args[i] == "--avatar" && i + 1 < args.size()) {
-            avatar = args[i + 1];
-            break;
-        }
+    QString avatar = extractFlag(args, "--avatar");
+    QString skin = extractFlag(args, "--skin");
+    if (args.size() < 2) {
+        std::cerr << _("error: 缺少玩家名称\n", "error: missing player name\n");
+        return 1;
     }
-    auto entry = lpcl::addPlayer(args[1], avatar);
+    if (!skin.isEmpty() && skin != "slim" && skin != "wide" && skin != "default") {
+        std::cerr << _("error: 皮肤类型必须是 slim / wide / default\n",
+                       "error: skin type must be slim / wide / default\n");
+        return 1;
+    }
+    auto entry = lpcl::addPlayer(args[1], avatar, skin.isEmpty() ? "slim" : skin);
     std::cout << _("已添加玩家:\n", "Player added:\n")
               << "  UUID: " << entry.uuid.toStdString() << "\n"
-              << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n";
+              << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n"
+              << "  Skin: " << entry.skinType.toStdString() << "\n";
     if (!entry.avatar.isEmpty())
         std::cout << "  " << _("头像: ", "Avatar: ") << entry.avatar.toStdString() << "\n";
     return 0;
@@ -351,7 +355,7 @@ static void printHelp() {
          "list-rm <name|*>",
          "删除实例（* 清空全部）",
          "Remove instance (* for all)"},
-        {"player-add <名称>", "player-add <name>", "添加玩家配置", "Add player profile"},
+        {"player-add <名称>", "player-add <name>", "添加玩家配置（--avatar/--skin）", "Add player profile (--avatar/--skin)"},
         {"player-rm <uuid>", "player-rm <uuid>", "删除玩家配置", "Remove player profile"},
         {"player-list", "player-list", "列出玩家配置", "List player profiles"},
         {"player-select <uuid>", "player-select <uuid>", "选择当前玩家", "Select current player"},

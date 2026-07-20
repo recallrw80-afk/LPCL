@@ -88,8 +88,9 @@ LPCLCORE_EXPORT ConfigInfo getConfig();
 /// 列出所有玩家配置
 LPCLCORE_EXPORT QList<PlayerEntry> listPlayers();
 
-/// 添加玩家配置（返回生成的条目）
-LPCLCORE_EXPORT PlayerEntry addPlayer(const QString &name, const QString &avatar = QString());
+/// 添加玩家配置（返回生成的条目；skinType: "slim"|"wide"|"default"）
+LPCLCORE_EXPORT PlayerEntry addPlayer(const QString &name, const QString &avatar = QString(),
+                                      const QString &skinType = "slim");
 
 /// 删除玩家配置（UUID 不存在时返回 false）
 LPCLCORE_EXPORT bool removePlayer(const QString &uuid);

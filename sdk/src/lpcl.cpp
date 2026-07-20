@@ -286,11 +286,12 @@ bool launchVersion(const QString &versionId,
         version = VersionManager::instance().loadVersion(versionId);
     if (!version.isValid) return false;
 
-    // 登录：使用选中的玩家 Profile（不再硬编码 "Player"）
+    // 登录：使用选中的玩家 Profile（名字 + 皮肤类型，不再硬编码 "Player"）
     QString playerUuid = Settings::instance().selectedPlayer();
     QString playerName = Settings::instance().getProfile(playerUuid, "Name", "Player");
     if (playerName.isEmpty()) playerName = "Player";
-    auto login = OfflineAuth::createOfflineLogin(playerName);
+    QString skinType = Settings::instance().getProfile(playerUuid, "SkinType", "slim");
+    auto login = OfflineAuth::createOfflineLogin(playerName, skinType);
 
     if (jm.javaList().isEmpty()) {
         jm.scanSystemJava();
@@ -413,17 +414,17 @@ QList<PlayerEntry> listPlayers() {
     return result;
 }
 
-PlayerEntry addPlayer(const QString &name, const QString &avatar) {
+PlayerEntry addPlayer(const QString &name, const QString &avatar, const QString &skinType) {
     QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
     Settings::instance().setProfile(uuid, "Name", name);
     Settings::instance().setProfile(uuid, "Avatar", avatar);
-    Settings::instance().setProfile(uuid, "SkinType", "slim");
+    Settings::instance().setProfile(uuid, "SkinType", skinType);
 
     // 首个玩家自动选中
     if (Settings::instance().playerProfiles().size() == 1)
         Settings::instance().selectPlayer(uuid);
 
-    return {uuid, name, avatar, "slim"};
+    return {uuid, name, avatar, skinType};
 }
 
 bool removePlayer(const QString &uuid) {

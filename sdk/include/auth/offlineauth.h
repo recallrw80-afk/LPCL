@@ -28,9 +28,14 @@ public:
     /// Generate a random client token
     static QString generateClientToken();
 
+    /// UUID 默认皮肤判定（同 PCL McSkinSex）：第 7/15/23/31 位 XOR 后 mod 2，奇=Alex 偶=Steve
+    Q_INVOKABLE static QString skinSexFromUuid(const QString &uuid);
+
     /// Build a complete offline LoginResult for a username.
+    /// skinType: "default"（随机）/ "slim"|"alex"（迭代到 Alex）/ "wide"|"steve"（迭代到 Steve）
     /// Used by the launch page to supply credentials to Launcher.launchVersion().
-    Q_INVOKABLE static LoginResult createOfflineLogin(const QString &username);
+    Q_INVOKABLE static LoginResult createOfflineLogin(const QString &username,
+                                                       const QString &skinType = "default");
 
 private:
     QString m_username;

@@ -48,10 +48,44 @@ QString OfflineAuth::generateClientToken() {
     return QUuid::createUuid().toString(QUuid::WithoutBraces);
 }
 
-LoginResult OfflineAuth::createOfflineLogin(const QString &username) {
+QString OfflineAuth::skinSexFromUuid(const QString &uuid) {
+    // McSkinSex：UUID 第 7/15/23/31 位十六进制 XOR 后 mod 2（同 PCL ModMinecraft.vb:1765）
+    QString u = uuid;
+    u.remove('-');
+    if (u.length() != 32) return "Steve";
+    auto nib = [&](int i) { return QString(u[i]).toInt(nullptr, 16); };
+    return ((nib(7) ^ nib(15) ^ nib(23) ^ nib(31)) % 2) ? "Alex" : "Steve";
+}
+
+// 递增 UUID 末 5 位直到默认皮肤为目标性别（同 PCL McLoginLegacyUuidWithCustomSkin）
+static QString uuidForSkinSex(const QString &uuid, const QString &targetSex) {
+    QString u = uuid;
+    u.remove('-');
+    if (u.length() != 32) return uuid;
+    while (OfflineAuth::skinSexFromUuid(u) != targetSex) {
+        bool ok = false;
+        ulong tail = u.mid(27).toULong(&ok, 16);
+        if (!ok) tail = 0;
+        tail = (tail + 1) & 0xFFFFF;
+        u = u.left(27) + QString("%1").arg(tail, 5, 16, QChar('0'));
+    }
+    return u.left(8) + '-' + u.mid(8, 4) + '-' + u.mid(12, 4) + '-' + u.mid(16, 4) + '-' + u.mid(20);
+}
+
+LoginResult OfflineAuth::createOfflineLogin(const QString &username, const QString &skinType) {
     LoginResult result;
     result.name = username.trimmed();
     result.uuid = generateOfflineUuid(result.name);
+    // 离线皮肤：按类型迭代 UUID 到目标默认皮肤（PCL SkinType 1=Steve 2=Alex 4=按 slim 设置）
+    QString target;
+    if (skinType.compare("slim", Qt::CaseInsensitive) == 0 ||
+        skinType.compare("alex", Qt::CaseInsensitive) == 0)
+        target = "Alex";
+    else if (skinType.compare("wide", Qt::CaseInsensitive) == 0 ||
+             skinType.compare("steve", Qt::CaseInsensitive) == 0)
+        target = "Steve";
+    if (!target.isEmpty())
+        result.uuid = uuidForSkinSex(result.uuid, target);
     result.accessToken = "0"; // Offline mode doesn't need a real token
     result.type = "Legacy";
     result.clientToken = generateClientToken();
