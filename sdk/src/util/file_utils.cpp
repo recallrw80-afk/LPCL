@@ -90,6 +90,11 @@ static QByteArray inflateRaw(const QByteArray &compressed, quint32 expectedSize)
         strm.avail_out = result.size() - strm.total_out;
 
         if (strm.avail_out == 0) {
+            // zip bomb 防护：单条目解压上限 512MB（恶意高压缩比条目会耗尽内存）
+            if (result.size() >= 512 * 1024 * 1024) {
+                inflateEnd(&strm);
+                return {};
+            }
             result.resize(result.size() * 2);
             strm.avail_out = result.size() - strm.total_out;
             strm.next_out = reinterpret_cast<Bytef*>(result.data() + strm.total_out);
@@ -142,30 +147,36 @@ struct ZipEntryInfo {
     quint32 localHeaderOffset = 0;  // local header 偏移（解压时定位数据区）
 };
 
-// 从文件尾部的 EOCD 定位并读取中央目录（zip 规范必有；无 EOCD 则不是有效 zip）
-static QList<ZipEntryInfo> readZipCentralDirectory(QFile &file)
+// 从文件尾部定位 EOCD（zip 规范必有），返回中央目录偏移；找不到返回 -1
+static qint64 findEocdOffset(QFile &file, quint16 *countOut)
 {
-    QList<ZipEntryInfo> entries;
     qint64 fileSize = file.size();
-    if (fileSize < 22) return entries;
+    if (fileSize < 22) return -1;
 
     // EOCD 固定 22 字节 + 最长 65535 字节注释，从尾部回扫签名
     qint64 scanLen = qMin(fileSize, (qint64)(22 + 65535));
     file.seek(fileSize - scanLen);
     QByteArray tail = file.read(scanLen);
 
-    qint64 cdOffset = -1;
-    quint16 cdCount = 0;
     for (int i = tail.size() - 22; i >= 0; --i) {
         quint32 sig = quint32(quint8(tail[i])) | (quint32(quint8(tail[i+1])) << 8) |
                       (quint32(quint8(tail[i+2])) << 16) | (quint32(quint8(tail[i+3])) << 24);
         if (sig == 0x06054b50) {
-            cdCount = quint16(quint8(tail[i+10])) | (quint16(quint8(tail[i+11])) << 8);
-            cdOffset = qint64(quint32(quint8(tail[i+16])) | (quint32(quint8(tail[i+17])) << 8) |
-                              (quint32(quint8(tail[i+18])) << 16) | (quint32(quint8(tail[i+19])) << 24));
-            break;
+            if (countOut)
+                *countOut = quint16(quint8(tail[i+10])) | (quint16(quint8(tail[i+11])) << 8);
+            return qint64(quint32(quint8(tail[i+16])) | (quint32(quint8(tail[i+17])) << 8) |
+                          (quint32(quint8(tail[i+18])) << 16) | (quint32(quint8(tail[i+19])) << 24));
         }
     }
+    return -1;
+}
+
+// 从文件尾部的 EOCD 定位并读取中央目录（zip 规范必有；无 EOCD 则不是有效 zip）
+static QList<ZipEntryInfo> readZipCentralDirectory(QFile &file)
+{
+    QList<ZipEntryInfo> entries;
+    quint16 cdCount = 0;
+    qint64 cdOffset = findEocdOffset(file, &cdCount);
     if (cdOffset < 0 || !file.seek(cdOffset)) return entries;
 
     QDataStream stream(&file);
@@ -224,6 +235,7 @@ static qint64 localDataOffset(QFile &file, quint32 localHeaderOffset)
 static QByteArray inflateEntry(QFile &file, const ZipEntryInfo &e)
 {
     if (e.compressedSize == 0xFFFFFFFF) return {};  // ZIP64 未支持
+    if (e.uncompressedSize > 512 * 1024 * 1024) return {};  // zip bomb 防护：单条目上限 512MB
     qint64 offset = localDataOffset(file, e.localHeaderOffset);
     if (offset < 0 || !file.seek(offset)) return {};
 
@@ -269,6 +281,10 @@ bool extractZip(const QString &zipPath, const QString &destDir, QString *errorOu
     }
     auto entries = readZipCentralDirectory(file);
     if (entries.isEmpty()) {
+        // 区分"不是 zip"和"合法空包"：EOCD 存在且 cdCount=0 → 空包，视为成功
+        quint16 cdCount = 0;
+        if (findEocdOffset(file, &cdCount) >= 0 && cdCount == 0)
+            return true;
         if (errorOut) *errorOut = "Not a valid zip archive: " + zipPath;
         return false;
     }
@@ -276,6 +292,11 @@ bool extractZip(const QString &zipPath, const QString &destDir, QString *errorOu
     int failed = 0;
     for (const auto &e : entries) {
         if (e.name.endsWith('/')) continue;  // 目录条目
+        // zip-slip 防护：拒绝绝对路径和 .. 穿越（恶意整合包可任意写文件）
+        if (e.name.startsWith('/') || e.name.split('/').contains("..")) {
+            qWarning() << "extractZip: skip unsafe entry" << e.name;
+            continue;
+        }
         if (!inflateEntryToFile(file, e, destDir + "/" + e.name)) {
             qWarning() << "extractZip: failed entry" << e.name;
             failed++;
@@ -346,6 +367,117 @@ bool copyDir(const QString &src, const QString &dst)
         }
     }
     return ok;
+}
+
+// ---- tar.gz 解压（Adoptium JRE 包用） ----
+
+// gzip 解压（inflateInit2 带 gzip 头，windowBits = 15+16）
+static QByteArray gunzip(const QByteArray &compressed)
+{
+    z_stream strm;
+    memset(&strm, 0, sizeof(strm));
+    strm.next_in = reinterpret_cast<Bytef*>(const_cast<char*>(compressed.constData()));
+    strm.avail_in = compressed.size();
+
+    if (inflateInit2(&strm, 15 + 16) != Z_OK)
+        return {};
+
+    QByteArray result(compressed.size() * 3 + 4096, Qt::Uninitialized);
+    int ret;
+    do {
+        if (strm.total_out >= (size_t)result.size())
+            result.resize(result.size() * 2);
+        strm.next_out = reinterpret_cast<Bytef*>(result.data() + strm.total_out);
+        strm.avail_out = result.size() - strm.total_out;
+        ret = inflate(&strm, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR ||
+            ret == Z_BUF_ERROR || ret == Z_NEED_DICT) {
+            inflateEnd(&strm);
+            return {};
+        }
+    } while (ret != Z_STREAM_END);
+
+    result.resize(strm.total_out);
+    inflateEnd(&strm);
+    return result;
+}
+
+// tar 头的 size 字段（八进制 ASCII）
+static qint64 tarOctal(const char *p, int len)
+{
+    qint64 v = 0;
+    for (int i = 0; i < len && p[i] >= '0' && p[i] <= '7'; ++i)
+        v = v * 8 + (p[i] - '0');
+    return v;
+}
+
+bool extractTarGz(const QString &tgzPath, const QString &destDir, QString *errorOut)
+{
+    QFile f(tgzPath);
+    if (!f.open(QIODevice::ReadOnly)) {
+        if (errorOut) *errorOut = "Cannot open: " + tgzPath;
+        return false;
+    }
+    QByteArray tar = gunzip(f.readAll());
+    f.close();
+    if (tar.isEmpty()) {
+        if (errorOut) *errorOut = "gzip decompress failed: " + tgzPath;
+        return false;
+    }
+
+    int failed = 0;
+    qint64 pos = 0;
+    QString longName;
+    while (pos + 512 <= tar.size()) {
+        const char *h = tar.constData() + pos;
+        if (h[0] == '\0') break;  // 空块结束
+
+        QString name = longName.isEmpty()
+            ? QString::fromUtf8(QByteArray(h, strnlen(h, 100)))
+            : longName;
+        longName.clear();
+        qint64 size = tarOctal(h + 124, 12);
+        char type = h[156];
+        pos += 512;
+
+        if (type == 'L') {
+            // GNU 长文件名：本块内容是名字（含结尾 NUL），下一个头才是真实条目
+            if (pos + size > tar.size()) break;
+            longName = QString::fromUtf8(QByteArray(tar.constData() + pos, size));
+            while (longName.endsWith('\0')) longName.chop(1);
+            pos += (size + 511) / 512 * 512;
+            continue;
+        }
+        // zip-slip 防护：拒绝绝对路径和 .. 穿越
+        if (name.startsWith('/') || name.split('/').contains("..")) {
+            pos += (size + 511) / 512 * 512;
+            continue;
+        }
+        if (type == '5' || name.endsWith('/')) {
+            QDir().mkpath(destDir + "/" + name);
+        } else if (type == '0' || type == '\0') {
+            QString outPath = destDir + "/" + name;
+            QDir().mkpath(QFileInfo(outPath).absolutePath());
+            QFile out(outPath);
+            if (!out.open(QIODevice::WriteOnly) ||
+                pos + size > tar.size() ||
+                out.write(tar.constData() + pos, size) != size) {
+                failed++;
+            } else {
+                out.close();
+                // 保留可执行位（JRE 的 bin/ 工具需要）
+                qint64 mode = tarOctal(h + 100, 8);
+                if (mode & 0100)
+                    QFile::setPermissions(outPath, QFile::permissions(outPath) |
+                        QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther);
+            }
+        }
+        pos += (size + 511) / 512 * 512;
+    }
+
+    if (errorOut && failed > 0)
+        *errorOut = QString("%1 entries failed").arg(failed);
+    return failed == 0;
 }
 
 } // namespace FileUtils

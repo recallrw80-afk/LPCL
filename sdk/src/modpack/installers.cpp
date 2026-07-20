@@ -251,6 +251,10 @@ void installModrinth(const QString &filePath, const QString &packDir,
         for (const auto &f : index["files"]) {
             ModDownloadEntry m;
             m.savePath = QString::fromStdString(f.value("path", "mods/unknown.jar"));
+            // zip-slip 防护：path 必须是相对且不越界
+            while (m.savePath.startsWith('/')) m.savePath.remove(0, 1);
+            if (m.savePath.split('/').contains(".."))
+                m.savePath = "mods/" + QFileInfo(m.savePath).fileName();
             if (f.contains("downloads") && f["downloads"].is_array() && !f["downloads"].empty()
                 && f["downloads"][0].is_string()) {
                 m.url = QString::fromStdString(f["downloads"][0].get<std::string>());
@@ -315,14 +319,46 @@ static QPair<QString, bool> findMcOrPclRoot(const QString &dir) {
     return {{}, false};
 }
 
-// 从 .minecraft/versions/ 目录提取 MC 版本名
+// 从 .minecraft/versions/ 提取 MC 版本（读版本 json 判定，而非只看目录名——
+// 目录名可能是 loader 命名，如 fabric-loader-0.16.10-1.21.1、neoforge-21.1.66）
 static QString detectMcVersion(const QString &rootDir) {
     QString base = QDir(rootDir + "/.minecraft").exists() ? rootDir + "/.minecraft" : rootDir;
     QDir vd(base + "/versions");
     if (!vd.exists()) return {};
     for (const auto &entry : vd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-        if (QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json"))
-            return entry.fileName();
+        QString dirName = entry.fileName();
+        QString jsonPath = entry.absoluteFilePath() + "/" + dirName + ".json";
+        if (!QFile::exists(jsonPath)) continue;
+
+        // NeoForge 目录命名：neoforge-{major}.{minor}[.patch] → MC 1.{major}.{minor}
+        QRegularExpression neoRe(R"(^neoforge-(\d+)\.(\d+))");
+        auto neoM = neoRe.match(dirName);
+        if (neoM.hasMatch())
+            return QString("1.%1.%2").arg(neoM.captured(1), neoM.captured(2));
+
+        // fabric-loader-{loaderVer}-{mcVer}：取末尾的 MC 版本号
+        QRegularExpression tailRe(R"((\d+\.\d+(?:\.\d+)?)$)");
+        auto tailM = tailRe.match(dirName);
+        if (dirName.startsWith("fabric-loader-") && tailM.hasMatch())
+            return tailM.captured(1);
+
+        // 读 json：inheritsFrom 优先，id 以数字版本开头次之
+        QFile f(jsonPath);
+        if (f.open(QIODevice::ReadOnly)) {
+            json j = parseJsonSafe(f.readAll());
+            f.close();
+            QString inherit = QString::fromStdString(j.value("inheritsFrom", ""));
+            if (!inherit.isEmpty()) return inherit;
+            QString id = QString::fromStdString(j.value("id", ""));
+            QRegularExpression idRe(R"(^\d+\.\d+(?:\.\d+)?)");
+            auto idM = idRe.match(id);
+            if (idM.hasMatch()) return idM.captured(0);
+        }
+
+        // 目录名本身像 MC 版本号（PCL 风格，如 1.21.1-NeoForge_21.1.226）
+        QRegularExpression dirRe(R"(^\d+\.\d+(?:\.\d+)?)");
+        auto dirM = dirRe.match(dirName);
+        if (dirM.hasMatch()) return dirM.captured(0);
     }
     return {};
 }
@@ -599,7 +635,13 @@ void installCompressed(const QString &filePath, const QString &packDir,
     if (!mcRoot.isEmpty()) {
         QString innerDir = workDir + mcRoot;
         if (QDir(innerDir).exists() && innerDir != workDir) {
-            copyDir(innerDir, workDir);
+            // 复制失败不能删原件继续——按失败回滚
+            if (!copyDir(innerDir, workDir)) {
+                QDir(workDir).removeRecursively();
+                cleanupOnError(finalDir);
+                if (onComplete) onComplete(false, "Copy inner content failed");
+                return;
+            }
             QDir(innerDir).removeRecursively();
         }
     }
@@ -612,6 +654,15 @@ void installCompressed(const QString &filePath, const QString &packDir,
         return;
     }
     QDir(workDir).removeRecursively();
+
+    // 包内 assets/libraries 合并进全局共享目录——资源不能丢
+    for (const auto &shared : {"assets", "libraries"}) {
+        QString src = finalDir + shared;
+        if (QDir(src).exists()) {
+            if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
+            QDir(src).removeRecursively();
+        }
+    }
 
     QDir(finalDir + "PCL/").mkpath(".");
     QSettings ini(finalDir + "PCL/Setup.ini", QSettings::IniFormat);

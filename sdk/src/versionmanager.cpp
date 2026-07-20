@@ -27,6 +27,18 @@ VersionManager& VersionManager::instance() {
 
 // Minecraft folder
 
+QString VersionManager::mcFolder() {
+    if (m_mcFolder.isEmpty()) {
+        // 惰性解析：Settings 的 LaunchFolderSelect → 默认可执行文件旁 ./mc/
+        // （组 A 命令（如 list-javas）不走 setMcFolder，也依赖此默认值）
+        QString saved = Settings::instance().getString("LaunchFolderSelect");
+        if (saved.isEmpty())
+            saved = QCoreApplication::applicationDirPath() + "/mc/";
+        m_mcFolder = QDir(saved).absolutePath() + "/";
+    }
+    return m_mcFolder;
+}
+
 void VersionManager::setMcFolder(const QString &path, bool persist) {
     QString normalized = QDir(path).absolutePath() + "/";
     if (m_mcFolder == normalized) return;
@@ -394,6 +406,13 @@ McVersion VersionManager::parseVersionJson(const QString &jsonPath) {
     ver.pathJson = jsonPath;
     ver.pathVersion = QFileInfo(jsonPath).absolutePath() + "/";
     ver.pathJar = ver.pathVersion + ver.id + ".jar";
+    if (!QFile::exists(ver.pathJar)) {
+        // modded 版本目录只有 json——client jar 在 vanilla 目录
+        QString vanillaStr = ver.vanillaVersion.toString();
+        QString vanillaJar = m_mcFolder + "versions/" + vanillaStr + "/" + vanillaStr + ".jar";
+        if (!vanillaStr.isEmpty() && QFile::exists(vanillaJar))
+            ver.pathJar = vanillaJar;
+    }
     // pathIndie may differ for version isolation — same as pathVersion for now
     ver.pathIndie = m_mcFolder;
 

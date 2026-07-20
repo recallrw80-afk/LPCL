@@ -50,7 +50,14 @@ LPCLCORE_EXPORT QStringList listVersions();
 LPCLCORE_EXPORT QStringList listMcVersions();
 
 /// 安装指定版本（当前为桩实现）
-LPCLCORE_EXPORT bool installVersion(const QString &versionId);
+/// 下载原版 MC 版本（json + jar + libraries + assets + natives，同步等待完成）
+/// 已存在的文件按 sha1 跳过——重复调用即"校验/补齐"
+LPCLCORE_EXPORT bool installVersion(const QString &versionId,
+                                    std::function<void(const ImportProgress &)> onProgress = nullptr);
+
+/// 自动下载并安装指定大版本的 Java（Adoptium JRE，解压到 {mcFolder}/javas/ 并注册）
+/// errOut 为失败原因；majorVersion <= 0 时按 8 处理
+LPCLCORE_EXPORT bool installJavaRuntime(int majorVersion, QString *errOut);
 
 /// 启动游戏（离线模式，异步）
 LPCLCORE_EXPORT bool launchVersion(const QString &versionId,

@@ -13,6 +13,7 @@
 
 void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
                                const QString &finalDir, const QString &name, const QString &mcVersion,
+                               const QString &loaderType, const QString &loaderVer,
                                PackProgressCallback onProgress,
                                PackCompleteCallback onComplete) {
     // 所有 mod 下载完成后的 finalize
@@ -24,7 +25,7 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
         ini.setValue("VersionArgumentIndie", 1);
         ini.setValue("VersionArgumentIndieV2", true);
         // 记录版本 json 名——launch 时据此解析（实例内版本文件夹/全局 loader 目录/vanilla）
-        QString versionName = resolveInstanceVersionName(finalDir, mcVersion);
+        QString versionName = resolveInstanceVersionName(finalDir, mcVersion, loaderType, loaderVer);
         if (!versionName.isEmpty()) ini.setValue("Version", versionName);
         ini.endGroup();
         ini.sync();
@@ -60,7 +61,7 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
             nullptr,
             [=](bool ok, QString) {
                 if (!ok) { failNow(mod.url); return; }
-                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, loaderType, loaderVer, onProgress, onComplete);
             });
     } else if (!mod.cfModId.isEmpty()) {
         // CurseForge — 通过 ModPlatform 解析下载 URL
@@ -68,10 +69,10 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
             mod.cfModId, mod.cfFileId, finalDir + mod.savePath,
             [=](bool ok, QString) {
                 if (!ok) { failNow("CF mod " + mod.cfModId); return; }
-                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
+                downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, loaderType, loaderVer, onProgress, onComplete);
             });
     } else {
-        downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, onProgress, onComplete);
+        downloadModsAsync(mods, index + 1, finalDir, name, mcVersion, loaderType, loaderVer, onProgress, onComplete);
     }
 }
 
@@ -81,8 +82,14 @@ void downloadAndFinalize(const QString &mcVersion,
                                  const QList<ModDownloadEntry> &mods,
                                  PackProgressCallback onProgress,
                                  PackCompleteCallback onComplete) {
+    // 确定 modloader（forge > neoforge > fabric）
+    QString loaderType, loaderVer;
+    if (!forgeVer.isEmpty())       { loaderType = "forge"; loaderVer = forgeVer; }
+    else if (!neoVer.isEmpty())    { loaderType = "neoforge"; loaderVer = neoVer; }
+    else if (!fabricVer.isEmpty()) { loaderType = "fabric"; loaderVer = fabricVer; }
+
     auto startModDownloads = [=]() {
-        downloadModsAsync(mods, 0, finalDir, name, mcVersion, onProgress, onComplete);
+        downloadModsAsync(mods, 0, finalDir, name, mcVersion, loaderType, loaderVer, onProgress, onComplete);
     };
 
     if (mcVersion.isEmpty()) {
@@ -119,12 +126,6 @@ void downloadAndFinalize(const QString &mcVersion,
 
                     // Step 3: Installing modloader
                     auto installLoader = [=]() {
-                        QString loaderType;
-                        QString loaderVer;
-                        if (!forgeVer.isEmpty())   { loaderType = "forge"; loaderVer = forgeVer; }
-                        else if (!neoVer.isEmpty()) { loaderType = "neoforge"; loaderVer = neoVer; }
-                        else if (!fabricVer.isEmpty()) { loaderType = "fabric"; loaderVer = fabricVer; }
-
                         if (loaderType.isEmpty()) {
                             startModDownloads();
                             return;
@@ -137,14 +138,19 @@ void downloadAndFinalize(const QString &mcVersion,
                             jm.scanSystemJava();
                             jm.waitForScanFinished();
                         }
-                        auto javaList = jm.javaList();
-                        if (javaList.isEmpty()) {
+                        // 按 MC 版本兼容矩阵选 Java（老 Forge 安装器需要 Java 8，
+                        // 不能拿扫描列表的第一个）
+                        McVersion jver;
+                        jver.vanillaVersion = QVersionNumber::fromString(vanilla);
+                        JavaEntry je = jm.selectJavaForVersion(jver);
+                        if (je.pathJava.isEmpty()) je = jm.selectJava();
+                        QString javaPath = je.pathJava;
+                        if (javaPath.isEmpty()) {
                             // 没有 Java 装不了 modloader，按失败处理
                             cleanupOnError(finalDir);
                             if (onComplete) onComplete(false, "No Java runtime found for modloader install");
                             return;
                         }
-                        QString javaPath = javaList.first().pathJava;
 
                         Installer::instance().installLoader(loaderType,
                             VersionManager::instance().mcFolder(), vanilla, loaderVer, javaPath,

@@ -333,6 +333,8 @@ static void printHelp() {
         {"set-player <名称>", "set-player <name>", "设置玩家名称",         "Set player name"},
         {"set-lang <en|zh>", "set-lang <en|zh>", "设置界面语言（持久保存）", "Set UI language (persistent)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
+        {"install <版本>",  "install <version>", "下载原版 MC 版本",     "Download a vanilla MC version"},
+        {"install-java <大版本>", "install-java <major>", "下载安装 Java（Adoptium JRE）", "Download & install Java (Adoptium JRE)"},
         {"list-rm <名称|*>", "list-rm <name|*>", "删除实例（* 清空全部）", "Remove instance (* for all)"},
         {"player-add <名称>","player-add <name>",  "添加玩家配置",          "Add player profile"},
         {"player-rm <uuid>", "player-rm <uuid>",  "删除玩家配置",          "Remove player profile"},
@@ -393,6 +395,61 @@ static int handleConfig() {
     return 0;
 }
 
+static int handleInstall(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli install <MC版本>\n",
+                       "error:  lpcl-cli install <mc-version>\n");
+        return 1;
+    }
+    std::cout << _(QString("正在下载 MC %1 ...\n").arg(args[1]).toStdString(),
+                   QString("Downloading MC %1 ...\n").arg(args[1]).toStdString());
+    bool ok = lpcl::installVersion(args[1],
+        [](const lpcl::ImportProgress &p) {
+            if (p.percent >= 0) {
+                int bars = p.percent / 5;
+                std::cout << "\r  [";
+                for (int i = 0; i < 20; ++i)
+                    std::cout << (i < bars ? "=" : i == bars ? ">" : " ");
+                std::cout << "] " << p.percent << "% " << p.step.toStdString();
+                std::cout.flush();
+            } else {
+                std::cout << "\r  " << p.step.toStdString() << "                    ";
+                std::cout.flush();
+            }
+        });
+    std::cout << std::endl;
+    if (ok) {
+        std::cout << "success" << std::endl;
+        return 0;
+    }
+    std::cerr << _("error:  下载失败（版本不存在或网络错误）\n",
+                   "error:  download failed (version not found or network error)\n");
+    return 1;
+}
+
+static int handleInstallJava(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli install-java <大版本>\n",
+                       "error:  lpcl-cli install-java <major>\n");
+        return 1;
+    }
+    bool okNum = false;
+    int major = args[1].toInt(&okNum);
+    if (!okNum || major <= 0) {
+        std::cerr << _("error:  无效的 Java 大版本\n", "error:  invalid Java major version\n");
+        return 1;
+    }
+    std::cout << _(QString("正在下载 JRE %1 ...\n").arg(major).toStdString(),
+                   QString("Downloading JRE %1 ...\n").arg(major).toStdString());
+    QString err;
+    if (!lpcl::installJavaRuntime(major, &err)) {
+        std::cerr << _("error:  ", "error: ") << err.toStdString() << std::endl;
+        return 1;
+    }
+    std::cout << "success" << std::endl;
+    return 0;
+}
+
 // ---- 命令派发 ----
 
 /// 解析 mcFolder 并派发到对应处理函数。
@@ -435,6 +492,8 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
 
     if (cmd == "list")     return handleList();
     if (cmd == "mc-list")  return handleMcList();
+    if (cmd == "install")  return handleInstall(args);
+    if (cmd == "install-java") return handleInstallJava(args);
     if (cmd == "launch")   return handleLaunch(args);
     if (cmd == "inpack")  return handleInpack(args);
     if (cmd == "list-rm") return handleRm(args);

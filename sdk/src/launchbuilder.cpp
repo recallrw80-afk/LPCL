@@ -129,16 +129,13 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
         args.append(QString("-Xms%1m").arg(minMemMB));
     }
 
-    // GC selection
+    // GC selection: 0=Auto（<21 用 G1，21+ 用 ZGC）、1=强制 G1GC、2=强制 ZGC、3=自定义、4=优化 G1GC
     int gcType = Settings::instance().getInstance(version.id, "VersionAdvanceGC", "0").toInt();
     if (gcType <= 0) gcType = Settings::instance().getInt("LaunchAdvanceGC");
     if (gcType != 3) { // 3 = custom/user-defined
-        bool useG1GC = false;
-        if ((gcType == 0 && java.majorVersion < 15) ||
-            (gcType == 1 && java.majorVersion < 21) ||
-            (gcType == 2 || gcType == 4)) {
-            useG1GC = true;
-        }
+        bool useG1GC = (gcType == 1 || gcType == 4) ||
+                       (gcType == 0 && java.majorVersion < 21);
+        bool useZGC  = !useG1GC && (gcType == 2 || gcType == 0);
 
         // Remove existing GC args
         QRegularExpression gcArgRe(R"(^-XX:[+-]?(Use\w+GC|ZGenerational|UseCompactObjectHeaders|G1\w+Percent|G1\w+Size|MaxGCPauseMillis|MinHeapFreeRatio))");
@@ -147,16 +144,30 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
         if (useG1GC) {
             args.append("-XX:+UseG1GC");
             if (gcType == 4) {
-                // Optimized G1GC
-                args.append("-XX:G1NewSizePercent=20");
+                // 优化 G1（MC 社区通用调优集，对齐 PCL 优化档）
+                args.append("-XX:+ParallelRefProcEnabled");
+                args.append("-XX:MaxGCPauseMillis=200");
+                args.append("-XX:+UnlockExperimentalVMOptions");
+                args.append("-XX:+DisableExplicitGC");
+                args.append("-XX:+AlwaysPreTouch");
+                args.append("-XX:G1NewSizePercent=30");
+                args.append("-XX:G1MaxNewSizePercent=40");
+                args.append("-XX:G1HeapRegionSize=8M");
                 args.append("-XX:G1ReservePercent=20");
-                args.append("-XX:G1HeapRegionSize=32M");
-                args.append("-XX:MaxGCPauseMillis=50");
+                args.append("-XX:G1HeapWastePercent=5");
+                args.append("-XX:G1MixedGCCountTarget=4");
+                args.append("-XX:InitiatingHeapOccupancyPercent=15");
+                args.append("-XX:G1MixedGCLiveThresholdPercent=90");
+                args.append("-XX:G1RSetUpdatingPauseTimePercent=5");
+                args.append("-XX:SurvivorRatio=32");
+                args.append("-XX:MaxTenuringThreshold=1");
             }
-        } else {
+        } else if (useZGC) {
             args.append("-XX:+UseZGC");
-            // ZGenerational 仅 Java 21-23 有效（24+ 已默认整合并被移除）
             if (java.majorVersion >= 21 && java.majorVersion < 24) {
+                // ZGenerational 在 21-22 是 preview（需解锁实验参数），23 转正式
+                if (java.majorVersion < 23)
+                    args.append("-XX:+UnlockExperimentalVMOptions");
                 args.append("-XX:+ZGenerational");
             }
         }

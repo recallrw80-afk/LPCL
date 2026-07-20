@@ -30,7 +30,7 @@ public:
 
     // ---- Minecraft folder ----
 
-    QString mcFolder() const { return m_mcFolder; }
+    QString mcFolder();
     void setMcFolder(const QString &path, bool persist = true);
 
     QList<McFolder> loadFolderList();

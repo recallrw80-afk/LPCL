@@ -52,8 +52,9 @@ bool copyOrFail(const QString &src, const QString &finalDir, PackCompleteCallbac
 QString extractVanillaVersion(const QString &v);
 
 // 确定实例应记录的版本 json 名（写进 Setup.ini 的 Version 键）：
-// 实例内版本文件夹（带 json）→ 全局 versions/ 下 vanilla 前缀的 loader 目录 → vanilla
-QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion);
+// 实例内版本文件夹（带 json）→ 按 loader 类型精确匹配全局 versions/ → vanilla
+QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion,
+                                   const QString &loaderType = {}, const QString &loaderVer = {});
 
 // ---- 下载管线（pipeline.cpp） ----
 

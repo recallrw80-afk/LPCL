@@ -1,5 +1,6 @@
 #include "core/javamanager.h"
 #include "core/settings.h"
+#include "core/versionmanager.h"
 
 #include <QDir>
 #include <QFileInfo>
@@ -26,6 +27,11 @@ QStringList JavaManager::javaSearchPaths() {
             paths.append(QDir(path).absolutePath());
         }
     };
+
+    // LPCL 自动下载的 Java 存放目录（{mcFolder}/javas/）——确保重装/重启后仍被发现
+    QString mcFolder = VersionManager::instance().mcFolder();
+    if (!mcFolder.isEmpty())
+        addIfExists(mcFolder + "javas/");
 
     switch (currentPlatform()) {
     case Platform::Windows: {
@@ -240,12 +246,14 @@ void JavaManager::scanFolder(const QString &folder, bool isUserImport) {
 // ---- Deduplicating append (thread-safe) ----
 
 bool JavaManager::addJavaEntry(const JavaEntry &entry) {
-    QMutexLocker lock(&m_mutex);
-    for (const auto &e : m_javaList) {
-        if (e.pathFolder == entry.pathFolder) return false;
+    {
+        QMutexLocker lock(&m_mutex);
+        for (const auto &e : m_javaList) {
+            if (e.pathFolder == entry.pathFolder) return false;
+        }
+        m_javaList.append(entry);
     }
-    m_javaList.append(entry);
-    emit javaListChanged();
+    emit javaListChanged();  // 锁外发送，避免直连槽回调造成死锁
     return true;
 }
 
@@ -435,8 +443,8 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
 
     // 原版基线约束（对 modloader 版本同样适用——modded 也跑在同一个 MC 上）
     // 注意 Java 9+ 的版本号首段即主版本（17.0.x），只有 Java 8 及以前是 1.x 格式
-    if (feature < 7) {
-        applyMax(QVersionNumber({1, 8, 999, 999})); // <= Java 8
+    if (feature < 8) {
+        applyMax(QVersionNumber({1, 8, 999, 999})); // 1.7.x 及更早：Java 8 封顶
     } else if (feature >= 8 && feature <= 12) {
         outMin = qMax(outMin, QVersionNumber({1, 8, 0, 0}));
         applyMax(QVersionNumber({1, 8, 999, 999})); // Java 8

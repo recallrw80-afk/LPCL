@@ -129,6 +129,8 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
+    // 传输超时：防止僵死的连接让下载链永久挂起（超时后走重试）
+    request.setTransferTimeout(30000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
@@ -228,6 +230,8 @@ QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
     emit downloadStarted(url);
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
+    // 传输超时：防止僵死的连接让下载链永久挂起（超时后走重试）
+    request.setTransferTimeout(30000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);

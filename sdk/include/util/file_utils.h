@@ -49,6 +49,10 @@ inline QString pathJoin(const QString &a, const QString &b) {
     return a + '/' + b;
 }
 
+/// 解压 .tar.gz（gzip 解压 + tar 遍历；用于 Adoptium JRE 包，替代外部 tar 命令）
+LPCLCORE_EXPORT bool extractTarGz(const QString &tgzPath, const QString &destDir,
+                                  QString *errorOut = nullptr);
+
 } // namespace FileUtils
 
 #endif // LPCL_FILE_UTILS_H

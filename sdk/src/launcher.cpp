@@ -119,8 +119,11 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
 
     // Pick best Java for this version
     JavaEntry bestJava = javaList.first();
-    int targetMajor = version.vanillaVersion.majorVersion() > 0
-        ? version.vanillaVersion.majorVersion() : 8;
+    // MC 1.x 的特性版本号在第二段（"1.20.1" → 20），majorVersion() 恒为 1
+    int feature = version.vanillaVersion.majorVersion() == 1
+        ? version.vanillaVersion.minorVersion()
+        : version.vanillaVersion.majorVersion();
+    int targetMajor = feature > 0 ? feature : 8;
     for (const auto &j : javaList) {
         if (j.majorVersion >= targetMajor && j.is64Bit == is64BitSystem()) {
             bestJava = j;

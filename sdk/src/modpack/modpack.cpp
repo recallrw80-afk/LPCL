@@ -27,36 +27,41 @@ static void installModpackFromDir(const QString &filePath, const QString &packDi
         }
     }
 
-    // 分派到对应的安装器
-    switch (type) {
-    case PackType::CurseForge:
-        installCurseForge(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::HMCL:
-        installHMCL(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::MultiMC:
-        installMultiMC(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::MCBBS:
-        installMCBBS(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::Modrinth:
-        installModrinth(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::LauncherPack:
-        installLauncherPack(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    case PackType::Mod:
-        installMod(effectiveDir, targetInstance, onProgress, onComplete);
-        break;
-    case PackType::Compressed:
-        installCompressed(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
-    default:
-        // 回退：当作压缩版 .minecraft 处理
-        installCompressed(filePath, effectiveDir, instanceName, onProgress, onComplete);
-        break;
+    // 分派到对应的安装器（nlohmann value() 遇 null 会抛 type_error，
+    // 畸形清单统一在此兜底为干净错误而不是进程终止）
+    try {
+        switch (type) {
+        case PackType::CurseForge:
+            installCurseForge(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::HMCL:
+            installHMCL(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::MultiMC:
+            installMultiMC(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::MCBBS:
+            installMCBBS(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::Modrinth:
+            installModrinth(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::LauncherPack:
+            installLauncherPack(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        case PackType::Mod:
+            installMod(effectiveDir, targetInstance, onProgress, onComplete);
+            break;
+        case PackType::Compressed:
+            installCompressed(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        default:
+            // 回退：当作压缩版 .minecraft 处理
+            installCompressed(filePath, effectiveDir, instanceName, onProgress, onComplete);
+            break;
+        }
+    } catch (const std::exception &e) {
+        if (onComplete) onComplete(false, QString("清单解析失败: %1").arg(e.what()));
     }
 }
 

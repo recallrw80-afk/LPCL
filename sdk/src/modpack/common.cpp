@@ -149,7 +149,8 @@ QString extractVanillaVersion(const QString &v) {
 }
 
 // 确定实例应记录的版本 json 名
-QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion) {
+QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVersion,
+                                   const QString &loaderType, const QString &loaderVer) {
     // 实例内版本文件夹优先（LauncherPack/Compressed 的包自带版本）
     QDir instVd(finalDir + "versions/");
     for (const auto &entry : instVd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
@@ -158,13 +159,23 @@ QString resolveInstanceVersionName(const QString &finalDir, const QString &mcVer
     }
     if (!mcVersion.isEmpty()) {
         QString vanilla = extractVanillaVersion(mcVersion);
-        // 全局 versions/ 下找 vanilla 前缀的 loader 目录（如 1.20.1-forge-47.4.10）
+        // 按 loader 类型的实际目录命名规则匹配（Fabric/NeoForge 不是 vanilla 前缀）
+        QString prefix;
+        if (loaderType == "forge")         prefix = vanilla + "-forge-";
+        else if (loaderType == "neoforge") prefix = "neoforge-";
+        else if (loaderType == "fabric")   prefix = "fabric-loader-";
+        else                               prefix = vanilla + "-";
         QDir gd(VersionManager::instance().mcFolder() + "versions/");
+        QString fallback;
         for (const auto &entry : gd.entryInfoList(QDir::Dirs | QDir::NoDotAndDotDot)) {
-            if (entry.fileName().startsWith(vanilla + "-") &&
-                QFile::exists(entry.absoluteFilePath() + "/" + entry.fileName() + ".json"))
-                return entry.fileName();
+            QString dn = entry.fileName();
+            if (!dn.startsWith(prefix)) continue;
+            if (!QFile::exists(entry.absoluteFilePath() + "/" + dn + ".json")) continue;
+            // 优先精确版本匹配
+            if (!loaderVer.isEmpty() && dn.contains(loaderVer)) return dn;
+            if (fallback.isEmpty()) fallback = dn;
         }
+        if (!fallback.isEmpty()) return fallback;
         return vanilla;
     }
     return {};
