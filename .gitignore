@@ -87,6 +87,7 @@ CMakeLists.txt.user*
 CLAUDE.md
 PORTING_PLAN.md
 /*.md
+!README.md
 cmake-build-debug/
 cmake-build-release/
 /.idea
