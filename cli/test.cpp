@@ -420,9 +420,9 @@ static QList<TestItem> runCommandTests() {
             // install：原版 MC 下载（1.12.2 经 inpack-112 已缓存，重复调用即校验补齐）
             {
                 if (lpcl::installVersion("1.12.2"))
-                    ok("install", "install 1.12.2 校验补齐正常");
+                    ok("mc-install", "install 1.12.2 校验补齐正常");
                 else
-                    fail("install", "install 1.12.2 失败");
+                    fail("mc-install", "install 1.12.2 失败");
             }
 
             QDir(base).removeRecursively();

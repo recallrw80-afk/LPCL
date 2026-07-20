@@ -10,7 +10,7 @@ CLI_BUILD_DIR := cli/cmake-build-debug
 CLI_PKG_DIR   := cli/dist
 CLI_PKG_BUILD := cli/cmake-build-release
 
-.PHONY: run cli package package-cli
+.PHONY: run cli package package-cli package-tar
 
 # ---- QML GUI App ----
 
@@ -39,7 +39,13 @@ package-cli:
 	cmake --build $(CLI_PKG_BUILD) --target lpclcore lpcl-cli
 	mkdir -p $(CLI_PKG_DIR)
 	cp $(CLI_PKG_BUILD)/cli/lpcl-cli $(CLI_PKG_DIR)/
-	cp $(CLI_PKG_BUILD)/liblpclcore/liblpclcore.so $(CLI_PKG_DIR)/
+	cp $(CLI_PKG_BUILD)/sdk/liblpclcore.so $(CLI_PKG_DIR)/
 	@echo "CLI 打包: $(CLI_PKG_DIR)/"
 	@echo "  lpcl-cli         (rpath=\$$ORIGIN)"
 	@echo "  liblpclcore.so"
+
+# ---- 发布压缩包（配合 cli/install.sh 的 curl|bash 安装） ----
+ARCH := $(shell uname -m | sed 's/arm64/aarch64/')
+package-tar: package-cli
+	tar -czf $(CLI_PKG_DIR)/lpcl-cli-linux-$(ARCH).tar.gz -C $(CLI_PKG_DIR) lpcl-cli liblpclcore.so
+	@echo "发布包: $(CLI_PKG_DIR)/lpcl-cli-linux-$(ARCH).tar.gz"

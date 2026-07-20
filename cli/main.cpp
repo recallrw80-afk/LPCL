@@ -8,8 +8,15 @@
 //     3. 在 dispatchCommand() 中按是否需要 mcFolder 归类加入
 
 #include <QCoreApplication>
+#include <cstdlib>
 #include <QCommandLineParser>
+#include <QDir>
+#include <QEventLoop>
+#include <QFileInfo>
 #include <QLoggingCategory>
+#include <QPointer>
+#include <QRegularExpression>
+#include <QSysInfo>
 #include <iostream>
 
 #include "i18n.h"
@@ -17,6 +24,8 @@
 #include "lpcl.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
+#include "download/downloadmanager.h"
+#include "util/file_utils.h"
 
 // ---- helpers ----
 
@@ -115,17 +124,29 @@ static int handlePlayerAdd(QStringList &args) {
     return 0;
 }
 
+// 把"序号或 uuid"解析成玩家 uuid（序号 = player-list 中的 1 起始编号）
+static QString resolvePlayerUuid(const QString &idOrIndex) {
+    bool isNum = false;
+    int n = idOrIndex.toInt(&isNum);
+    if (isNum && n >= 1) {
+        auto players = lpcl::listPlayers();
+        if (n <= players.size()) return players[n - 1].uuid;
+    }
+    return idOrIndex;  // 不是有效序号则按 uuid 处理
+}
+
 static int handlePlayerRm(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-rm <uuid>\n",
-                       "error:  lpcl-cli player-rm <uuid>\n");
+        std::cerr << _("error:  lpcl-cli player-rm <uuid|序号>\n",
+                       "error:  lpcl-cli player-rm <uuid|index>\n");
         return 1;
     }
-    if (lpcl::removePlayer(args[1])) {
+    QString uuid = resolvePlayerUuid(args[1]);
+    if (lpcl::removePlayer(uuid)) {
         std::cout << "success" << std::endl;
         return 0;
     }
-    std::cerr << _("error: UUID 不存在\n", "error: UUID not found\n");
+    std::cerr << _("error: UUID 或序号不存在\n", "error: UUID or index not found\n");
     return 1;
 }
 
@@ -136,9 +157,10 @@ static int handlePlayerList() {
         return 0;
     }
     QString selected = Settings::instance().selectedPlayer();
+    int idx = 1;
     for (const auto &p : players) {
         bool isSel = (p.uuid == selected);
-        std::cout << (isSel ? " * " : "   ")
+        std::cout << (isSel ? " * " : "   ") << idx++ << ") "
                   << p.uuid.toStdString() << "\n"
                   << "     " << _("名称: ", "Name: ") << p.name.toStdString() << "\n";
         if (!p.avatar.isEmpty())
@@ -150,12 +172,13 @@ static int handlePlayerList() {
 
 static int handlePlayerSelect(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-select <uuid>\n",
-                       "error:  lpcl-cli player-select <uuid>\n");
+        std::cerr << _("error:  lpcl-cli player-select <uuid|序号>\n",
+                       "error:  lpcl-cli player-select <uuid|index>\n");
         return 1;
     }
-    if (!lpcl::selectPlayer(args[1])) {
-        std::cerr << _("error:  玩家 UUID 不存在\n", "error:  player UUID not found\n");
+    QString uuid = resolvePlayerUuid(args[1]);
+    if (!lpcl::selectPlayer(uuid)) {
+        std::cerr << _("error:  玩家 UUID 或序号不存在\n", "error:  player UUID or index not found\n");
         return 1;
     }
     std::cout << "success" << std::endl;
@@ -346,9 +369,9 @@ static void printHelp() {
          "设置界面语言（持久保存）",
          "Set UI language (persistent)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
-        {"install <版本>", "install <version>", "下载原版 MC 版本", "Download a vanilla MC version"},
-        {"install-java <大版本>",
-         "install-java <major>",
+        {"mc-install <版本>", "mc-install <version>", "下载原版 MC 版本", "Download a vanilla MC version"},
+        {"java-install <大版本>",
+         "java-install <major>",
          "下载安装 Java（Adoptium JRE）",
          "Download & install Java (Adoptium JRE)"},
         {"list-rm <名称|*>",
@@ -356,10 +379,12 @@ static void printHelp() {
          "删除实例（* 清空全部）",
          "Remove instance (* for all)"},
         {"player-add <名称>", "player-add <name>", "添加玩家配置（--avatar/--skin）", "Add player profile (--avatar/--skin)"},
-        {"player-rm <uuid>", "player-rm <uuid>", "删除玩家配置", "Remove player profile"},
+        {"player-rm <uuid|序号>", "player-rm <uuid|index>", "删除玩家配置（按列表序号或 uuid）", "Remove player profile (by index or uuid)"},
         {"player-list", "player-list", "列出玩家配置", "List player profiles"},
-        {"player-select <uuid>", "player-select <uuid>", "选择当前玩家", "Select current player"},
+        {"player-select <uuid|序号>", "player-select <uuid|index>", "选择当前玩家（按列表序号或 uuid）", "Select current player (by index or uuid)"},
         {"config", "config", "查看当前配置", "Show current configuration"},
+        {"update", "update", "检查并更新到最新版本", "Check for and apply updates"},
+        {"uninstall [-r]", "uninstall [-r]", "卸载（-r 保留游戏目录）", "Uninstall (-r keeps game folder)"},
         {"test", "test", "全系统自检", "Run system self-test"},
         {"help", "help", "显示帮助信息", "Show help information"},
         {"version", "version", "显示版本号", "Show version number"},
@@ -414,10 +439,160 @@ static int handleConfig() {
     return 0;
 }
 
+// ---- 自身安装管理（uninstall / update） ----
+
+// 安装根目录（install.sh 的落位）；不是该布局时拒绝卸载（防止误删开发/分发副本）
+static QString installedRoot() {
+    QString root = QDir::homePath() + "/.local/lib/lpcl";
+    QString appDir = QCoreApplication::applicationDirPath();
+    return appDir.startsWith(root) ? root : QString();
+}
+
+static int handleUninstall(const QStringList &args) {
+    bool keepGame = args.contains("-r");  // -r：保留游戏目录内容
+    QString root = installedRoot();
+    if (root.isEmpty()) {
+        std::cerr << _("error:  当前不是 install.sh 安装副本（开发/分发路径），拒绝卸载\n",
+                       "error:  not an install.sh-installed copy (dev/dist path), refusing to uninstall\n");
+        return 1;
+    }
+
+    // 1. 清空游戏目录内容（除非 -r；只清内容不删目录本身）
+    if (!keepGame) {
+        QString gameDir = VersionManager::instance().mcFolder();
+        if (QDir(gameDir).exists()) {
+            std::cout << _("正在清空游戏目录: ", "Clearing game folder: ")
+                      << gameDir.toStdString() << std::endl;
+            QDir gd(gameDir);
+            for (const auto &entry : gd.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden))
+                QDir(entry.absoluteFilePath()).removeRecursively();
+        }
+    }
+
+    // 2. 删除 PATH 符号链接（指向本二进制的才删）
+    QString link = QDir::homePath() + "/.local/bin/lpcl-cli";
+    if (QFileInfo(link).isSymLink() &&
+        QFileInfo(link).symLinkTarget() == QCoreApplication::applicationFilePath()) {
+        std::cout << _("删除命令链接: ", "Removing command link: ") << link.toStdString() << std::endl;
+        QFile::remove(link);
+    }
+
+    // 3. 删除安装目录（Linux 下删除运行中的二进制是安全的，进程退出后 inode 回收）
+    if (keepGame) {
+        // -r：只删程序本体和配置，保留 mc/ 等其余内容
+        std::cout << _("删除程序本体和配置（保留游戏内容）\n",
+                       "Removing binaries and config (keeping game contents)\n");
+        QFile::remove(root + "/lpcl-cli");
+        QFile::remove(root + "/liblpclcore.so");
+        QFile::remove(root + "/LPCL.ini");
+    } else {
+        std::cout << _("删除安装目录: ", "Removing install dir: ") << root.toStdString() << std::endl;
+        QDir(root).removeRecursively();
+    }
+
+    std::cout << _("卸载完成。\n", "Uninstall complete.\n");
+    if (keepGame)
+        std::cout << _("（已按 -r 保留游戏目录内容）\n", "(game folder contents kept as requested by -r)\n");
+    std::cout.flush();
+    // 自毁退出：跳过析构（QSettings 析构会把缓存配置重新写回 LPCL.ini，导致"删不干净"）
+    _Exit(0);
+}
+
+static int handleUpdate(const QStringList &args) {
+    Q_UNUSED(args);
+    // 仓库与包地址（与 install.sh 同一套占位，可用环境变量覆盖）
+    QString repo = qEnvironmentVariable("LPCL_REPO", "OWNER/LPCL");
+    QString apiUrl = QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
+
+    std::cout << _("正在检查更新...\n", "Checking for updates...\n");
+    bool done = false;
+    int result = 1;
+    QEventLoop loop;
+    QPointer<QEventLoop> guard = &loop;
+
+    DownloadManager::instance().downloadJson(apiUrl,
+        [&](bool ok, QString err, nlohmann::json rel) {
+        auto finish = [&](int code) { result = code; done = true; if (guard) guard->quit(); };
+
+        if (!ok || !rel.contains("tag_name")) {
+            std::cerr << T("error:  检查更新失败（%1）。如仓库未公开，请先用 LPCL_REPO 配置\n",
+                           "error:  update check failed (%1). If the repo is private, set LPCL_REPO first\n")
+                         .arg(err.isEmpty() ? "no tag_name" : err).toStdString();
+            finish(1); return;
+        }
+
+        QString remoteTag = QString::fromStdString(rel.value("tag_name", ""));
+        // 版本比较：提取 vX.Y.Z 数字段
+        QRegularExpression re(R"(v?(\d+\.\d+(?:\.\d+)?))");
+        auto rm = re.match(remoteTag), lm = re.match(QString(GIT_DESCRIBE));
+        QVersionNumber remoteVer = rm.hasMatch() ? QVersionNumber::fromString(rm.captured(1)) : QVersionNumber();
+        QVersionNumber localVer = lm.hasMatch() ? QVersionNumber::fromString(lm.captured(1)) : QVersionNumber(0, 0, 0);
+        if (remoteVer.isNull() || remoteVer <= localVer) {
+            std::cout << _("已是最新版本: ", "Already up to date: ")
+                      << QString(GIT_DESCRIBE).toStdString() << std::endl;
+            finish(0); return;
+        }
+
+        // 找对应架构的包
+        QString arch = QSysInfo::currentCpuArchitecture() == "aarch64" ? "aarch64" : "x86_64";
+        QString pkg = "lpcl-cli-linux-" + arch + ".tar.gz";
+        QString dlUrl;
+        for (const auto &a : rel["assets"]) {
+            QString name = QString::fromStdString(a.value("name", ""));
+            if (name == pkg) { dlUrl = QString::fromStdString(a.value("browser_download_url", "")); break; }
+        }
+        if (dlUrl.isEmpty()) {
+            std::cerr << T("error:  新版本 %1 没有 %2 架构的包\n",
+                           "error:  new release %1 has no package for %2\n").arg(remoteTag, arch).toStdString();
+            finish(1); return;
+        }
+
+        std::cout << T("发现新版本 %1（当前 %2），正在下载...\n",
+                       "New version %1 found (current %2), downloading...\n")
+                       .arg(remoteTag, QString(GIT_DESCRIBE)).toStdString();
+        QString tmpDir = QCoreApplication::applicationDirPath() + "/.update-tmp";
+        QDir(tmpDir).removeRecursively();
+        QDir().mkpath(tmpDir);
+        QString pkgPath = tmpDir + "/" + pkg;
+        DownloadManager::instance().download(dlUrl, pkgPath, nullptr,
+            [=, &result](bool dlOk, QString dlErr) {
+            if (!dlOk) {
+                std::cerr << T("error:  下载失败: ", "error:  download failed: ").toStdString()
+                          << dlErr.toStdString() << std::endl;
+                QDir(tmpDir).removeRecursively();
+                finish(1); return;
+            }
+            // 解压并原子替换（rename 覆盖运行中的二进制在 Linux 下安全）
+            if (!FileUtils::extractTarGz(pkgPath, tmpDir)) {
+                std::cerr << _("error:  解压失败\n", "error:  extract failed\n");
+                QDir(tmpDir).removeRecursively();
+                finish(1); return;
+            }
+            QString appDir = QCoreApplication::applicationDirPath();
+            bool okBin = QFile::rename(tmpDir + "/lpcl-cli", appDir + "/lpcl-cli");
+            bool okSo  = QFile::rename(tmpDir + "/liblpclcore.so", appDir + "/liblpclcore.so");
+            QDir(tmpDir).removeRecursively();
+            if (!okBin || !okSo) {
+                std::cerr << _("error:  替换二进制失败（目录不可写？）\n",
+                               "error:  failed to replace binary (dir not writable?)\n");
+                finish(1); return;
+            }
+            QFile(appDir + "/lpcl-cli").setPermissions(
+                QFile::permissions(appDir + "/lpcl-cli") | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther);
+            std::cout << _("更新完成: ", "Updated to: ") << remoteTag.toStdString()
+                      << _("（重启 lpcl-cli 生效）\n", " (restart lpcl-cli to take effect)\n");
+            finish(0);
+        });
+    });
+
+    if (!done) loop.exec();
+    return result;
+}
+
 static int handleInstall(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli install <MC版本>\n",
-                       "error:  lpcl-cli install <mc-version>\n");
+        std::cerr << _("error:  lpcl-cli mc-install <MC版本>\n",
+                       "error:  lpcl-cli mc-install <mc-version>\n");
         return 1;
     }
     std::cout << _(QString("正在下载 MC %1 ...\n").arg(args[1]).toStdString(),
@@ -448,8 +623,8 @@ static int handleInstall(const QStringList &args) {
 
 static int handleInstallJava(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli install-java <大版本>\n",
-                       "error:  lpcl-cli install-java <major>\n");
+        std::cerr << _("error:  lpcl-cli java-install <大版本>\n",
+                       "error:  lpcl-cli java-install <major>\n");
         return 1;
     }
     bool okNum = false;
@@ -482,6 +657,8 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
         return 0;
     }
     if (cmd == "config")       return handleConfig();
+    if (cmd == "uninstall")    return handleUninstall(args);
+    if (cmd == "update")       return handleUpdate(args);
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-player")     return handleSetPlayer(args);
     if (cmd == "set-lang")       return handleSetLang(args);
@@ -511,8 +688,8 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
 
     if (cmd == "list")     return handleList();
     if (cmd == "mc-list")  return handleMcList();
-    if (cmd == "install")  return handleInstall(args);
-    if (cmd == "install-java") return handleInstallJava(args);
+    if (cmd == "mc-install") return handleInstall(args);
+    if (cmd == "java-install") return handleInstallJava(args);
     if (cmd == "launch")   return handleLaunch(args);
     if (cmd == "inpack")  return handleInpack(args);
     if (cmd == "list-rm") return handleRm(args);

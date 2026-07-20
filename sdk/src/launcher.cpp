@@ -201,10 +201,28 @@ void Launcher::doLaunch() {
     env.insert("MINECRAFT_LAUNCHER_NAME", "LPCL");
     env.insert("MINECRAFT_LAUNCHER_VERSION", "0.1");
 
+    // 无显示环境（无 GUI）：用 xvfb-run 虚拟显示包装启动
+    QString program = javaExe;
+    QStringList finalArgs = allArgs;
+    bool headless = qEnvironmentVariableIsEmpty("DISPLAY") &&
+                    qEnvironmentVariableIsEmpty("WAYLAND_DISPLAY");
+    if (headless) {
+        QString xvfb = QStandardPaths::findExecutable("xvfb-run");
+        if (!xvfb.isEmpty()) {
+            appendLog("[LPCL] 无显示环境，使用 xvfb 虚拟显示启动");
+            program = xvfb;
+            finalArgs.prepend(javaExe);
+            finalArgs.prepend("-a");  // 自动分配 display 号
+        } else {
+            qCWarning(logLaunch) << "无显示环境且未找到 xvfb-run——"
+                    "游戏需要 X 显示才能创建窗口，请安装 xvfb 或配置 DISPLAY";
+        }
+    }
+
     m_gameProcess->setProcessEnvironment(env);
     m_gameProcess->setWorkingDirectory(gameDir);
-    m_gameProcess->setProgram(javaExe);
-    m_gameProcess->setArguments(allArgs);
+    m_gameProcess->setProgram(program);
+    m_gameProcess->setArguments(finalArgs);
 
     // Start asynchronously. The Running state and gameStarted() signal are
     // emitted from onGameStarted() (connected to QProcess::started) so we

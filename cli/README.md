@@ -17,12 +17,27 @@
 - Linux（x86_64 / aarch64）
 - 运行游戏需要 Java 运行时（没有也没关系，启动时会自动下载）
 
-## 构建
+## 安装
+
+### 一键安装（推荐）
+
+```bash
+curl -fsSL <发布地址>/install.sh | bash
+```
+
+脚本自动完成：下载对应架构的包 → 解压到 `~/.local/lib/lpcl/` → 在 `~/.local/bin/` 注册 `lpcl-cli` 命令。完成后任意目录直接：
+
+```bash
+lpcl-cli help
+```
+
+### 源码构建
 
 ```bash
 cd LPCL
 make cli            # 构建 lpcl-cli + liblpclcore.so
 make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
+make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 ```
 
 ## 快速上手
@@ -46,7 +61,7 @@ make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
 没有整合包？先装个原版：
 
 ```bash
-./lpcl-cli install 1.20.1
+./lpcl-cli mc-install 1.20.1
 ./lpcl-cli launch 1.20.1
 ```
 
@@ -66,8 +81,8 @@ make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
 | 命令 | 说明 |
 |---|---|
 | `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包；`--r` 重命名实例；Mod 包需 `--to` 指定目标实例 |
-| `install <版本>` | 下载原版 MC 版本 |
-| `install-java <大版本>` | 下载安装 Java（Adoptium JRE） |
+| `mc-install <版本>` | 下载原版 MC 版本 |
+| `java-install <大版本>` | 下载安装 Java（Adoptium JRE） |
 
 ### Java
 
@@ -80,9 +95,9 @@ make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
 | 命令 | 说明 |
 |---|---|
 | `player-add <名称> [--avatar <路径>] [--skin <slim\|wide\|default>]` | 添加玩家 |
-| `player-rm <uuid>` | 删除玩家 |
-| `player-list` | 列出玩家（`*` 为当前选中） |
-| `player-select <uuid>` | 选择当前玩家 |
+| `player-rm <uuid\|序号>` | 删除玩家（可用 `player-list` 里的序号） |
+| `player-list` | 列出玩家（带序号，`*` 为当前选中） |
+| `player-select <uuid\|序号>` | 选择当前玩家（可用序号） |
 
 ### 配置与其他
 
@@ -91,6 +106,8 @@ make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
 | `set-folder <路径>` | 设置默认游戏目录 |
 | `set-player <名称>` | 设置玩家名称 |
 | `set-lang <en\|zh>` | 设置界面语言（默认英文） |
+| `update` | 检查 GitHub Releases 是否有新版本并自动更新 |
+| `uninstall [-r]` | 卸载启动器；`-r` 保留游戏目录内容 |
 | `config` | 查看当前配置 |
 | `test` | 全系统自检 |
 | `help` / `version` | 帮助 / 版本号 |
@@ -114,7 +131,7 @@ mc/
 不需要。未配置 key 时自动使用 MCIM 镜像下载。有 key 的话可以通过环境变量 `LPCL_CURSEFORGE_API_KEY` 配置走官方 API。
 
 **界面怎么变成中文？**
-`./lpcl-cli set-lang zh`（一次设置，永久生效）。
+`lpcl-cli set-lang zh`（一次设置，永久生效）。
 
 **导入失败会怎样？**
 任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。
