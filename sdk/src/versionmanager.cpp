@@ -548,19 +548,19 @@ static json resolveChainWithVisited(const QString &jsonPath, QSet<QString> &visi
     if (parent.is_null()) return result;
 
     // Merge: child overrides parent
-    // Merge arguments.jvm
-    if (parent.contains("arguments") && parent["arguments"].contains("jvm")) {
-        if (!result.contains("arguments")) result["arguments"] = json::object();
-        if (!result["arguments"].contains("jvm")) {
-            result["arguments"]["jvm"] = parent["arguments"]["jvm"];
-        }
-    }
-
-    // Merge arguments.game
-    if (parent.contains("arguments") && parent["arguments"].contains("game")) {
-        if (!result.contains("arguments")) result["arguments"] = json::object();
-        if (!result["arguments"].contains("game")) {
-            result["arguments"]["game"] = parent["arguments"]["game"];
+    // Merge arguments.jvm / arguments.game：数组按父版本在前、子版本追加拼接
+    // （PCL 用 Newtonsoft JObject.Merge 的 Concat 语义；若子版本独占，
+    //  vanilla 的标准启动参数（--username/--uuid/--gameDir 等）会全部丢失）
+    for (const char *section : {"jvm", "game"}) {
+        if (parent.contains("arguments") && parent["arguments"].contains(section)) {
+            if (!result.contains("arguments")) result["arguments"] = json::object();
+            if (!result["arguments"].contains(section)) {
+                result["arguments"][section] = parent["arguments"][section];
+            } else {
+                json merged = parent["arguments"][section];
+                for (const auto &a : result["arguments"][section]) merged.push_back(a);
+                result["arguments"][section] = merged;
+            }
         }
     }
 
