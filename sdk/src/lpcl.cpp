@@ -169,6 +169,72 @@ static bool ensureLaunchReady(const McVersion &version) {
     }
 }
 
+// 中文输入修复：fcitx/ibus 的 XIM 会让 GLFW 3.3 在 glfwWaitEventsTimeout 里 SIGSEGV。
+// LWJGL ≥ 3.3.3 自带的 GLFW 3.4 已重构 XIM 路径不会崩。
+// 注意 LWJGL 的 natives 加载机制：它从 classpath 里的 *-natives-linux.jar 提取
+// libglfw.so 到 SharedLibraryExtractPath，文件不匹配就重新提取覆盖——所以直接
+// 替换 natives 目录或前置 java.library.path 都无效（均已实测）。
+// 唯一可靠做法：把 libraries/ 里的 lwjgl-glfw-<ver>-natives-linux.jar 内容换成
+// 3.3.6 版（文件名不变），LWJGL 提取出来的就是 GLFW 3.4。
+// 任何失败都静默返回：doLaunch 会回退到 XMODIFIERS=@im=none（禁输入法式修复）。
+static void maybeInstallGlfw34(const McVersion &version) {
+    QString xim = qEnvironmentVariable("XMODIFIERS");
+    if (!xim.contains("@im=") || xim == "@im=none") return;  // 无 IME 钩子，无需处理
+
+    auto &vm = VersionManager::instance();
+    QString mcFolder = vm.mcFolder();
+    QString vanillaId = version.vanillaVersion.toString();
+    if (vanillaId.isEmpty()) return;
+    QString nativesDir = mcFolder + "versions/" + vanillaId + "/natives/";
+    QString marker = nativesDir + "libglfw.so.glfw34-fixed";
+    if (QFile::exists(marker)) return;
+
+    // 找 LWJGL 版本；≥ 3.3.3 自带 GLFW 3.4，无需替换
+    QString lwjglVer;
+    json resolved = VersionManager::resolveInheritanceChain(version.pathJson);
+    if (!resolved.is_null() && resolved.contains("libraries")) {
+        for (const auto &lib : resolved["libraries"]) {
+            QString name = QString::fromStdString(lib.value("name", ""));
+            if (name.startsWith("org.lwjgl:lwjgl:") || name.startsWith("org.lwjgl:lwjgl-glfw:")) {
+                QString ver = name.section(':', -1);
+                QStringList p = ver.split('.');
+                if (p.size() >= 3) {
+                    int minor = p[1].toInt(), patch = p[2].toInt();
+                    if (minor > 3 || (minor == 3 && patch >= 3)) return;
+                }
+                lwjglVer = ver;
+                break;
+            }
+        }
+    }
+    if (lwjglVer.isEmpty()) return;
+
+    QString jarPath = mcFolder + "libraries/org/lwjgl/lwjgl-glfw/" + lwjglVer +
+                      "/lwjgl-glfw-" + lwjglVer + "-natives-linux.jar";
+    if (!QFile::exists(jarPath)) return;
+
+    QString tmpJar = mcFolder + "tmp/lwjgl-glfw-3.3.6-natives-linux.jar";
+    bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+        DownloadManager::instance().download(
+            "https://repo1.maven.org/maven2/org/lwjgl/lwjgl-glfw/3.3.6/lwjgl-glfw-3.3.6-natives-linux.jar",
+            tmpJar, nullptr, cb);
+    });
+    if (ok) {
+        QString bak = jarPath + ".bak-vanilla";
+        if (!QFile::exists(bak))
+            QFile::copy(jarPath, bak);                         // 原 jar 备份只做一次
+        QFile::remove(jarPath);
+        ok = QFile::copy(tmpJar, jarPath);
+        if (ok) {
+            QFile m(marker);
+            if (m.open(QIODevice::WriteOnly)) m.write("lwjgl-glfw 3.3.6 (GLFW 3.4)\n");
+            qWarning() << "IME 修复: MC" << vanillaId << "将使用 GLFW 3.4（保留中文输入）";
+        }
+    }
+    QFile::remove(tmpJar);
+    if (!ok) qWarning() << "IME 修复: GLFW 3.4 准备失败，将回退到禁用 XIM 方案";
+}
+
 } // namespace
 
 namespace lpcl {
@@ -336,6 +402,8 @@ bool launchVersion(const QString &versionId,
 
     // 启动预检：补齐缺失的游戏文件（对照 PCL DlClientFix）
     if (!ensureLaunchReady(version)) return false;
+    // 中文输入修复：XIM 激活且 LWJGL 老（GLFW 3.3）时替换 GLFW 3.4
+    maybeInstallGlfw34(version);
 
     // 注：如在同一进程中多次调用 launchVersion，信号会累积连接。
     // CLI 每次只启动一次游戏即退出，不受影响。

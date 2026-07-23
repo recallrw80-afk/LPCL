@@ -178,6 +178,15 @@ void Launcher::doLaunch() {
     appendLog("> " + cmdLog);
     appendLog("");
 
+    // GLFW 3.4 中文输入修复：lpcl::launchVersion 已把 lwjgl-glfw natives jar 换成
+    // 3.3.6（标记 libglfw.so.glfw34-fixed），LWJGL 提取出来的就是 GLFW 3.4
+    QString mcFolder = VersionManager::instance().mcFolder();
+    QString vanillaId = m_version.vanillaVersion.toString();
+    bool glfw34Fixed = !vanillaId.isEmpty()
+        && QFileInfo::exists(mcFolder + "versions/" + vanillaId + "/natives/libglfw.so.glfw34-fixed");
+    if (glfw34Fixed)
+        appendLog("[LPCL] 使用 GLFW 3.4（IME 修复），保留中文输入");
+
     // Set up environment
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
 
@@ -213,12 +222,11 @@ void Launcher::doLaunch() {
     if (!env.contains("__GL_THREADED_OPTIMIZATIONS"))
         env.insert("__GL_THREADED_OPTIMIZATIONS", "0");
 
-    // fcitx/ibus 的 XIM 模块会让 GLFW 在 glfwWaitEventsTimeout 里 SIGSEGV
-    // （原版 MC 也会在窗口出现后几秒内崩，pc=0xc906 固定坏地址，已实测：
-    // XMODIFIERS=@im=fcitx 4.3 秒必崩，@im=none 稳定运行）。
-    // 对游戏进程强制禁用 XIM——副作用是游戏内聊天框不能用输入法打中文，
-    // 但换来不崩溃。用户显式设过 LPCL 专用开关则尊重（高级逃生口）。
-    if (!env.contains("LPCL_KEEP_XIM")) {
+    // fcitx/ibus 的 XIM 模块会让 GLFW 3.3 在 glfwWaitEventsTimeout 里 SIGSEGV
+    // （原版 MC 也会在窗口出现后几秒内崩，pc=0xc906 固定坏地址，已实测）。
+    // 首选 GLFW 3.4 修复（上面 glfw34Fixed 为真时 XIM 无害，可打中文，跳过禁用）；
+    // 否则回退：强制 XMODIFIERS=@im=none——副作用是游戏内不能用输入法，但换来不崩溃。
+    if (!env.contains("LPCL_KEEP_XIM") && !glfw34Fixed) {
         if (env.value("XMODIFIERS") != "@im=none") {
             env.insert("XMODIFIERS", "@im=none");
             appendLog("[LPCL] 已禁用 XIM 输入法钩子（XMODIFIERS=@im=none），"
