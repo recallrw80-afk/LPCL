@@ -72,7 +72,7 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | 命令 | 说明 |
 |---|---|
 | `list` | 列出所有实例 |
-| `list-rm <名称\|*>` | 删除实例（`*` 删除全部，注意加引号） |
+| `list-rm [名称\|*]` | 删除实例（无参时上下键选择 + 二次确认；`*` 删除全部，注意加引号） |
 | `mc-list` | 列出已下载的原版 MC 版本 |
 | `launch [名称]` | 启动游戏；不填名称时**上下键选择**（TTY 交互菜单，非 TTY 退回输序号） |
 
@@ -94,8 +94,9 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 
 | 命令 | 说明 |
 |---|---|
-| `player-add <名称> [--avatar <路径>] [--skin <slim\|wide\|default>]` | 添加玩家 |
-| `player-rm <uuid\|序号>` | 删除玩家（可用 `player-list` 里的序号） |
+| `player-add [名称] [--avatar <路径>] [--skin <slim\|wide\|default>]` | 添加玩家；不带参数进入交互向导（名字 → 皮肤 → 头像 → 高级配置自定义 UUID） |
+| `player-edit [uuid\|序号]` | 修改玩家配置（交互向导，回车保留原值；无参时上下键选择玩家） |
+| `player-rm [uuid\|序号]` | 删除玩家（无参时上下键选择 + 二次确认） |
 | `player-list` | 列出玩家（带序号，`*` 为当前选中） |
 | `player-select <uuid\|序号>` | 选择当前玩家（可用序号；无参时上下键选择） |
 

@@ -89,8 +89,15 @@ LPCLCORE_EXPORT ConfigInfo getConfig();
 LPCLCORE_EXPORT QList<PlayerEntry> listPlayers();
 
 /// 添加玩家配置（返回生成的条目；skinType: "slim"|"wide"|"default"）
+/// customUuid 非空时作为配置键（高级用法，需合法 UUID 格式），留空自动生成
 LPCLCORE_EXPORT PlayerEntry addPlayer(const QString &name, const QString &avatar = QString(),
-                                      const QString &skinType = "slim");
+                                      const QString &skinType = "slim",
+                                      const QString &customUuid = QString());
+
+/// 修改玩家配置（uuid 不存在返回 false；newUuid 非空且不同则迁移配置键）
+LPCLCORE_EXPORT bool updatePlayer(const QString &uuid, const QString &name,
+                                  const QString &avatar, const QString &skinType,
+                                  const QString &newUuid = QString());
 
 /// 删除玩家配置（UUID 不存在时返回 false）
 LPCLCORE_EXPORT bool removePlayer(const QString &uuid);

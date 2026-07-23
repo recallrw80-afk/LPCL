@@ -23,6 +23,7 @@
 #include "i18n.h"
 #include "test.h"
 #include "tui_select.h"
+#include "tui_prompt.h"
 #include "lpcl.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
@@ -123,11 +124,66 @@ static int handleListJavas() {
 
 // ---- 玩家 Profile 命令 ----
 
+// 玩家配置向导（create-vite 风格问答，仅 TTY；existing 非空 = 编辑模式，各问取现值为默认）
+// 交互流程全在 CLI 层，SDK 只提供 add/update/list 数据接口
+struct WizardResult { QString name, avatar, skin, customUuid; };
+static bool playerWizard(const lpcl::PlayerEntry *existing, WizardResult &out) {
+    auto name = tuiInput(_("玩家名字", "Player name"),
+                         existing ? existing->name : QString(),
+                         _("必填", "required"));
+    if (!name) return false;
+    if (name->isEmpty()) {
+        std::cerr << _("error: 玩家名字不能为空\n", "error: player name required\n");
+        return false;
+    }
+
+    // 皮肤类型：上下键单选
+    static const QStringList skins = {"slim", "wide", "default"};
+    int skinIdx = tuiSelect(_("皮肤类型", "Skin type"), skins,
+                            existing ? skins.indexOf(existing->skinType) : 0);
+    if (skinIdx < 0) return false;
+
+    auto avatar = tuiInput(_("头像路径", "Avatar path"),
+                           existing ? existing->avatar : QString(),
+                           _("可留空", "optional"));
+    if (!avatar) return false;
+
+    QString customUuid;
+    auto adv = tuiConfirm(_("需要高级配置吗", "Advanced options"), false);
+    if (!adv) return false;
+    if (*adv) {
+        auto u = tuiInput(_("自定义 UUID", "Custom UUID"),
+                          existing ? existing->uuid : QString(),
+                          _("留空自动生成", "empty = auto"));
+        if (!u) return false;
+        customUuid = *u;
+    }
+
+    out = {*name, *avatar, skins[skinIdx], customUuid};
+    return true;
+}
+
 static int handlePlayerAdd(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-add <名称> [--avatar <路径>] [--skin <slim|wide|default>]\n",
-                       "error:  lpcl-cli player-add <name> [--avatar <path>] [--skin <slim|wide|default>]\n");
-        return 1;
+        // 无参：TTY 进交互向导，非 TTY（脚本/管道）报用法
+        if (!isatty(fileno(stdin))) {
+            std::cerr << _("error:  lpcl-cli player-add <名称> [--avatar <路径>] [--skin <slim|wide|default>]\n",
+                           "error:  lpcl-cli player-add <name> [--avatar <path>] [--skin <slim|wide|default>]\n");
+            return 1;
+        }
+        WizardResult w;
+        if (!playerWizard(nullptr, w)) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        auto entry = lpcl::addPlayer(w.name, w.avatar, w.skin, w.customUuid);
+        std::cout << _("已添加玩家:\n", "Player added:\n")
+                  << "  UUID: " << entry.uuid.toStdString() << "\n"
+                  << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n"
+                  << "  Skin: " << entry.skinType.toStdString() << "\n";
+        if (!entry.avatar.isEmpty())
+            std::cout << "  " << _("头像: ", "Avatar: ") << entry.avatar.toStdString() << "\n";
+        return 0;
     }
     QString avatar = extractFlag(args, "--avatar");
     QString skin = extractFlag(args, "--skin");
@@ -163,8 +219,34 @@ static QString resolvePlayerUuid(const QString &idOrIndex) {
 
 static int handlePlayerRm(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-rm <uuid|序号>\n",
-                       "error:  lpcl-cli player-rm <uuid|index>\n");
+        // 无参：TTY 上下键选择要删的玩家（二次确认）；非 TTY 报用法
+        if (!isatty(fileno(stdin))) {
+            std::cerr << _("error:  lpcl-cli player-rm <uuid|序号>\n",
+                           "error:  lpcl-cli player-rm <uuid|index>\n");
+            return 1;
+        }
+        auto players = lpcl::listPlayers();
+        if (players.isEmpty()) {
+            std::cerr << _("error:  没有玩家配置\n", "error:  no player profiles\n");
+            return 1;
+        }
+        QStringList names;
+        for (const auto &p : players) names << p.name;
+        int pick = tuiSelect(_("选择要删除的玩家", "Select a player to remove"), names);
+        if (pick < 0) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        auto yes = tuiConfirm(QString(_("确定删除 %1 吗", "Remove %1")).arg(players[pick].name), false);
+        if (!yes || !*yes) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        if (lpcl::removePlayer(players[pick].uuid)) {
+            std::cout << "success" << std::endl;
+            return 0;
+        }
+        std::cerr << _("error: UUID 或序号不存在\n", "error: UUID or index not found\n");
         return 1;
     }
     QString uuid = resolvePlayerUuid(args[1]);
@@ -174,6 +256,53 @@ static int handlePlayerRm(const QStringList &args) {
     }
     std::cerr << _("error: UUID 或序号不存在\n", "error: UUID or index not found\n");
     return 1;
+}
+
+static int handlePlayerEdit(const QStringList &args) {
+    auto players = lpcl::listPlayers();
+    if (players.isEmpty()) {
+        std::cerr << _("error:  没有玩家配置，请先 player-add\n",
+                       "error:  no player profiles, run player-add first\n");
+        return 1;
+    }
+    // 定位目标：参数为 uuid|序号；无参时 TTY 上下键选择
+    QString uuid;
+    if (args.size() >= 2) {
+        uuid = resolvePlayerUuid(args[1]);
+    } else {
+        if (!isatty(fileno(stdin))) {
+            std::cerr << _("error:  lpcl-cli player-edit <uuid|序号>\n",
+                           "error:  lpcl-cli player-edit <uuid|index>\n");
+            return 1;
+        }
+        QStringList names;
+        for (const auto &p : players) names << p.name;
+        int pick = tuiSelect(_("选择要修改的玩家", "Select a player to edit"), names);
+        if (pick < 0) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        uuid = players[pick].uuid;
+    }
+    const lpcl::PlayerEntry *existing = nullptr;
+    for (const auto &p : players)
+        if (p.uuid == uuid) { existing = &p; break; }
+    if (!existing) {
+        std::cerr << _("error: UUID 或序号不存在\n", "error: UUID or index not found\n");
+        return 1;
+    }
+
+    WizardResult w;
+    if (!playerWizard(existing, w)) {
+        std::cerr << _("已取消\n", "Cancelled\n");
+        return 1;
+    }
+    if (!lpcl::updatePlayer(uuid, w.name, w.avatar, w.skin, w.customUuid)) {
+        std::cerr << _("error: 修改失败（UUID 冲突？）\n", "error: update failed (UUID conflict?)\n");
+        return 1;
+    }
+    std::cout << "success" << std::endl;
+    return 0;
 }
 
 static int handlePlayerList() {
@@ -384,8 +513,33 @@ static int handleInpack(QStringList &args) {
 
 static int handleRm(const QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli list-rm <名称|*>\n",
-                       "error:  lpcl-cli list-rm <name|*>\n");
+        // 无参：TTY 上下键选择要删的实例（二次确认）；非 TTY 报用法
+        if (!isatty(fileno(stdin))) {
+            std::cerr << _("error:  lpcl-cli list-rm <名称|*>\n",
+                           "error:  lpcl-cli list-rm <name|*>\n");
+            return 1;
+        }
+        auto ids = lpcl::listVersions();
+        if (ids.isEmpty()) {
+            std::cout << _("没有可删除的实例\n", "No instances to remove\n");
+            return 0;
+        }
+        int pick = tuiSelect(_("选择要删除的实例", "Select an instance to remove"), ids);
+        if (pick < 0) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        auto yes = tuiConfirm(QString(_("确定删除 %1 吗", "Remove %1")).arg(ids[pick]), false);
+        if (!yes || !*yes) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        if (lpcl::removeInstance(ids[pick])) {
+            std::cout << "success" << std::endl;
+            return 0;
+        }
+        std::cerr << _("error: 实例不存在或删除失败\n",
+                       "error: instance not found or removal failed\n");
         return 1;
     }
     // shell 会把不带引号的 * 展开成当前目录文件列表（多个参数）——检测并提示加引号
@@ -449,12 +603,13 @@ static void printHelp() {
          "java-install <major>",
          "下载安装 Java（Adoptium JRE）",
          "Download & install Java (Adoptium JRE)"},
-        {"list-rm <名称|*>",
-         "list-rm <name|*>",
-         "删除实例（* 清空全部）",
-         "Remove instance (* for all)"},
-        {"player-add <名称>", "player-add <name>", "添加玩家配置（--avatar/--skin）", "Add player profile (--avatar/--skin)"},
-        {"player-rm <uuid|序号>", "player-rm <uuid|index>", "删除玩家配置（按列表序号或 uuid）", "Remove player profile (by index or uuid)"},
+        {"list-rm [名称|*]",
+         "list-rm [name|*]",
+         "删除实例（* 清空全部；无参上下键选择）",
+         "Remove instance (* for all, select with arrows without args)"},
+        {"player-add <名称>", "player-add <name>", "添加玩家配置（无参进入交互向导）", "Add player profile (interactive wizard without args)"},
+        {"player-edit [uuid|序号]", "player-edit [uuid|index]", "修改玩家配置（交互向导）", "Edit player profile (interactive wizard)"},
+        {"player-rm [uuid|序号]", "player-rm [uuid|index]", "删除玩家配置（无参上下键选择）", "Remove player profile (select with arrows without args)"},
         {"player-list", "player-list", "列出玩家配置", "List player profiles"},
         {"player-select <uuid|序号>", "player-select <uuid|index>", "选择当前玩家（按列表序号或 uuid）", "Select current player (by index or uuid)"},
         {"config", "config", "查看当前配置", "Show current configuration"},
@@ -745,6 +900,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "set-mem")        return handleSetMem(args);
     if (cmd == "list-javas")     return handleListJavas();
     if (cmd == "player-add")     return handlePlayerAdd(args);
+    if (cmd == "player-edit")    return handlePlayerEdit(args);
     if (cmd == "player-rm")      return handlePlayerRm(args);
     if (cmd == "player-list")    return handlePlayerList();
     if (cmd == "player-select")  return handlePlayerSelect(args);

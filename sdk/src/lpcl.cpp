@@ -414,8 +414,11 @@ QList<PlayerEntry> listPlayers() {
     return result;
 }
 
-PlayerEntry addPlayer(const QString &name, const QString &avatar, const QString &skinType) {
-    QString uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
+PlayerEntry addPlayer(const QString &name, const QString &avatar, const QString &skinType,
+                      const QString &customUuid) {
+    QString uuid = customUuid;
+    uuid.remove('{'); uuid.remove('}');
+    if (uuid.isEmpty()) uuid = QUuid::createUuid().toString(QUuid::WithoutBraces);
     Settings::instance().setProfile(uuid, "Name", name);
     Settings::instance().setProfile(uuid, "Avatar", avatar);
     Settings::instance().setProfile(uuid, "SkinType", skinType);
@@ -425,6 +428,32 @@ PlayerEntry addPlayer(const QString &name, const QString &avatar, const QString 
         Settings::instance().selectPlayer(uuid);
 
     return {uuid, name, avatar, skinType};
+}
+
+bool updatePlayer(const QString &uuid, const QString &name, const QString &avatar,
+                  const QString &skinType, const QString &newUuid) {
+    auto &s = Settings::instance();
+    if (!s.playerProfiles().contains(uuid)) return false;
+
+    QString target = newUuid;
+    target.remove('{'); target.remove('}');
+    if (!target.isEmpty() && target != uuid && s.playerProfiles().contains(target))
+        return false;  // 目标键已被占用，拒绝覆盖
+
+    s.setProfile(uuid, "Name", name);
+    s.setProfile(uuid, "Avatar", avatar);
+    s.setProfile(uuid, "SkinType", skinType);
+
+    // 改了配置键：整体迁移，并跟随选中态
+    if (!target.isEmpty() && target != uuid) {
+        s.setProfile(target, "Name", name);
+        s.setProfile(target, "Avatar", avatar);
+        s.setProfile(target, "SkinType", skinType);
+        bool wasSelected = (s.selectedPlayer() == uuid);
+        s.removeProfile(uuid);
+        if (wasSelected) s.selectPlayer(target);
+    }
+    return true;
 }
 
 bool removePlayer(const QString &uuid) {
