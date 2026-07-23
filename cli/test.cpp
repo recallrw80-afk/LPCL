@@ -144,18 +144,6 @@ static QList<TestItem> runCommandTests() {
             fail("set-folder", QString("写入 '%1' 读回 '%2'").arg(testPath, readBack));
     }
 
-    // set-player
-    {
-        const QString testName = "_lpcl_test_player_";
-        Settings::instance().setString("PlayerName", testName);
-        QString readBack = Settings::instance().getString("PlayerName");
-        Settings::instance().setString("PlayerName", QString());
-        if (readBack == testName)
-            ok("set-player", "写入/读取/清除 正常");
-        else
-            fail("set-player", QString("写入 '%1' 读回 '%2'").arg(testName, readBack));
-    }
-
     // set-lang（写入 → 读回 → 还原）
     {
         QString orig = Settings::instance().getString("UiLanguage");

@@ -52,6 +52,7 @@ LPCLCORE_EXPORT QStringList listMcVersions();
 /// 安装指定版本（当前为桩实现）
 /// 下载原版 MC 版本（json + jar + libraries + assets + natives，同步等待完成）
 /// 已存在的文件按 sha1 跳过——重复调用即"校验/补齐"
+/// versionId 为空 = 最新正式版（解析官方版本清单 latest.release）
 LPCLCORE_EXPORT bool installVersion(const QString &versionId,
                                     std::function<void(const ImportProgress &)> onProgress = nullptr);
 

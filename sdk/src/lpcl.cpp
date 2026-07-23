@@ -230,7 +230,23 @@ bool installJavaRuntime(int majorVersion, QString *errOut) {
 
 bool installVersion(const QString &versionId,
                     std::function<void(const ImportProgress &)> onProgress) {
-    if (versionId.isEmpty()) return false;
+    // 空版本号 = 最新正式版（读官方版本清单 latest.release）
+    QString id = versionId;
+    if (id.isEmpty()) {
+        json manifest;
+        bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+            DownloadManager::instance().downloadJson(
+                "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+                [&manifest, cb](bool ok2, QString err, json m) {
+                    manifest = std::move(m);
+                    cb(ok2, err);
+                });
+        });
+        if (!ok || !manifest.contains("latest")) return false;
+        id = QString::fromStdString(manifest["latest"].value("release", ""));
+        if (id.isEmpty()) return false;
+        if (onProgress) onProgress({"Latest release: " + id, 0});
+    }
 
     // 连接 AssetDownloader 的信号转发进度
     auto &ad = AssetDownloader::instance();
@@ -245,7 +261,7 @@ bool installVersion(const QString &versionId,
 
     // Step 1: 下载 MC 版本（json + jar + libraries + assets）
     bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
-        ad.downloadVersion(versionId, cb);
+        ad.downloadVersion(id, cb);
     });
     if (!ok) {
         QObject::disconnect(conn1);
@@ -256,9 +272,9 @@ bool installVersion(const QString &versionId,
     // Step 2: natives
     QString mcFolder = VersionManager::instance().mcFolder();
     McVersion ver;
-    ver.id = versionId;
-    ver.pathVersion = mcFolder + "versions/" + versionId + "/";
-    ver.pathJar = ver.pathVersion + versionId + ".jar";
+    ver.id = id;
+    ver.pathVersion = mcFolder + "versions/" + id + "/";
+    ver.pathJar = ver.pathVersion + id + ".jar";
     ver.pathIndie = mcFolder;
     if (onProgress) onProgress({"Downloading native libraries...", 85});
     ok = waitForAsync([&](std::function<void(bool, QString)> cb) {

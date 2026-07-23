@@ -63,16 +63,6 @@ static int handleSetFolder(const QStringList &args) {
     return 0;
 }
 
-static int handleSetPlayer(const QStringList &args) {
-    if (args.size() < 2) {
-        std::cerr << T("error: 缺少参数\n", "error: missing argument\n").toStdString();
-        return 1;
-    }
-    Settings::instance().setString("PlayerName", args[1]);
-    std::cout << "success" << std::endl;
-    return 0;
-}
-
 static int handleSetLang(const QStringList &args) {
     if (args.size() < 2 || (args[1] != "en" && args[1] != "zh")) {
         std::cerr << _("error:  lpcl-cli set-lang <en|zh>\n",
@@ -390,8 +380,12 @@ static int handleMcList() {
 static int handleLaunch(const QStringList &args) {
     QString target;
     if (args.size() < 2) {
-        // 未指定实例：TTY 用上下键 TUI 选择，非 TTY（管道）退回输序号
+        // 未指定实例：TTY 用上下键 TUI 选择，非 TTY（管道）退回输序号。
+        // 列表 = 实例 + 原版/加载器版本（launchVersion 解析时实例名优先，原版走 loadVersion）
         auto ids = lpcl::listVersions();
+        const auto mcIds = lpcl::listMcVersions();
+        for (const auto &v : mcIds)
+            if (!ids.contains(v)) ids << v;
         if (ids.isEmpty()) {
             std::cerr << _("error:  没有实例，请先导入整合包\n",
                            "error:  no instances, import a modpack first\n");
@@ -588,7 +582,6 @@ static void printHelp() {
          "set-folder <path>",
          "设置默认游戏目录",
          "Set default Minecraft folder"},
-        {"set-player <名称>", "set-player <name>", "设置玩家名称", "Set player name"},
         {"set-lang <en|zh>",
          "set-lang <en|zh>",
          "设置界面语言（持久保存）",
@@ -598,7 +591,10 @@ static void printHelp() {
          "设置游戏最大内存（auto=自动分配）",
          "Set max game memory (auto = automatic)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
-        {"mc-install <版本>", "mc-install <version>", "下载原版 MC 版本", "Download a vanilla MC version"},
+        {"mc-install [版本]",
+         "mc-install [version]",
+         "下载原版 MC 版本（不带参数为最新正式版）",
+         "Download a vanilla MC version (latest release without args)"},
         {"java-install <大版本>",
          "java-install <major>",
          "下载安装 Java（Adoptium JRE）",
@@ -607,14 +603,29 @@ static void printHelp() {
          "list-rm [name|*]",
          "删除实例（* 清空全部；无参上下键选择）",
          "Remove instance (* for all, select with arrows without args)"},
-        {"player-add <名称>", "player-add <name>", "添加玩家配置（无参进入交互向导）", "Add player profile (interactive wizard without args)"},
-        {"player-edit [uuid|序号]", "player-edit [uuid|index]", "修改玩家配置（交互向导）", "Edit player profile (interactive wizard)"},
-        {"player-rm [uuid|序号]", "player-rm [uuid|index]", "删除玩家配置（无参上下键选择）", "Remove player profile (select with arrows without args)"},
+        {"player-add <名称>",
+         "player-add <name>",
+         "添加玩家配置（无参进入交互向导）",
+         "Add player profile (interactive wizard without args)"},
+        {"player-edit [uuid|序号]",
+         "player-edit [uuid|index]",
+         "修改玩家配置（交互向导）",
+         "Edit player profile (interactive wizard)"},
+        {"player-rm [uuid|序号]",
+         "player-rm [uuid|index]",
+         "删除玩家配置（无参上下键选择）",
+         "Remove player profile (select with arrows without args)"},
         {"player-list", "player-list", "列出玩家配置", "List player profiles"},
-        {"player-select <uuid|序号>", "player-select <uuid|index>", "选择当前玩家（按列表序号或 uuid）", "Select current player (by index or uuid)"},
+        {"player-select <uuid|序号>",
+         "player-select <uuid|index>",
+         "选择当前玩家（按列表序号或 uuid）",
+         "Select current player (by index or uuid)"},
         {"config", "config", "查看当前配置", "Show current configuration"},
         {"update", "update", "检查并更新到最新版本", "Check for and apply updates"},
-        {"uninstall [-r]", "uninstall [-r]", "卸载（-r 保留游戏目录）", "Uninstall (-r keeps game folder)"},
+        {"uninstall [-r]",
+         "uninstall [-r]",
+         "卸载 lpcl-cli（-r 保留游戏目录）",
+         "Uninstall lpcl-cli (-r keeps game folder)"},
         {"test", "test", "全系统自检", "Run system self-test"},
         {"help", "help", "显示帮助信息", "Show help information"},
         {"version", "version", "显示版本号", "Show version number"},
@@ -825,14 +836,13 @@ static int handleUpdate(const QStringList &args) {
 }
 
 static int handleInstall(const QStringList &args) {
-    if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli mc-install <MC版本>\n",
-                       "error:  lpcl-cli mc-install <mc-version>\n");
-        return 1;
-    }
-    std::cout << _(QString("正在下载 MC %1 ...\n").arg(args[1]).toStdString(),
-                   QString("Downloading MC %1 ...\n").arg(args[1]).toStdString());
-    bool ok = lpcl::installVersion(args[1],
+    // 不带参数 = 最新正式版（SDK 解析 latest.release）
+    QString ver = args.size() >= 2 ? args[1] : QString();
+    std::cout << (ver.isEmpty()
+        ? _("正在下载最新版 MC ...\n", "Downloading latest MC ...\n")
+        : _(QString("正在下载 MC %1 ...\n").arg(ver).toStdString(),
+            QString("Downloading MC %1 ...\n").arg(ver).toStdString()));
+    bool ok = lpcl::installVersion(ver,
         [](const lpcl::ImportProgress &p) {
             if (p.percent >= 0) {
                 int bars = p.percent / 5;
@@ -895,7 +905,6 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "uninstall")    return handleUninstall(args);
     if (cmd == "update")       return handleUpdate(args);
     if (cmd == "set-folder")     return handleSetFolder(args);
-    if (cmd == "set-player")     return handleSetPlayer(args);
     if (cmd == "set-lang")       return handleSetLang(args);
     if (cmd == "set-mem")        return handleSetMem(args);
     if (cmd == "list-javas")     return handleListJavas();

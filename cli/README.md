@@ -61,7 +61,8 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 没有整合包？先装个原版：
 
 ```bash
-./lpcl-cli mc-install 1.20.1
+./lpcl-cli mc-install          # 最新正式版
+./lpcl-cli mc-install 1.20.1   # 指定版本
 ./lpcl-cli launch 1.20.1
 ```
 
@@ -74,14 +75,14 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | `list` | 列出所有实例 |
 | `list-rm [名称\|*]` | 删除实例（无参时上下键选择 + 二次确认；`*` 删除全部，注意加引号） |
 | `mc-list` | 列出已下载的原版 MC 版本 |
-| `launch [名称]` | 启动游戏；不填名称时**上下键选择**（TTY 交互菜单，非 TTY 退回输序号） |
+| `launch [名称]` | 启动游戏；不填名称时**上下键选择**（列表含实例 + 原版/加载器版本；非 TTY 退回输序号） |
 
 ### 下载与导入
 
 | 命令 | 说明 |
 |---|---|
 | `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包；`--r` 重命名实例；Mod 包需 `--to` 指定目标实例 |
-| `mc-install <版本>` | 下载原版 MC 版本 |
+| `mc-install [版本]` | 下载原版 MC 版本（不带参数为最新正式版） |
 | `java-install <大版本>` | 下载安装 Java（Adoptium JRE） |
 
 ### Java
@@ -105,7 +106,6 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | 命令 | 说明 |
 |---|---|
 | `set-folder <路径>` | 设置默认游戏目录 |
-| `set-player <名称>` | 设置玩家名称 |
 | `set-lang <en\|zh>` | 设置界面语言（默认英文） |
 | `set-mem <MB\|auto>` | 设置游戏最大内存；`auto`（默认）按可用内存 50% 自动分配（上限 16G） |
 | `update` | 检查 GitHub Releases 是否有新版本并自动更新 |
