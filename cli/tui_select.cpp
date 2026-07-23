@@ -108,11 +108,14 @@ int tuiSelect(const QString &title, const QStringList &items, int initial) {
         drawMenu(title, items, current, first);
     }
 
-    // 结束后：清理菜单区，留一行干净的输出位置
-    tuiWrite("\x1b[" + QByteArray::number(items.size() + 1) + "A");
+    // 结束后：清理菜单区，留一行干净的输出位置。
+    // 此时光标在尾行（提示行）行尾；菜单共 标题+N条目+尾行 三部分的 N+2 行。
+    tuiWrite("\r\x1b[2K");  // 先清掉光标所在的尾行
+    tuiWrite("\x1b[" + QByteArray::number(items.size() + 1) + "A");  // 回到标题行
     for (int i = 0; i <= items.size(); ++i)
         tuiWrite("\x1b[2K" + QByteArray(i < items.size() ? "\x1b[1B" : ""));
-    tuiWrite("\x1b[" + QByteArray::number(items.size()) + "A\r\n");
+    // 光标在最后一个条目行（已清），换行离开菜单区，后续输出从干净行开始
+    tuiWrite("\r\n");
 
     g_guard.restore();
     signal(SIGINT, SIG_DFL);
