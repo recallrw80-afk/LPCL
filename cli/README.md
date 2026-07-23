@@ -106,6 +106,7 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | `set-folder <路径>` | 设置默认游戏目录 |
 | `set-player <名称>` | 设置玩家名称 |
 | `set-lang <en\|zh>` | 设置界面语言（默认英文） |
+| `set-mem <MB\|auto>` | 设置游戏最大内存；`auto`（默认）按可用内存 50% 自动分配（上限 16G） |
 | `update` | 检查 GitHub Releases 是否有新版本并自动更新 |
 | `uninstall [-r]` | 卸载启动器；`-r` 保留游戏目录内容 |
 | `config` | 查看当前配置 |
@@ -122,8 +123,11 @@ mc/
 ├── versions/       # 下载的 MC 版本
 ├── libraries/      # 游戏依赖库（多实例共享）
 ├── assets/         # 游戏资源（多实例共享）
-└── javas/          # 自动下载的 Java
+├── javas/          # 自动下载的 Java
+└── logs/           # 启动器日志（lpcl-launch-*.log，滚动保留 10 份）
 ```
+
+游戏自己的日志在 `<实例>/logs/latest.log`（MC/mod 标准位置）；启动器每次 `launch` 另写一份完整会话日志（启动命令行 + 全部游戏输出 + 退出码）到 `mc/logs/lpcl-launch-<时间戳>.log`，排查启动问题看这个。
 
 ## 常见问题
 

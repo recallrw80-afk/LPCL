@@ -2,6 +2,7 @@
 #define LPCL_LAUNCHER_H
 
 #include <QObject>
+#include <QFile>
 #include <QProcess>
 #include <QTimer>
 #include "core/types.h"
@@ -84,6 +85,8 @@ private:
     void setProgress(int value);
     void appendLog(const QString &line);
     void doLaunch();
+    /// 打开本次启动的落盘日志（<mc>/logs/lpcl-launch-<时间戳>.log，滚动保留 10 份）
+    void openLaunchLog();
     /// 按行处理游戏输出（buffer 保留不完整行；字节级缓冲避免 UTF-8 跨界乱码）
     void processGameOutput(QByteArray &buffer, const QByteArray &data);
     /// 冲刷缓冲中无换行结尾的残留行（进程退出时调用）
@@ -100,6 +103,8 @@ private:
     QString m_statusText;
     QByteArray m_logBuffer;     // stdout 不完整行缓冲
     QByteArray m_logBufferErr;  // stderr 不完整行缓冲（与 stdout 分开，防止两通道粘行）
+    QFile m_logFile;            // 本次启动的落盘日志（mc/logs/lpcl-launch-*.log）
+    int m_logLinesSinceFlush = 0;
     int m_progress = 0;
 };
 

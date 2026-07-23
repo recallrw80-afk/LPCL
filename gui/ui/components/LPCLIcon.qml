@@ -19,11 +19,11 @@ Item {
 
     readonly property url _resolvedSource: {
         if (defaultIcon !== "")
-            return "qrc:/assets/icons/" + defaultIcon + ".svg";
+            return "qrc:/gui/assets/icons/" + defaultIcon + ".svg";
         if (lucideIcon !== "")
-            return "qrc:/assets/icons/lucide/" + lucideIcon + ".svg";
+            return "qrc:/gui/assets/icons/lucide/" + lucideIcon + ".svg";
         if (assetsIcon !== "")
-            return "qrc:/assets/" + assetsIcon + ".svg";
+            return "qrc:/gui/assets/" + assetsIcon + ".svg";
         return iconSource;
     }
 

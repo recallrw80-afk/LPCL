@@ -160,7 +160,7 @@ struct McLaunchOptions {
     QString saveBatch;        // Save launch script instead of launching
     QString targetVersionId;  // Force specific version
     QStringList extraGameArgs;
-    int maxMemoryMB = 4096;
+    int maxMemoryMB = 0;      // 0 = 按系统可用内存自动分配；>0 = 固定值
     int minMemoryMB = 512;
     bool fullscreen = false;
     int windowWidth = 854;

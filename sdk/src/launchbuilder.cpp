@@ -5,10 +5,37 @@
 #include "util/file_utils.h"
 
 #include <QDir>
+#include <QFile>
 #include <QLoggingCategory>
 #include <QRegularExpression>
 
 static Q_LOGGING_CATEGORY(logBuild, "lpcl.launchbuilder")
+
+// 自动内存：取系统可用内存（/proc/meminfo MemAvailable）的 50%，
+// 按 512MB 对齐，限制在 [2048, 16384] MB。读取失败时回退 4096MB。
+// 注意：/proc 文件 st_size 恒为 0，不能用 atEnd() 判断（会立即为真），
+// 必须以 readLine() 返回空作为结束条件。
+static int autoMaxMemoryMB() {
+    QFile f("/proc/meminfo");
+    if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
+        for (QByteArray line = f.readLine(); !line.isEmpty(); line = f.readLine()) {
+            if (line.startsWith("MemAvailable:")) {
+                const auto parts = line.split(' ');
+                for (const auto &p : parts) {
+                    bool ok = false;
+                    long kb = p.trimmed().toLong(&ok);
+                    if (ok) {
+                        long mb = (kb / 1024) / 2;
+                        mb = (mb / 512) * 512;
+                        return int(qBound(2048L, mb, 16384L));
+                    }
+                }
+                break;
+            }
+        }
+    }
+    return 4096;
+}
 
 LaunchBuilder& LaunchBuilder::instance() {
     static LaunchBuilder b;
@@ -119,9 +146,15 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
         args.append(ArgUtils::splitJavaArgs(customArg));
     }
 
-    // Memory allocation
+    // Memory allocation（所有启动路径在此收口）
+    // 优先级：调用方显式传入 > LaunchMaxMemory 设置（0=自动）> 按可用内存自动分配
     int maxMemMB = m_options.maxMemoryMB;
-    if (maxMemMB <= 0) maxMemMB = 4096;
+    if (maxMemMB <= 0)
+        maxMemMB = Settings::instance().getString("LaunchMaxMemory", "0").toInt();
+    if (maxMemMB <= 0) {
+        maxMemMB = autoMaxMemoryMB();
+        qCInfo(logBuild) << "Auto memory allocation:" << maxMemMB << "MB";
+    }
     args.append(QString("-Xmx%1m").arg(maxMemMB));
 
     int minMemMB = m_options.minMemoryMB;

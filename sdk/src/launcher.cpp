@@ -4,6 +4,7 @@
 #include "core/settings.h"
 #include "core/javamanager.h"
 
+#include <QDateTime>
 #include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
@@ -138,7 +139,8 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
 
     // 4. Build launch options from settings
     McLaunchOptions options;
-    options.maxMemoryMB = Settings::instance().getString("LaunchMaxMemory", "4096").toInt();
+    // LaunchMaxMemory：0（默认）= 自动（在 LaunchBuilder 统一收口）；>0 = 固定值
+    options.maxMemoryMB = Settings::instance().getString("LaunchMaxMemory", "0").toInt();
     options.minMemoryMB = Settings::instance().getString("LaunchMinMemory", "512").toInt();
     QString fsValue = Settings::instance().getString("LaunchFullscreen", "false").toLower();
     options.fullscreen = (fsValue == "true" || fsValue == "1");
@@ -152,6 +154,8 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
 void Launcher::doLaunch() {
     setState(LaunchState::Launching);
     setStatus("Starting game process...");
+
+    openLaunchLog();
 
     QString javaExe = m_java.pathJava;
 
@@ -200,6 +204,14 @@ void Launcher::doLaunch() {
     // Minecraft-specific env
     env.insert("MINECRAFT_LAUNCHER_NAME", "LPCL");
     env.insert("MINECRAFT_LAUNCHER_VERSION", "0.1");
+
+    // NVIDIA Linux 驱动的 threaded optimizations 会在渲染线程随机 SIGSEGV
+    // （glfwWaitEventsTimeout 里跳到坏地址）。Embeddium 也会禁它，但 FML 的
+    // 早期加载窗口在它之前 5 秒就建了 GL 上下文，进程内 setenv 已太晚——
+    // 必须在启动器层随环境变量注入，进程一启动就生效。
+    // 只有 NVIDIA 驱动读这个变量，其他显卡设置无副作用。
+    if (!env.contains("__GL_THREADED_OPTIMIZATIONS"))
+        env.insert("__GL_THREADED_OPTIMIZATIONS", "0");
 
     // 无显示环境（无 GUI）：用 xvfb-run 虚拟显示包装启动
     QString program = javaExe;
@@ -295,6 +307,7 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
     // 用户主动中断时不再覆盖状态
     if (m_state == LaunchState::Interrupted) {
         emit gameExited(exitCode, "Interrupted by user");
+        if (m_logFile.isOpen()) m_logFile.close();
         return;
     }
     if (exitStatus == QProcess::CrashExit) {
@@ -312,6 +325,7 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
         setStatus("Game exited");
         emit gameExited(exitCode, "Game exited normally");
     }
+    if (m_logFile.isOpen()) m_logFile.close();
 }
 
 void Launcher::onGameError(QProcess::ProcessError error) {
@@ -336,6 +350,7 @@ void Launcher::onGameError(QProcess::ProcessError error) {
     appendLog("[LPCL] ERROR: " + errMsg);
     qCWarning(logLaunch) << errMsg;
     setState(LaunchState::Failed);
+    if (m_logFile.isOpen()) m_logFile.close();
     emit launchFailed(errMsg);
 }
 
@@ -373,5 +388,37 @@ void Launcher::appendLog(const QString &line) {
     static QLoggingCategory logCat("lpcl.game");
     qCInfo(logCat).noquote() << line;
 
+    // 落盘：每次启动一份文件，攒 100 行刷一次（游戏日志量大，逐行 flush 太贵）
+    if (m_logFile.isOpen()) {
+        m_logFile.write(line.toUtf8());
+        m_logFile.write("\n");
+        if (++m_logLinesSinceFlush >= 100) {
+            m_logFile.flush();
+            m_logLinesSinceFlush = 0;
+        }
+    }
+
     // The UI can connect to gameLog() signal for display
+}
+
+void Launcher::openLaunchLog() {
+    if (m_logFile.isOpen()) m_logFile.close();
+    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
+    if (mcFolder.isEmpty()) return;
+    QDir logDir(mcFolder + "/logs");
+    if (!logDir.mkpath(".")) return;
+
+    // 滚动清理：只留最近 9 份，加上本次共 10 份
+    const auto old = logDir.entryInfoList({"lpcl-launch-*.log"}, QDir::Files, QDir::Time);
+    for (int i = 9; i < old.size(); ++i)
+        QFile::remove(old[i].absoluteFilePath());
+
+    QString name = "lpcl-launch-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss") + ".log";
+    m_logFile.setFileName(logDir.filePath(name));
+    if (!m_logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        qCWarning(logLaunch) << "Cannot open launch log file:" << m_logFile.fileName();
+        return;
+    }
+    m_logLinesSinceFlush = 0;
+    appendLog("[LPCL] Launch log: " + m_logFile.fileName());
 }

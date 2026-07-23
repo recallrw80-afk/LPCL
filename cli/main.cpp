@@ -85,6 +85,30 @@ static int handleSetLang(const QStringList &args) {
     return 0;
 }
 
+// set-mem <MB|auto>：对应 PCL 的 LaunchRamType/LaunchRamCustom（0=自动，>0=固定 MB）
+static int handleSetMem(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli set-mem <MB|auto>\n",
+                       "error:  lpcl-cli set-mem <MB|auto>\n");
+        return 1;
+    }
+    QString v = args[1].toLower();
+    if (v == "auto" || v == "自动") {
+        Settings::instance().setString("LaunchMaxMemory", "0");
+    } else {
+        bool ok = false;
+        int mb = v.toInt(&ok);
+        if (!ok || mb < 512 || mb > 65536) {
+            std::cerr << _("error:  内存需为 512~65536 之间的 MB 数，或 auto\n",
+                           "error:  memory must be 512-65536 MB, or auto\n");
+            return 1;
+        }
+        Settings::instance().setString("LaunchMaxMemory", QString::number(mb));
+    }
+    std::cout << "success" << std::endl;
+    return 0;
+}
+
 static int handleListJavas() {
     auto names = lpcl::listJavas();
     if (names.isEmpty()) {
@@ -415,6 +439,10 @@ static void printHelp() {
          "set-lang <en|zh>",
          "设置界面语言（持久保存）",
          "Set UI language (persistent)"},
+        {"set-mem <MB|auto>",
+         "set-mem <MB|auto>",
+         "设置游戏最大内存（auto=自动分配）",
+         "Set max game memory (auto = automatic)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
         {"mc-install <版本>", "mc-install <version>", "下载原版 MC 版本", "Download a vanilla MC version"},
         {"java-install <大版本>",
@@ -454,6 +482,11 @@ static int handleConfig() {
               << _("提交: ",       "Commit: ")       << cfg.commit.toStdString() << std::endl;
     QString folder = cfg.gameFolderSet ? cfg.gameFolder : _("（未设置）", "(not set)");
     std::cout << _("默认游戏目录: ", "Default game folder: ") << folder.toStdString() << std::endl;
+
+    // 最大内存：0 = 自动（可用内存 50%，上限 16G）
+    int maxMem = Settings::instance().getString("LaunchMaxMemory", "0").toInt();
+    QString memStr = maxMem <= 0 ? _("自动", "auto") : QString("%1 MB").arg(maxMem);
+    std::cout << _("游戏最大内存: ", "Max game memory: ") << memStr.toStdString() << std::endl;
 
     if (cfg.players.isEmpty()) {
         std::cout << _("玩家配置: （无）\n", "Player profiles: (none)\n");
@@ -709,6 +742,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-player")     return handleSetPlayer(args);
     if (cmd == "set-lang")       return handleSetLang(args);
+    if (cmd == "set-mem")        return handleSetMem(args);
     if (cmd == "list-javas")     return handleListJavas();
     if (cmd == "player-add")     return handlePlayerAdd(args);
     if (cmd == "player-rm")      return handlePlayerRm(args);
