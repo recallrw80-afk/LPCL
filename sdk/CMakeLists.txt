@@ -75,7 +75,15 @@ set(LPCLCORE_HEADERS
     include/util/platform_utils.h
 )
 
-add_library(lpclcore SHARED ${LPCLCORE_SOURCES} ${LPCLCORE_HEADERS})
+# 打包 CLI 时用 -DLPCL_STATIC_CORE=ON：静态链接进 lpcl-cli，发布单文件免带 .so
+option(LPCL_STATIC_CORE "Static-link lpclcore into dependents" OFF)
+if(LPCL_STATIC_CORE)
+    add_library(lpclcore STATIC ${LPCLCORE_SOURCES} ${LPCLCORE_HEADERS})
+    # Qt 要求使用它的目标都是 PIC；静态库要链接进 PIE 可执行文件也必须 PIC
+    set_target_properties(lpclcore PROPERTIES POSITION_INDEPENDENT_CODE ON)
+else()
+    add_library(lpclcore SHARED ${LPCLCORE_SOURCES} ${LPCLCORE_HEADERS})
+endif()
 
 # CurseForge API key：开发构建从 LPCL/.env 嵌入（发布构建 -DLPCL_EMBED_CF_KEY=OFF 跳过）
 option(LPCL_EMBED_CF_KEY "Embed CurseForge API key from .env (dev builds)" ON)
