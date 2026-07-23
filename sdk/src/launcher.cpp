@@ -213,6 +213,19 @@ void Launcher::doLaunch() {
     if (!env.contains("__GL_THREADED_OPTIMIZATIONS"))
         env.insert("__GL_THREADED_OPTIMIZATIONS", "0");
 
+    // fcitx/ibus 的 XIM 模块会让 GLFW 在 glfwWaitEventsTimeout 里 SIGSEGV
+    // （原版 MC 也会在窗口出现后几秒内崩，pc=0xc906 固定坏地址，已实测：
+    // XMODIFIERS=@im=fcitx 4.3 秒必崩，@im=none 稳定运行）。
+    // 对游戏进程强制禁用 XIM——副作用是游戏内聊天框不能用输入法打中文，
+    // 但换来不崩溃。用户显式设过 LPCL 专用开关则尊重（高级逃生口）。
+    if (!env.contains("LPCL_KEEP_XIM")) {
+        if (env.value("XMODIFIERS") != "@im=none") {
+            env.insert("XMODIFIERS", "@im=none");
+            appendLog("[LPCL] 已禁用 XIM 输入法钩子（XMODIFIERS=@im=none），"
+                      "规避 fcitx/ibus 导致的 GLFW 崩溃");
+        }
+    }
+
     // 无显示环境（无 GUI）：用 xvfb-run 虚拟显示包装启动
     QString program = javaExe;
     QStringList finalArgs = allArgs;
