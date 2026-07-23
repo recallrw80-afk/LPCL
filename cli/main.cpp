@@ -10,6 +10,7 @@
 #include <QCoreApplication>
 #include <cstdlib>
 #include <QCommandLineParser>
+#include <unistd.h>
 #include <QDir>
 #include <QEventLoop>
 #include <QFileInfo>
@@ -21,6 +22,7 @@
 
 #include "i18n.h"
 #include "test.h"
+#include "tui_select.h"
 #include "lpcl.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
@@ -171,12 +173,31 @@ static int handlePlayerList() {
 }
 
 static int handlePlayerSelect(const QStringList &args) {
+    QString uuid;
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli player-select <uuid|序号>\n",
-                       "error:  lpcl-cli player-select <uuid|index>\n");
-        return 1;
+        // 无参：TTY 弹上下键选择（非 TTY 提示用法）
+        auto players = lpcl::listPlayers();
+        if (players.isEmpty()) {
+            std::cerr << _("error:  没有玩家配置，请先 player-add\n",
+                           "error:  no player profiles, run player-add first\n");
+            return 1;
+        }
+        if (!isatty(fileno(stdin))) {
+            std::cerr << _("error:  lpcl-cli player-select <uuid|序号>\n",
+                           "error:  lpcl-cli player-select <uuid|index>\n");
+            return 1;
+        }
+        QStringList names;
+        for (const auto &p : players) names << p.name;
+        int pick = tuiSelect("选择当前玩家", names);
+        if (pick < 0) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        uuid = players[pick].uuid;
+    } else {
+        uuid = resolvePlayerUuid(args[1]);
     }
-    QString uuid = resolvePlayerUuid(args[1]);
     if (!lpcl::selectPlayer(uuid)) {
         std::cerr << _("error:  玩家 UUID 或序号不存在\n", "error:  player UUID or index not found\n");
         return 1;
@@ -216,27 +237,37 @@ static int handleMcList() {
 static int handleLaunch(const QStringList &args) {
     QString target;
     if (args.size() < 2) {
-        // 未指定实例：列出实例列表，用户按序号选择
+        // 未指定实例：TTY 用上下键 TUI 选择，非 TTY（管道）退回输序号
         auto ids = lpcl::listVersions();
         if (ids.isEmpty()) {
             std::cerr << _("error:  没有实例，请先导入整合包\n",
                            "error:  no instances, import a modpack first\n");
             return 1;
         }
-        std::cout << _("选择要启动的实例:\n", "Select an instance to launch:\n");
-        for (int i = 0; i < ids.size(); ++i)
-            std::cout << "  " << (i + 1) << ") " << ids[i].toStdString() << "\n";
-        std::cout << _("请输入序号: ", "Enter number: ");
-        std::cout.flush();
-        std::string line;
-        std::getline(std::cin, line);
-        bool okNum = false;
-        int choice = QString::fromStdString(line).toInt(&okNum);
-        if (!okNum || choice < 1 || choice > ids.size()) {
-            std::cerr << _("error:  无效的选择\n", "error:  invalid choice\n");
-            return 1;
+        int choice = -1;
+        if (isatty(fileno(stdin))) {
+            choice = tuiSelect("选择要启动的实例", ids);
+            if (choice < 0) {
+                std::cerr << _("已取消\n", "Cancelled\n");
+                return 1;
+            }
+        } else {
+            std::cout << _("选择要启动的实例:\n", "Select an instance to launch:\n");
+            for (int i = 0; i < ids.size(); ++i)
+                std::cout << "  " << (i + 1) << ") " << ids[i].toStdString() << "\n";
+            std::cout << _("请输入序号: ", "Enter number: ");
+            std::cout.flush();
+            std::string line;
+            std::getline(std::cin, line);
+            bool okNum = false;
+            int n = QString::fromStdString(line).toInt(&okNum);
+            if (!okNum || n < 1 || n > ids.size()) {
+                std::cerr << _("error:  无效的选择\n", "error:  invalid choice\n");
+                return 1;
+            }
+            choice = n - 1;
         }
-        target = ids[choice - 1];
+        target = ids[choice];
     } else {
         target = args[1];
     }
@@ -271,44 +302,60 @@ static int handleInpack(QStringList &args) {
     }
     std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
 
-    bool done = false;
-    int  result = 1;
-    lpcl::importModpack(args[1], rename, to,
-        [](const lpcl::ImportProgress &p) {
-            int bars = p.percent / 5;
-            std::cout << "\r  [";
-            for (int i = 0; i < 20; ++i)
-                std::cout << (i < bars ? "=" : i == bars ? ">" : " ");
-            std::cout << "] " << p.percent << "% " << p.step.toStdString();
-            if (p.percent >= 100) std::cout << std::endl;
-            std::cout.flush();
-        },
-        [&](bool ok, const QString &msg, const QStringList &data) {
-            if (ok) {
-                std::cout << std::endl << _("success: ", "success: ")
-                          << msg.toStdString() << std::endl;
-                result = 0;
-            } else {
-                std::cerr << std::endl << _("error: ", "error: ")
-                          << msg.toStdString() << std::endl;
-                // mod 包缺 --to：输出当前实例列表（先判断有没有实例）
-                if (msg.contains("--to")) {
-                    if (data.isEmpty()) {
-                        std::cout << _("（当前没有实例，请先导入整合包）\n",
-                                       "(no instances yet, import a modpack first)\n");
-                    } else {
-                        std::cout << _("当前实例:\n", "Current instances:\n");
-                        for (const auto &d : data)
-                            std::cout << "  " << d.toStdString() << "\n";
+    for (;;) {
+        bool done = false;
+        int  result = 1;
+        QString retryTo;  // mod 包场景：用户在 TUI 里选中的目标实例
+        lpcl::importModpack(args[1], rename, to,
+            [](const lpcl::ImportProgress &p) {
+                int bars = p.percent / 5;
+                std::cout << "\r  [";
+                for (int i = 0; i < 20; ++i)
+                    std::cout << (i < bars ? "=" : i == bars ? ">" : " ");
+                std::cout << "] " << p.percent << "% " << p.step.toStdString();
+                if (p.percent >= 100) std::cout << std::endl;
+                std::cout.flush();
+            },
+            [&](bool ok, const QString &msg, const QStringList &data) {
+                if (ok) {
+                    std::cout << std::endl << _("success: ", "success: ")
+                              << msg.toStdString() << std::endl;
+                    result = 0;
+                } else {
+                    // mod 包缺 --to：TTY 弹上下键选择实例后重试；否则按原样报错
+                    if (msg.contains("--to") && !data.isEmpty() && isatty(fileno(stdin))) {
+                        int pick = tuiSelect(msg, data);
+                        if (pick >= 0) retryTo = data[pick];
+                        done = true;
+                        QCoreApplication::quit();
+                        return;
+                    }
+                    std::cerr << std::endl << _("error: ", "error: ")
+                              << msg.toStdString() << std::endl;
+                    // mod 包缺 --to 且无 TTY：输出当前实例列表（先判断有没有实例）
+                    if (msg.contains("--to")) {
+                        if (data.isEmpty()) {
+                            std::cout << _("（当前没有实例，请先导入整合包）\n",
+                                           "(no instances yet, import a modpack first)\n");
+                        } else {
+                            std::cout << _("当前实例:\n", "Current instances:\n");
+                            for (const auto &d : data)
+                                std::cout << "  " << d.toStdString() << "\n";
+                        }
                     }
                 }
-            }
-            done = true;
-            QCoreApplication::quit();
-        });
+                done = true;
+                QCoreApplication::quit();
+            });
 
-    if (!done) QCoreApplication::instance()->exec(); // 等待异步下载完成
-    return result;
+        if (!done) QCoreApplication::instance()->exec(); // 等待异步下载完成
+
+        if (retryTo.isEmpty()) return result;
+        // 用户已选择目标实例，重试导入
+        to = retryTo;
+        std::cout << _("以实例 ", "Retrying with target instance ")
+                  << to.toStdString() << _(" 为目标重新导入...\n", " ...\n");
+    }
 }
 
 static int handleRm(const QStringList &args) {
