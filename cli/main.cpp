@@ -16,8 +16,10 @@
 #include <QFileInfo>
 #include <QLoggingCategory>
 #include <QPointer>
+#include <QProcess>
 #include <QRegularExpression>
 #include <QSysInfo>
+#include <QUrl>
 #include <iostream>
 
 #include "i18n.h"
@@ -28,6 +30,7 @@
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
+#include "util/crypto_utils.h"
 #include "util/file_utils.h"
 
 // ---- helpers ----
@@ -97,6 +100,98 @@ static int handleSetMem(const QStringList &args) {
         Settings::instance().setString("LaunchMaxMemory", QString::number(mb));
     }
     std::cout << "success" << std::endl;
+    return 0;
+}
+
+// set-cf-key <key|clear>：配置用户自己的 CurseForge API key（加密存 Settings）
+// 配置了走官方 API（最快最稳）；clear 清除后回退 MCIM 镜像
+static int handleSetCfKey(const QStringList &args) {
+    if (args.size() < 2) {
+        std::cerr << _("error:  lpcl-cli set-cf-key <key|clear>\n",
+                       "error:  lpcl-cli set-cf-key <key|clear>\n");
+        return 1;
+    }
+    if (args[1] == "clear") {
+        Settings::instance().setString("CurseForgeApiKey", "");
+        std::cout << _("success: 已清除，CurseForge 下载将使用 MCIM 镜像\n",
+                       "success: cleared, CurseForge downloads will use the MCIM mirror\n");
+        return 0;
+    }
+    Settings::instance().setString("CurseForgeApiKey", CryptoUtils::pclEncrypt(args[1]));
+    std::cout << _("success: 已配置，CurseForge 下载将使用官方 API\n",
+                   "success: configured, CurseForge downloads will use the official API\n");
+    return 0;
+}
+
+// ---- 问题上报（方案 B：生成 GitHub Issue 预填链接） ----
+
+// 最近一份启动日志的末尾，脱敏：accessToken 打码、家目录缩略为 ~
+static QString latestLaunchLogTail(int maxLines, int maxChars) {
+    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
+    if (mcFolder.isEmpty()) return QString();
+    QDir logDir(mcFolder + "/logs");
+    const auto files = logDir.entryInfoList({"lpcl-launch-*.log"}, QDir::Files, QDir::Time);
+    if (files.isEmpty()) return QString();
+    QFile f(files.first().absoluteFilePath());
+    if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return QString();
+
+    QStringList lines = QString::fromUtf8(f.readAll()).split('\n');
+    static const QRegularExpression tokenRe("(--accessToken\\s+)\\S+");
+    const QString home = QDir::homePath();
+    for (auto &l : lines) {
+        l.replace(tokenRe, "\\1***");
+        if (!home.isEmpty()) l.replace(home, "~");
+    }
+    if (lines.size() > maxLines) lines = lines.mid(lines.size() - maxLines);
+    QString tail = lines.join('\n');
+    if (tail.size() > maxChars) tail = _("（截断）\n", "(truncated)\n") + tail.right(maxChars);
+    return tail;
+}
+
+static QString buildIssueUrl(const QString &repo, const QString &desc, const QString &tail) {
+    QString body = QString("%1\n\n**环境 / Environment**\n- LPCL: %2 (%3)\n- OS: %4 %5\n- Qt: %6\n")
+        .arg(desc, GIT_DESCRIBE, GIT_COMMIT_HASH,
+             QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture(), qVersion());
+    if (!tail.isEmpty())
+        body += "\n**最近启动日志 / Launch log (tail)**\n```\n" + tail + "\n```\n";
+    QString title = desc.size() > 60 ? desc.left(60) + "..." : desc;
+    return QString("https://github.com/%1/issues/new?title=%2&body=%3")
+        .arg(repo, QString(QUrl::toPercentEncoding(title)),
+             QString(QUrl::toPercentEncoding(body)));
+}
+
+static int handleReport(const QStringList &args) {
+    QString desc;
+    if (args.size() >= 2) {
+        desc = args.mid(1).join(' ');
+    } else if (isatty(fileno(stdin))) {
+        auto d = tuiInput(_("用一句话描述问题", "Describe the issue in one sentence"));
+        if (!d) {
+            std::cerr << _("已取消\n", "Cancelled\n");
+            return 1;
+        }
+        desc = *d;
+    } else {
+        std::cerr << _("error:  lpcl-cli report <问题描述>\n",
+                       "error:  lpcl-cli report <description>\n");
+        return 1;
+    }
+    if (desc.isEmpty()) desc = "LPCL 问题反馈";
+
+    QString repo = qEnvironmentVariable("LPCL_REPO", "OWNER/LPCL");
+    // GitHub URL 长度有限，先给 4000 字符日志，超长再砍到 1200
+    QString url = buildIssueUrl(repo, desc, latestLaunchLogTail(40, 4000));
+    if (url.size() > 7500)
+        url = buildIssueUrl(repo, desc, latestLaunchLogTail(15, 1200));
+
+    std::cout << _("Issue 预填链接（内容已生成，提交前可再编辑）:\n",
+                   "Prefilled issue URL (editable before submitting):\n")
+              << url.toStdString() << "\n";
+    if (isatty(fileno(stdin))) {
+        auto open = tuiConfirm(_("在浏览器中打开吗", "Open in browser"), true);
+        if (open && *open)
+            QProcess::startDetached("xdg-open", {url});
+    }
     return 0;
 }
 
@@ -590,6 +685,10 @@ static void printHelp() {
          "set-mem <MB|auto>",
          "设置游戏最大内存（auto=自动分配）",
          "Set max game memory (auto = automatic)"},
+        {"set-cf-key <key|clear>",
+         "set-cf-key <key|clear>",
+         "配置自己的 CurseForge API key（clear 清除回退镜像）",
+         "Set your own CurseForge API key (clear to use mirror)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
         {"mc-install [版本]",
          "mc-install [version]",
@@ -621,6 +720,7 @@ static void printHelp() {
          "选择当前玩家（按列表序号或 uuid）",
          "Select current player (by index or uuid)"},
         {"config", "config", "查看当前配置", "Show current configuration"},
+        {"report [描述]", "report [description]", "生成 GitHub Issue 预填链接（附环境+日志）", "Create a prefilled GitHub issue link (env + logs attached)"},
         {"update", "update", "检查并更新到最新版本", "Check for and apply updates"},
         {"uninstall [-r]",
          "uninstall [-r]",
@@ -902,11 +1002,13 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
         return 0;
     }
     if (cmd == "config")       return handleConfig();
+    if (cmd == "report")       return handleReport(args);
     if (cmd == "uninstall")    return handleUninstall(args);
     if (cmd == "update")       return handleUpdate(args);
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-lang")       return handleSetLang(args);
     if (cmd == "set-mem")        return handleSetMem(args);
+    if (cmd == "set-cf-key")     return handleSetCfKey(args);
     if (cmd == "list-javas")     return handleListJavas();
     if (cmd == "player-add")     return handlePlayerAdd(args);
     if (cmd == "player-edit")    return handlePlayerEdit(args);

@@ -74,6 +74,20 @@ public:
                                                 std::function<void(bool, QString)> onComplete,
                                                 int maxRetries = 3);
 
+    /// Download to memory with custom headers, reporting the HTTP status code.
+    /// onComplete(success, httpStatusCode, data or errorString)——鉴权类失败（401/403/429）
+    /// 调用方可据此做降级（如 CF key 失效回退镜像），无 HTTP 响应时 statusCode 为 0
+    QNetworkReply* downloadToStringWithStatus(const QString &url,
+                                               const QMap<QByteArray, QByteArray> &headers,
+                                               std::function<void(bool, int, QString)> onComplete,
+                                               int maxRetries = 3);
+
+    /// Download and parse JSON with custom headers, reporting the HTTP status code
+    QNetworkReply* downloadJsonWithStatus(const QString &url,
+                                           const QMap<QByteArray, QByteArray> &headers,
+                                           std::function<void(bool, int, QString, nlohmann::json)> onComplete,
+                                           int maxRetries = 3);
+
     // ---- JSON download helpers ----
 
     /// Download and parse JSON

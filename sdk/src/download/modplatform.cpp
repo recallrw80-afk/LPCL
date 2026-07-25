@@ -40,30 +40,46 @@ ModPlatform& ModPlatform::instance() {
             m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
         if (m.m_cfApiKey.isEmpty())
             qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
+        // 强制镜像开关：嵌入 key 失效时的逃逸通道，跳过官方 API 直连镜像
+        m.m_forceCfMirror = qEnvironmentVariableIntValue("LPCL_FORCE_CF_MIRROR") != 0;
+        if (m.m_forceCfMirror)
+            qCInfo(logMod) << "LPCL_FORCE_CF_MIRROR 已设置，CF 请求强制走 MCIM 镜像";
     }
     return m;
 }
 
 // CurseForge 请求辅助
 
-// 无 API key 时把官方地址改写为 MCIM 镜像地址
+// 无 API key（或强制镜像）时把官方地址改写为 MCIM 镜像地址
 QString ModPlatform::cfApiUrl(const QString &officialUrl) const {
-    if (!m_cfApiKey.isEmpty()) return officialUrl;
+    if (!m_cfApiKey.isEmpty() && !m_forceCfMirror) return officialUrl;
     QString mirrored = officialUrl;
     return mirrored.replace(CF_API, CF_MIRROR);
 }
 
-// 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key 走 MCIM 镜像
+// 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key / 强制镜像走 MCIM 镜像；
+// 官方返回 401/403/429（key 失效/被吊销/配额超限）时自动回退镜像重试一次，功能降级而非硬挂
 void ModPlatform::cfJsonGet(const QString &officialUrl,
                             std::function<void(bool, QString, json)> onComplete) {
-    if (m_cfApiKey.isEmpty()) {
+    if (m_cfApiKey.isEmpty() || m_forceCfMirror) {
         DownloadManager::instance().downloadJson(cfApiUrl(officialUrl), onComplete);
-    } else {
-        QMap<QByteArray, QByteArray> headers;
-        headers.insert("x-api-key", m_cfApiKey.toUtf8());
-        headers.insert("Accept", "application/json");
-        DownloadManager::instance().downloadJsonWithHeaders(officialUrl, headers, onComplete);
+        return;
     }
+    QMap<QByteArray, QByteArray> headers;
+    headers.insert("x-api-key", m_cfApiKey.toUtf8());
+    headers.insert("Accept", "application/json");
+    DownloadManager::instance().downloadJsonWithStatus(officialUrl, headers,
+        [officialUrl, onComplete](bool ok, int statusCode, QString errOrData, json result) {
+            if (!ok && (statusCode == 401 || statusCode == 403 || statusCode == 429)) {
+                qCWarning(logMod) << "CF API 返回" << statusCode
+                                  << "（key 失效或超限），回退 MCIM 镜像:" << officialUrl;
+                QString mirrored = officialUrl;
+                DownloadManager::instance().downloadJson(
+                    mirrored.replace(CF_API, CF_MIRROR), onComplete);
+                return;
+            }
+            if (onComplete) onComplete(ok, errOrData, result);
+        });
 }
 
 // Public API — search

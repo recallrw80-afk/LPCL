@@ -19,11 +19,13 @@
 
 ## 安装
 
-### 一键安装（推荐）
+### 一键安装（待发布）
 
 ```bash
 curl -fsSL <发布地址>/install.sh | bash
 ```
+
+> 发布页尚未上线，目前请使用下方的源码构建。
 
 脚本自动完成：下载对应架构的包 → 解压到 `~/.local/lib/lpcl/` → 在 `~/.local/bin/` 注册 `lpcl-cli` 命令。完成后任意目录直接：
 
@@ -111,6 +113,7 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | `update` | 检查 GitHub Releases 是否有新版本并自动更新 |
 | `uninstall [-r]` | 卸载启动器；`-r` 保留游戏目录内容 |
 | `config` | 查看当前配置 |
+| `report [描述]` | 生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏） |
 | `test` | 全系统自检 |
 | `help` / `version` | 帮助 / 版本号 |
 
@@ -133,7 +136,10 @@ mc/
 ## 常见问题
 
 **导入 CurseForge 整合包需要 API key 吗？**
-不需要。未配置 key 时自动使用 MCIM 镜像下载。有 key 的话可以通过环境变量 `LPCL_CURSEFORGE_API_KEY` 配置走官方 API。
+不需要。未配置 key 时自动使用 MCIM 镜像下载。想要最快最稳的官方 API 通道，可以申请自己的 key 后配置：`lpcl-cli set-cf-key <你的key>`（加密保存在本地；`set-cf-key clear` 清除回退镜像）。key 申请地址：<https://console.curseforge.com/>
+
+**配置的 CF key 失效了怎么办？**
+什么都不用做。官方 API 返回 401/403/429（key 失效、被吊销或配额超限）时会自动回退 MCIM 镜像完成本次请求，功能不受影响。想完全绕过官方 API（比如发布版内嵌 key 失效），设环境变量 `LPCL_FORCE_CF_MIRROR=1` 即可强制全部走镜像。
 
 **界面怎么变成中文？**
 `lpcl-cli set-lang zh`（一次设置，永久生效）。
@@ -141,6 +147,6 @@ mc/
 **导入失败会怎样？**
 任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。
 
-## 许可
+## 许可与声明
 
-本项目基于 Qt（LGPL）构建。Windows 原版 [PCL2](https://github.com/Hex-Dragon/PCL2) 与本项目的关系见其原仓库说明。
+本项目以 [GNU GPL v3](../LICENSE) 开源。本项目是独立开发的开源软件：与 Mojang / Microsoft 无关联（"Minecraft" 是 Mojang Synergies AB 的商标），与 [PCL](https://github.com/Hex-Dragon/PCL2) 官方亦无隶属或授权关系。按"原样"提供，不承担使用责任（见许可证第 15、16 条）。

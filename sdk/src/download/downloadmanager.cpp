@@ -227,6 +227,16 @@ QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
                                                               const QMap<QByteArray, QByteArray> &headers,
                                                               std::function<void(bool, QString)> onComplete,
                                                               int maxRetries) {
+    return downloadToStringWithStatus(url, headers,
+        [onComplete](bool success, int, QString data) {
+            if (onComplete) onComplete(success, data);
+        }, maxRetries);
+}
+
+QNetworkReply* DownloadManager::downloadToStringWithStatus(const QString &url,
+                                                           const QMap<QByteArray, QByteArray> &headers,
+                                                           std::function<void(bool, int, QString)> onComplete,
+                                                           int maxRetries) {
     emit downloadStarted(url);
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
@@ -249,18 +259,18 @@ QNetworkReply* DownloadManager::downloadToStringWithHeaders(const QString &url,
 
         if (!success && maxRetries > 0) {
             QTimer::singleShot(500, this, [=, this]() {
-                downloadToStringWithHeaders(url, headers, onComplete, maxRetries - 1);
+                downloadToStringWithStatus(url, headers, onComplete, maxRetries - 1);
             });
             return;
         }
 
         if (!success) {
-            if (onComplete) onComplete(false, reply->errorString());
+            if (onComplete) onComplete(false, statusCode, reply->errorString());
             return;
         }
 
         QByteArray data = reply->readAll();
-        if (onComplete) onComplete(true, QString::fromUtf8(data));
+        if (onComplete) onComplete(true, statusCode, QString::fromUtf8(data));
     });
 
     return reply;
@@ -281,6 +291,25 @@ QNetworkReply* DownloadManager::downloadJsonWithHeaders(const QString &url,
                 if (onComplete) onComplete(true, data, j);
             } catch (const std::exception &e) {
                 if (onComplete) onComplete(false, QString("JSON parse error: ") + e.what(), nlohmann::json());
+            }
+        }, maxRetries);
+}
+
+QNetworkReply* DownloadManager::downloadJsonWithStatus(const QString &url,
+                                                          const QMap<QByteArray, QByteArray> &headers,
+                                                          std::function<void(bool, int, QString, nlohmann::json)> onComplete,
+                                                          int maxRetries) {
+    return downloadToStringWithStatus(url, headers,
+        [onComplete](bool success, int statusCode, QString data) {
+            if (!success) {
+                if (onComplete) onComplete(false, statusCode, data, nlohmann::json());
+                return;
+            }
+            try {
+                nlohmann::json j = nlohmann::json::parse(data.toStdString());
+                if (onComplete) onComplete(true, statusCode, data, j);
+            } catch (const std::exception &e) {
+                if (onComplete) onComplete(false, statusCode, QString("JSON parse error: ") + e.what(), nlohmann::json());
             }
         }, maxRetries);
 }

@@ -60,8 +60,11 @@ target_compile_definitions(lpcl-cli PRIVATE
 
 target_compile_features(lpcl-cli PRIVATE cxx_std_20)
 
-# rpath: 优先在同目录找 liblpclcore.so（打包后 lpcl-cli 和 .so 放一起）
+# rpath: 优先在同目录及 lib/ 子目录找依赖库（打包后依赖放 lib/，开发时 .so 放旁边）
+# 必须用老式 DT_RPATH（--disable-new-dtags）：RUNPATH 不可传递，间接依赖
+# （如 libgssapi_krb5 依赖 libkrb5）会漏到系统路径；RPATH 对整个进程传递生效
 set_target_properties(lpcl-cli PROPERTIES
-    BUILD_RPATH "$ORIGIN"
-    INSTALL_RPATH "$ORIGIN"
+    BUILD_RPATH "$ORIGIN;$ORIGIN/lib"
+    INSTALL_RPATH "$ORIGIN;$ORIGIN/lib"
 )
+target_link_options(lpcl-cli PRIVATE "-Wl,--disable-new-dtags")
