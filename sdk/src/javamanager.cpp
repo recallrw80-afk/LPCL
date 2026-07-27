@@ -546,6 +546,23 @@ QStringList JavaManager::javaNames() const
     return names;
 }
 
+QVariantList JavaManager::javaVariantList() const
+{
+    QMutexLocker lock(&m_mutex);
+    QVariantList out;
+    for (const auto &j : m_javaList) {
+        QVariantMap m;
+        m.insert("pathJava", j.pathJava);
+        m.insert("pathFolder", j.pathFolder);
+        m.insert("display", j.toString());
+        m.insert("majorVersion", j.majorVersion);
+        m.insert("is64Bit", j.is64Bit);
+        m.insert("isUserImport", j.isUserImport);
+        out.append(m);
+    }
+    return out;
+}
+
 int JavaManager::javaCount() const
 {
     QMutexLocker lock(&m_mutex);

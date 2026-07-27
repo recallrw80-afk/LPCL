@@ -19,6 +19,9 @@
 #include "auth/offlineauth.h"
 #include "auth/msauth.h"
 #include "util/file_drop_handler.h"
+#include "bridge/player_bridge.h"
+#include "bridge/install_bridge.h"
+#include "bridge/instance_bridge.h"
 
 int main(int argc, char *argv[]){
     // Enable multisample anti-aliasing for smooth rounded corners and shapes
@@ -77,6 +80,11 @@ int main(int argc, char *argv[]){
     FileDropHandler *dropHandler = new FileDropHandler(&app);
     qmlRegisterSingletonInstance("LPCL", 1, 0, "FileDropHandler", dropHandler);
 
+    // GUI 桥接层（包装 lpcl:: 自由函数为 QML 可调用的单例）
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "PlayerBridge", &PlayerBridge::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "InstallBridge", &InstallBridge::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "InstanceBridge", &InstanceBridge::instance());
+
     // Connect status text changes
     QObject::connect(&launcher, &Launcher::statusTextChanged, []() {
         qInfo() << "[Launcher]" << Launcher::instance().statusText();
@@ -125,7 +133,7 @@ int main(int argc, char *argv[]){
             clip: true
             Image {
                 anchors.fill: parent
-                source: "qrc:/assets/logo.svg"
+                source: "qrc:/gui/assets/logo.svg"
                 sourceSize: Qt.size(256, 256)
                 smooth: true
                 mipmap: true

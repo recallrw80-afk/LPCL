@@ -75,6 +75,7 @@ make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
 | 命令 | 说明 |
 |---|---|
 | `list` | 列出所有实例 |
+| `mods <名称>` | 列出实例的 Mod（文件大小 + 启用/禁用状态） |
 | `list-rm [名称\|*]` | 删除实例（无参时上下键选择 + 二次确认；`*` 删除全部，注意加引号） |
 | `mc-list` | 列出已下载的原版 MC 版本 |
 | `launch [名称]` | 启动游戏；不填名称时**上下键选择**（列表含实例 + 原版/加载器版本；非 TTY 退回输序号） |
@@ -136,10 +137,7 @@ mc/
 ## 常见问题
 
 **导入 CurseForge 整合包需要 API key 吗？**
-不需要。未配置 key 时自动使用 MCIM 镜像下载。想要最快最稳的官方 API 通道，可以申请自己的 key 后配置：`lpcl-cli set-cf-key <你的key>`（加密保存在本地；`set-cf-key clear` 清除回退镜像）。key 申请地址：<https://console.curseforge.com/>
-
-**配置的 CF key 失效了怎么办？**
-什么都不用做。官方 API 返回 401/403/429（key 失效、被吊销或配额超限）时会自动回退 MCIM 镜像完成本次请求，功能不受影响。想完全绕过官方 API（比如发布版内嵌 key 失效），设环境变量 `LPCL_FORCE_CF_MIRROR=1` 即可强制全部走镜像。
+不需要。官方发布的预编译包内嵌了 key（走官方 API，最快最稳）；源码构建默认不带 key，自动使用 MCIM 镜像下载。key 失效或被吊销时会自动回退镜像重试，无需手动处理。
 
 **界面怎么变成中文？**
 `lpcl-cli set-lang zh`（一次设置，永久生效）。

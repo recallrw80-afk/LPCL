@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QList>
 #include <QMap>
+#include <QVariantList>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
 #include "core/lpclcore_export.h"
@@ -44,7 +45,10 @@ public:
     Q_INVOKABLE void loadMcVersions();
 
     /// Fetch version manifest from Mojang API
-    void fetchVersionManifest();
+    Q_INVOKABLE void fetchVersionManifest();
+
+    /// QML 用：远程可下载版本列表（[{id, type, releaseTime}]，isLocal=false 的条目）
+    Q_INVOKABLE QVariantList remoteVersionList() const;
 
     /// Get all known version IDs (local + remote)
     QStringList versionIds() const;

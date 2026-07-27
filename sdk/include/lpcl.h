@@ -83,6 +83,33 @@ LPCLCORE_EXPORT void importModpack(const QString &filePath,
 /// 删除实例（通过 INI 映射查找随机目录名并删除，移除映射记录）
 LPCLCORE_EXPORT bool removeInstance(const QString &name);
 
+/// 实例信息
+struct InstanceInfo {
+    QString dirName;   // 随机目录名（空 = 实例不存在）
+    QString path;      // 实例目录（带尾斜杠）
+    QString version;   // Setup.ini 的 Version 键（启动用版本 json 名）
+    int modCount = 0;  // mods/ 下 jar 数量（含禁用）
+};
+
+/// Mod 条目
+struct ModEntry {
+    QString fileName;  // 文件名（含 .jar / .jar.disabled 后缀）
+    qint64 size = 0;
+    bool enabled = false; // .jar = 启用，.jar.disabled = 禁用
+};
+
+/// 读取实例信息（dirName 为空 = 实例不存在）
+LPCLCORE_EXPORT InstanceInfo instanceInfo(const QString &displayName);
+
+/// 列出实例的 Mod（按文件名排序）
+LPCLCORE_EXPORT QList<ModEntry> listMods(const QString &displayName);
+
+/// 启用/禁用 Mod（重命名 .jar ↔ .jar.disabled）
+LPCLCORE_EXPORT bool setModEnabled(const QString &displayName, const QString &fileName, bool enabled);
+
+/// 删除 Mod 文件（仅限实例 mods/ 目录内的 jar，防路径穿越）
+LPCLCORE_EXPORT bool deleteMod(const QString &displayName, const QString &fileName);
+
 /// 读取当前配置快照（同步）
 LPCLCORE_EXPORT ConfigInfo getConfig();
 

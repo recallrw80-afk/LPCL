@@ -56,7 +56,7 @@ enum class LoginType {
     Ms = 5       // Microsoft OAuth
 };
 
-struct LoginResult {
+struct LPCLCORE_EXPORT LoginResult {
     Q_GADGET
     Q_PROPERTY(QString name MEMBER name)
     Q_PROPERTY(QString uuid MEMBER uuid)

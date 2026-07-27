@@ -319,6 +319,19 @@ void VersionManager::fetchVersionManifest() {
     });
 }
 
+QVariantList VersionManager::remoteVersionList() const {
+    QVariantList out;
+    for (const auto &v : m_versionList) {
+        if (v.isLocal) continue;
+        QVariantMap m;
+        m.insert("id", v.id);
+        m.insert("type", v.type);
+        m.insert("releaseTime", v.releaseTime.toString(Qt::ISODate));
+        out.append(m);
+    }
+    return out;
+}
+
 QStringList VersionManager::versionIds() const
 {
     QStringList ids;

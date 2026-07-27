@@ -40,6 +40,15 @@ ApplicationWindow {
     flags: Qt.FramelessWindowHint | Qt.Window
     color: "transparent"
 
+    // ---- 全局弹窗 / 轻提示 API（页面通过 Window.window.showMsg(...) / showHint(...) 调用）----
+    function showMsg(options) {
+        panMsg.show(options);
+    }
+
+    function showHint(text, type) {
+        panHint.show(text, type);
+    }
+
     // PanBack (Grid, Margin=10)
 
     Item {
@@ -261,7 +270,7 @@ ApplicationWindow {
                         // Navigation tabs
                         Row {
                             Layout.alignment: Qt.AlignVCenter
-                            height: 27
+                            Layout.preferredHeight: 27
                             spacing: 12
 
                             Repeater {
@@ -417,27 +426,6 @@ ApplicationWindow {
                         }  // btnTitleClose
                     }  // RowLayout
 
-                    // PanHint — bottom-left hint overlay
-                    Item {
-                        id: panHint
-                        anchors {
-                            left: parent.left
-                            bottom: parent.bottom
-                            leftMargin: Theme.cardPadding
-                            bottomMargin: Theme.cardPadding
-                        }
-                        // Hint messages appear here
-                    }
-
-                    // PanMsg — message overlay (hidden by default)
-                    Rectangle {
-                        id: panMsg
-                        anchors.fill: parent
-                        color: "#00000000"
-                        visible: false
-                        z: 100
-                    }
-
                     // Bottom-right extra buttons
                     ColumnLayout {
                         anchors {
@@ -544,6 +532,20 @@ ApplicationWindow {
                         bottom: parent.bottom
                     }
                     isActive: navTabs.currentIndex === 3
+                }
+
+                // PanHint — 轻提示层（对应原版 PanHint：左下角滑入提示，覆盖于页面之上）
+                LPCLHint {
+                    id: panHint
+                    anchors.fill: parent
+                    z: 90
+                }
+
+                // PanMsg — 消息弹窗层（对应原版 PanMsg：模态遮罩覆盖整个窗口含标题栏，默认隐藏）
+                LPCLMsg {
+                    id: panMsg
+                    anchors.fill: parent
+                    z: 100
                 }
             }  // borderForm
         }  // panBack

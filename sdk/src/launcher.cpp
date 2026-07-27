@@ -119,16 +119,28 @@ bool Launcher::launchVersion(const QString &versionId, const LoginResult &login)
     }
 
     // Pick best Java for this version
-    JavaEntry bestJava = javaList.first();
-    // MC 1.x 的特性版本号在第二段（"1.20.1" → 20），majorVersion() 恒为 1
-    int feature = version.vanillaVersion.majorVersion() == 1
-        ? version.vanillaVersion.minorVersion()
-        : version.vanillaVersion.majorVersion();
-    int targetMajor = feature > 0 ? feature : 8;
-    for (const auto &j : javaList) {
-        if (j.majorVersion >= targetMajor && j.is64Bit == is64BitSystem()) {
-            bestJava = j;
-            break;
+    JavaEntry bestJava;
+    // 用户在 GUI Java 管理页指定的 Java 优先（LaunchJavaSelect = java 可执行文件路径，空 = 自动）
+    QString userJava = Settings::instance().getString("LaunchJavaSelect");
+    if (!userJava.isEmpty()) {
+        for (const auto &j : javaList) {
+            if (j.pathJava == userJava) { bestJava = j; break; }
+        }
+        if (bestJava.pathJava.isEmpty())
+            qCWarning(logLaunch) << "用户指定的 Java 不存在，回退自动选择:" << userJava;
+    }
+    if (bestJava.pathJava.isEmpty()) {
+        bestJava = javaList.first();
+        // MC 1.x 的特性版本号在第二段（"1.20.1" → 20），majorVersion() 恒为 1
+        int feature = version.vanillaVersion.majorVersion() == 1
+            ? version.vanillaVersion.minorVersion()
+            : version.vanillaVersion.majorVersion();
+        int targetMajor = feature > 0 ? feature : 8;
+        for (const auto &j : javaList) {
+            if (j.majorVersion >= targetMajor && j.is64Bit == is64BitSystem()) {
+                bestJava = j;
+                break;
+            }
         }
     }
 

@@ -473,6 +473,73 @@ bool removeInstance(const QString &name) {
     return ok;
 }
 
+InstanceInfo instanceInfo(const QString &displayName) {
+    InstanceInfo info;
+    QString dirName = Settings::instance().dirForDisplayName(displayName);
+    if (dirName.isEmpty()) return info;
+    QString path = VersionManager::instance().mcFolder() + "instances/" + dirName + "/";
+    if (!QDir(path).exists()) return info;
+
+    info.dirName = dirName;
+    info.path = path;
+    // 启动版本：PCL/Setup.ini 的 Version 键
+    QSettings setupIni(path + "PCL/Setup.ini", QSettings::IniFormat);
+    info.version = setupIni.value("Setup/Version").toString();
+    QDir modsDir(path + "mods");
+    info.modCount = modsDir.entryList({"*.jar", "*.jar.disabled"}, QDir::Files).size();
+    return info;
+}
+
+/// 解析实例 mods/ 目录；fileName 只允许纯文件名（防路径穿越），失败返回空串
+static QString resolveModsDir(const QString &displayName, QString *dirNameOut = nullptr) {
+    QString dirName = Settings::instance().dirForDisplayName(displayName);
+    if (dirName.isEmpty()) return {};
+    if (dirNameOut) *dirNameOut = dirName;
+    return VersionManager::instance().mcFolder() + "instances/" + dirName + "/mods/";
+}
+
+static bool isModFileName(const QString &fileName) {
+    if (fileName.isEmpty() || fileName.contains('/') || fileName.contains('\\') || fileName.contains(".."))
+        return false;
+    return fileName.endsWith(".jar") || fileName.endsWith(".jar.disabled");
+}
+
+QList<ModEntry> listMods(const QString &displayName) {
+    QList<ModEntry> out;
+    QString modsPath = resolveModsDir(displayName);
+    if (modsPath.isEmpty()) return out;
+    QDir modsDir(modsPath);
+    for (const auto &fi : modsDir.entryInfoList({"*.jar", "*.jar.disabled"}, QDir::Files, QDir::Name)) {
+        ModEntry e;
+        e.fileName = fi.fileName();
+        e.size = fi.size();
+        e.enabled = fi.fileName().endsWith(".jar");
+        out.append(e);
+    }
+    return out;
+}
+
+bool setModEnabled(const QString &displayName, const QString &fileName, bool enabled) {
+    if (!isModFileName(fileName)) return false;
+    QString modsPath = resolveModsDir(displayName);
+    if (modsPath.isEmpty()) return false;
+
+    bool currentlyEnabled = fileName.endsWith(".jar");
+    if (currentlyEnabled == enabled) return QFile::exists(modsPath + fileName);
+    // ".disabled" 共 9 字符：启用 = 去尾，禁用 = 追加
+    QString toName = enabled ? fileName.left(fileName.size() - 9)
+                             : fileName + ".disabled";
+    if (QFile::exists(modsPath + toName)) return false;  // 目标已存在，避免覆盖
+    return QFile::rename(modsPath + fileName, modsPath + toName);
+}
+
+bool deleteMod(const QString &displayName, const QString &fileName) {
+    if (!isModFileName(fileName)) return false;
+    QString modsPath = resolveModsDir(displayName);
+    if (modsPath.isEmpty()) return false;
+    return QFile::remove(modsPath + fileName);
+}
+
 ConfigInfo getConfig() {
     ConfigInfo info;
     info.version       = GIT_DESCRIBE;

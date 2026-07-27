@@ -30,7 +30,6 @@
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
-#include "util/crypto_utils.h"
 #include "util/file_utils.h"
 
 // ---- helpers ----
@@ -100,26 +99,6 @@ static int handleSetMem(const QStringList &args) {
         Settings::instance().setString("LaunchMaxMemory", QString::number(mb));
     }
     std::cout << "success" << std::endl;
-    return 0;
-}
-
-// set-cf-key <key|clear>：配置用户自己的 CurseForge API key（加密存 Settings）
-// 配置了走官方 API（最快最稳）；clear 清除后回退 MCIM 镜像
-static int handleSetCfKey(const QStringList &args) {
-    if (args.size() < 2) {
-        std::cerr << _("error:  lpcl-cli set-cf-key <key|clear>\n",
-                       "error:  lpcl-cli set-cf-key <key|clear>\n");
-        return 1;
-    }
-    if (args[1] == "clear") {
-        Settings::instance().setString("CurseForgeApiKey", "");
-        std::cout << _("success: 已清除，CurseForge 下载将使用 MCIM 镜像\n",
-                       "success: cleared, CurseForge downloads will use the MCIM mirror\n");
-        return 0;
-    }
-    Settings::instance().setString("CurseForgeApiKey", CryptoUtils::pclEncrypt(args[1]));
-    std::cout << _("success: 已配置，CurseForge 下载将使用官方 API\n",
-                   "success: configured, CurseForge downloads will use the official API\n");
     return 0;
 }
 
@@ -472,6 +451,34 @@ static int handleMcList() {
     return 0;
 }
 
+static int handleMods(const QStringList &args) {
+    QString name = args.size() >= 2 ? args.at(1) : QString();
+    if (name.isEmpty()) {
+        auto ids = lpcl::listVersions();
+        std::cerr << T("用法: lpcl-cli mods <实例名>\n", "usage: lpcl-cli mods <instance>\n").toStdString();
+        for (const auto &id : ids)
+            std::cerr << "  " << id.toStdString() << "\n";
+        return ids.isEmpty() ? 0 : 1;
+    }
+    auto info = lpcl::instanceInfo(name);
+    if (info.dirName.isEmpty()) {
+        std::cerr << T("error: 实例不存在: ", "error: instance not found: ").toStdString()
+                  << name.toStdString() << "\n";
+        return 1;
+    }
+    auto mods = lpcl::listMods(name);
+    std::cout << name.toStdString() << T(" 的 Mod（共 ", " mods (").toStdString()
+              << mods.size() << T(" 个）:\n", "):\n").toStdString();
+    if (mods.isEmpty())
+        std::cout << T("  (无 Mod)\n", "  (no mods)\n").toStdString();
+    for (const auto &m : mods) {
+        std::cout << "  " << (m.enabled ? "[on]  " : "[off] ")
+                  << m.fileName.toStdString() << "  ("
+                  << QString::number(m.size / 1048576.0, 'f', 2).toStdString() << " MB)\n";
+    }
+    return 0;
+}
+
 static int handleLaunch(const QStringList &args) {
     QString target;
     if (args.size() < 2) {
@@ -667,6 +674,7 @@ static void printHelp() {
     struct Item { QString cmdCn, cmdEn; const char *descCn, *descEn; };
     const Item items[] = {
         {"list", "list", "列出已导入的整合包实例", "List imported instances"},
+        {"mods <名称>", "mods <name>", "列出实例的 Mod 及启用状态", "List mods of an instance with enabled state"},
         {"mc-list", "mc-list", "列出原版 MC 版本", "List vanilla MC versions"},
         {"launch [名称]",
          "launch [name]",
@@ -685,10 +693,6 @@ static void printHelp() {
          "set-mem <MB|auto>",
          "设置游戏最大内存（auto=自动分配）",
          "Set max game memory (auto = automatic)"},
-        {"set-cf-key <key|clear>",
-         "set-cf-key <key|clear>",
-         "配置自己的 CurseForge API key（clear 清除回退镜像）",
-         "Set your own CurseForge API key (clear to use mirror)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
         {"mc-install [版本]",
          "mc-install [version]",
@@ -1008,7 +1012,6 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-lang")       return handleSetLang(args);
     if (cmd == "set-mem")        return handleSetMem(args);
-    if (cmd == "set-cf-key")     return handleSetCfKey(args);
     if (cmd == "list-javas")     return handleListJavas();
     if (cmd == "player-add")     return handlePlayerAdd(args);
     if (cmd == "player-edit")    return handlePlayerEdit(args);
@@ -1035,6 +1038,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     VersionManager::instance().setMcFolder(mcFolder, folderArg.isEmpty());
 
     if (cmd == "list")     return handleList();
+    if (cmd == "mods")     return handleMods(args);
     if (cmd == "mc-list")  return handleMcList();
     if (cmd == "mc-install") return handleInstall(args);
     if (cmd == "java-install") return handleInstallJava(args);

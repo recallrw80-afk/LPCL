@@ -38,14 +38,21 @@ message(STATUS "Build version: ${GIT_DESCRIBE} (${GIT_COMMIT_HASH})")
 
 # ---- QML GUI App (gui/) ----
 
-set(CORE_SOURCES gui/src/util/file_drop_handler.cpp)
-set(CORE_HEADERS gui/include/util/file_drop_handler.h)
+set(CORE_SOURCES gui/src/util/file_drop_handler.cpp
+                 gui/src/bridge/player_bridge.cpp
+                 gui/src/bridge/install_bridge.cpp
+                 gui/src/bridge/instance_bridge.cpp)
+set(CORE_HEADERS gui/include/util/file_drop_handler.h
+                 gui/include/bridge/player_bridge.h
+                 gui/include/bridge/install_bridge.h
+                 gui/include/bridge/instance_bridge.h)
 
 qt_add_executable(LiunxPlainCraftLauncher gui/src/main.cpp)
 
 # Lucide icons
 set(LUCIDE_ICONS "play" "bolt" "arrow-down-to-line" "layout-grid" "x" "minus"
-    "shield-check" "unlink" "file-plus")
+    "shield-check" "unlink" "file-plus"
+    "folder" "file-archive" "package" "file-code" "image" "file-text" "file")
 set(LUCIDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/gui/assets/icons/lucide")
 file(MAKE_DIRECTORY "${LUCIDE_DIR}")
 
@@ -103,13 +110,21 @@ qt_add_qml_module(LiunxPlainCraftLauncher URI LPCL VERSION 1.0
         gui/ui/pages/PageDownload.qml
         gui/ui/pages/PageSettings.qml
         gui/ui/pages/PageMore.qml
-        gui/ui/pages/launch/PageSelect.qml
         gui/ui/components/LPCLButton.qml
         gui/ui/components/LPCLIcon.qml
         gui/ui/components/LPCLComboBox.qml
         gui/ui/components/LPCLProgressBar.qml
         gui/ui/components/LPCLTextBox.qml
         gui/ui/components/LPCLScrollBar.qml
+        gui/ui/components/LPCLCard.qml
+        gui/ui/components/LPCLListItem.qml
+        gui/ui/components/LPCLIconButton.qml
+        gui/ui/components/LPCLCheckBox.qml
+        gui/ui/components/LPCLSlider.qml
+        gui/ui/components/LPCLSearchBox.qml
+        gui/ui/components/LPCLScrollViewer.qml
+        gui/ui/components/LPCLMsg.qml
+        gui/ui/components/LPCLHint.qml
         gui/ui/styles/Theme.qml
     SOURCES ${CORE_SOURCES} ${CORE_HEADERS})
 

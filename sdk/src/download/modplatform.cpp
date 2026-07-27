@@ -1,7 +1,5 @@
 #include "download/modplatform.h"
 #include "download/downloadmanager.h"
-#include "core/settings.h"
-#include "util/crypto_utils.h"
 #include "cf_key_embedded.h"  // CMake 生成：编译期嵌入的 CF key（发布构建为空串）
 
 #include <QJsonDocument>
@@ -25,43 +23,32 @@ const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
 ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
-    // 初始化 CurseForge API key：环境变量 → 设置项 → 编译期嵌入（.env）
-    // 均无则留空——CF 请求会自动改走 MCIM 镜像（无需鉴权，同 PCL-CE 方案）
+    // CurseForge API key 只有两条路径：编译期嵌入（发布版，走官方 API）；
+    // 无 key（本地开发构建）则留空——CF 请求自动改走 MCIM 镜像（无需鉴权，同 PCL-CE 方案）
     static bool keyResolved = false;
     if (!keyResolved) {
         keyResolved = true;
-        m.m_cfApiKey = qEnvironmentVariable("LPCL_CURSEFORGE_API_KEY");
-        if (m.m_cfApiKey.isEmpty()) {
-            QString key = Settings::instance().getString("CurseForgeApiKey", "");
-            if (!key.isEmpty())
-                m.m_cfApiKey = CryptoUtils::pclDecrypt(key);
-        }
-        if (m.m_cfApiKey.isEmpty())
-            m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
+        m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
         if (m.m_cfApiKey.isEmpty())
             qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
-        // 强制镜像开关：嵌入 key 失效时的逃逸通道，跳过官方 API 直连镜像
-        m.m_forceCfMirror = qEnvironmentVariableIntValue("LPCL_FORCE_CF_MIRROR") != 0;
-        if (m.m_forceCfMirror)
-            qCInfo(logMod) << "LPCL_FORCE_CF_MIRROR 已设置，CF 请求强制走 MCIM 镜像";
     }
     return m;
 }
 
 // CurseForge 请求辅助
 
-// 无 API key（或强制镜像）时把官方地址改写为 MCIM 镜像地址
+// 无 API key 时把官方地址改写为 MCIM 镜像地址
 QString ModPlatform::cfApiUrl(const QString &officialUrl) const {
-    if (!m_cfApiKey.isEmpty() && !m_forceCfMirror) return officialUrl;
+    if (!m_cfApiKey.isEmpty()) return officialUrl;
     QString mirrored = officialUrl;
     return mirrored.replace(CF_API, CF_MIRROR);
 }
 
-// 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key / 强制镜像走 MCIM 镜像；
+// 发起 CF API GET 请求：有 key 走官方并附带 x-api-key，无 key 走 MCIM 镜像；
 // 官方返回 401/403/429（key 失效/被吊销/配额超限）时自动回退镜像重试一次，功能降级而非硬挂
 void ModPlatform::cfJsonGet(const QString &officialUrl,
                             std::function<void(bool, QString, json)> onComplete) {
-    if (m_cfApiKey.isEmpty() || m_forceCfMirror) {
+    if (m_cfApiKey.isEmpty()) {
         DownloadManager::instance().downloadJson(cfApiUrl(officialUrl), onComplete);
         return;
     }

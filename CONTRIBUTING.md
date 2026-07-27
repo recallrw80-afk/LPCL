@@ -51,4 +51,4 @@ cd cmake-build-debug/cli && ./lpcl-cli test          # 全系统自检（必须�
 2. 更新仓库的 GitHub Secret `LPCL_CURSEFORGE_API_KEY`
 3. 打新 tag 发版，CI 会用新 key 构建
 
-注意：已发布二进制里的旧 key 无法召回，只能靠第 1 步作废它。key 失效期间用户侧无感——客户端遇 401/403/429 会自动回退 MCIM 镜像，也可用 `LPCL_FORCE_CF_MIRROR=1` 强制镜像。
+注意：已发布二进制里的旧 key 无法召回，只能靠第 1 步作废它。key 失效期间用户侧无感——客户端遇 401/403/429 会自动回退 MCIM 镜像。

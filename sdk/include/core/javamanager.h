@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QVariantList>
 #include <QVersionNumber>
 #include <QMutex>
 #include <atomic>
@@ -56,6 +57,9 @@ public:
 
     const QList<JavaEntry>& javaList() const { return m_javaList; }
     QStringList javaNames() const;
+    /// QML 用：锁内按值拷贝的 Java 列表
+    /// [{pathJava, pathFolder, display, majorVersion, is64Bit, isUserImport}]
+    Q_INVOKABLE QVariantList javaVariantList() const;
     int javaCount() const;
     bool isScanning() const { return m_isScanning; }
     QString selectedJavaName() const;
