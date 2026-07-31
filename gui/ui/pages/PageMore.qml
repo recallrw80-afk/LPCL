@@ -5,7 +5,51 @@ import LPCL
 
 // More tab — about, tools, help links
 Item {
+    id: root
     property bool isActive: false
+
+    // 发布前替换为真实仓库地址
+    readonly property string repoUrl: "https://github.com/owner/LPCL"
+
+    // qmllint disable unqualified
+    // qmllint disable missing-property
+    // 打开目录：无法可靠预检目录是否存在，直接交给系统处理，分发失败时提示
+    function openFolder(path) {
+        if (!Qt.openUrlExternally("file://" + path))
+            Window.window.showHint("目录不存在", "error");
+    }
+
+    // 工具区动作：act = mods / versions / game / logs
+    function openTool(act) {
+        if (act === "mods") {
+            // 当前实例与 PageLaunch 自动选中首个实例的逻辑一致
+            if (VersionManager.versionIds.length === 0) {
+                Window.window.showHint("当前没有实例", "info");
+                return;
+            }
+            var info = InstanceBridge.instanceInfo(VersionManager.versionIds[0]);
+            openFolder(info.path + "mods/");
+        } else if (act === "versions") {
+            openFolder(VersionManager.mcFolder + "versions/");
+        } else if (act === "game") {
+            openFolder(VersionManager.mcFolder);
+        } else if (act === "logs") {
+            openFolder(VersionManager.mcFolder + "logs/");
+        }
+    }
+
+    // 关于区动作：act = docs / github / update / vote
+    function openAbout(act) {
+        if (act === "update") {
+            // GUI 更新功能未做，引导到 CLI
+            Window.window.showHint("请使用 lpcl-cli update 检查更新", "info");
+        } else {
+            Qt.openUrlExternally(repoUrl);
+        }
+    }
+    // qmllint enable missing-property
+    // qmllint enable unqualified
+
     visible: opacity > 0
     opacity: isActive ? 1 : 0
     scale: isActive ? 1 : 0.96
@@ -53,10 +97,10 @@ Item {
                     }
                     Repeater {
                         model: [
-                            { name: "打开 Mods 文件夹", icon: "layout-grid" },
-                            { name: "打开版本文件夹", icon: "layout-grid" },
-                            { name: "打开游戏目录", icon: "layout-grid" },
-                            { name: "启动器日志", icon: "layout-grid" }
+                            { name: "打开 Mods 文件夹", icon: "layout-grid", act: "mods" },
+                            { name: "打开版本文件夹", icon: "layout-grid", act: "versions" },
+                            { name: "打开游戏目录", icon: "layout-grid", act: "game" },
+                            { name: "启动器日志", icon: "layout-grid", act: "logs" }
                         ]
                         Rectangle {
                             Layout.fillWidth: true
@@ -79,6 +123,8 @@ Item {
                             MouseArea {
                                 id: toolMouse; anchors.fill: parent; hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
+                                // qmllint disable unqualified
+                                onClicked: root.openTool(modelData.act)
                             }
                         }
                     }
@@ -92,10 +138,10 @@ Item {
                     }
                     Repeater {
                         model: [
-                            { name: "帮助文档", icon: "bolt" },
-                            { name: "GitHub 仓库", icon: "bolt" },
-                            { name: "检查更新", icon: "bolt" },
-                            { name: "功能投票", icon: "bolt" }
+                            { name: "帮助文档", icon: "bolt", act: "docs" },
+                            { name: "GitHub 仓库", icon: "bolt", act: "github" },
+                            { name: "检查更新", icon: "bolt", act: "update" },
+                            { name: "功能投票", icon: "bolt", act: "vote" }
                         ]
                         Rectangle {
                             Layout.fillWidth: true
@@ -118,6 +164,8 @@ Item {
                             MouseArea {
                                 id: aboutMouse; anchors.fill: parent; hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
+                                // qmllint disable unqualified
+                                onClicked: root.openAbout(modelData.act)
                             }
                         }
                     }
@@ -205,6 +253,8 @@ Item {
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 40
                                     colorType: 0
+                                    // qmllint disable unqualified
+                                    onClicked: Qt.openUrlExternally(modelData.url)
                                     contentItem: ColumnLayout {
                                         anchors.centerIn: parent
                                         spacing: 2

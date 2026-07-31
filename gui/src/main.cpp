@@ -22,6 +22,7 @@
 #include "bridge/player_bridge.h"
 #include "bridge/install_bridge.h"
 #include "bridge/instance_bridge.h"
+#include "bridge/mod_platform_bridge.h"
 
 int main(int argc, char *argv[]){
     // Enable multisample anti-aliasing for smooth rounded corners and shapes
@@ -84,6 +85,7 @@ int main(int argc, char *argv[]){
     qmlRegisterSingletonInstance("LPCL", 1, 0, "PlayerBridge", &PlayerBridge::instance());
     qmlRegisterSingletonInstance("LPCL", 1, 0, "InstallBridge", &InstallBridge::instance());
     qmlRegisterSingletonInstance("LPCL", 1, 0, "InstanceBridge", &InstanceBridge::instance());
+    qmlRegisterSingletonInstance("LPCL", 1, 0, "ModPlatformBridge", &ModPlatformBridge::instance());
 
     // Connect status text changes
     QObject::connect(&launcher, &Launcher::statusTextChanged, []() {

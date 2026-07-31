@@ -49,6 +49,11 @@ ApplicationWindow {
         panHint.show(text, type);
     }
 
+    // ---- 全局 tab 切换（0=启动 1=下载 2=设置 3=更多），页面经 Window.window.switchTab(i) 调用 ----
+    function switchTab(index) {
+        navTabs.currentIndex = index;
+    }
+
     // PanBack (Grid, Margin=10)
 
     Item {

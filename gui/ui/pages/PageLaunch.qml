@@ -1826,7 +1826,10 @@ Item {
 
     // ---- Launch button click (matching LaunchButtonClick) ----
     function launchButtonClick() {
-        if (page.btnLaunchState === 2) { /* TODO: Navigate to download page */
+        if (page.btnLaunchState === 2) {
+            // 无版本时按钮为「下载游戏」→ 跳到下载 tab
+            // qmllint disable missing-property
+            Window.window.switchTab(1);
             return;
         }
         if (page.btnLaunchState !== 3 && page.btnLaunchState !== 1)

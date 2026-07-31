@@ -41,11 +41,13 @@ message(STATUS "Build version: ${GIT_DESCRIBE} (${GIT_COMMIT_HASH})")
 set(CORE_SOURCES gui/src/util/file_drop_handler.cpp
                  gui/src/bridge/player_bridge.cpp
                  gui/src/bridge/install_bridge.cpp
-                 gui/src/bridge/instance_bridge.cpp)
+                 gui/src/bridge/instance_bridge.cpp
+                 gui/src/bridge/mod_platform_bridge.cpp)
 set(CORE_HEADERS gui/include/util/file_drop_handler.h
                  gui/include/bridge/player_bridge.h
                  gui/include/bridge/install_bridge.h
-                 gui/include/bridge/instance_bridge.h)
+                 gui/include/bridge/instance_bridge.h
+                 gui/include/bridge/mod_platform_bridge.h)
 
 qt_add_executable(LiunxPlainCraftLauncher gui/src/main.cpp)
 
