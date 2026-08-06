@@ -31,6 +31,10 @@ public:
     /// Start login, results via deviceCodeReady + loginFinished signals
     Q_INVOKABLE void startLogin() { login(nullptr); }
 
+    /// 用持久化的 refresh token 换新 token 登录（跳过设备码，走 XBL→XSTS→MC 全链）。
+    /// MS 会轮换 refresh token：成功后新 token 在 LoginResult.refreshToken，调用方须重新持久化。
+    void loginWithRefreshToken(const QString &refreshToken, Callback onComplete);
+
 signals:
     /// Emitted when user needs to open a URL and enter a code
     void deviceCodeReady(const QString &userCode, const QString &verificationUrl);
@@ -51,6 +55,7 @@ private:
     QTimer *m_pollTimer = nullptr;
     int m_pollRetries = 0;
     bool m_cancelled = false;
+    QString m_refreshToken;  // 登录/刷新成功后随 LoginResult 带出
 };
 
 #endif // LPCL_MSAUTH_H

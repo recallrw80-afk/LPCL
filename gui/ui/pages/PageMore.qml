@@ -42,7 +42,7 @@ Item {
     function openAbout(act) {
         if (act === "update") {
             // GUI 更新功能未做，引导到 CLI
-            Window.window.showHint("请使用 lpcl-cli update 检查更新", "info");
+            Window.window.showHint("请使用 lpcl update 检查更新", "info");
         } else {
             Qt.openUrlExternally(repoUrl);
         }

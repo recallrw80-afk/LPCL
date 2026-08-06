@@ -71,20 +71,42 @@ void ModPlatform::cfJsonGet(const QString &officialUrl,
 
 // Public API — search
 
-void ModPlatform::searchMods(Platform platform, const QString &query, int page, int pageSize,
-                               std::function<void(bool, QList<ModResource>)> onComplete) {
-    switch (platform) {
-    case CurseForge: searchCurseForge(query, page, pageSize, onComplete); break;
-    case Modrinth:   searchModrinth(query, page, pageSize, onComplete); break;
+// CF classId（gameId=432 Minecraft 下的分类）
+static int cfClassIdFor(ModPlatform::ResourceType type) {
+    switch (type) {
+    case ModPlatform::Mod:          return 6;
+    case ModPlatform::ModPack:      return 4471;
+    case ModPlatform::ResourcePack: return 12;
+    case ModPlatform::Shader:       return 6552;
+    case ModPlatform::DataPack:     return 6945;
     }
+    return 6;
 }
 
-void ModPlatform::searchByCategory(Platform platform, int category, int page,
-                                     std::function<void(bool, QList<ModResource>)> onComplete) {
-    // 注意：分类过滤尚未实现（需要 CF categoryId / Modrinth facets 映射表），
-    // 当前按热门返回——调用方不要依赖 category 参数
-    Q_UNUSED(category)
-    searchMods(platform, QString(), page, 25, onComplete);
+// Modrinth facets 的 project_type
+static const char *mrProjectTypeFor(ModPlatform::ResourceType type) {
+    switch (type) {
+    case ModPlatform::Mod:          return "mod";
+    case ModPlatform::ModPack:      return "modpack";
+    case ModPlatform::ResourcePack: return "resourcepack";
+    case ModPlatform::Shader:       return "shader";
+    case ModPlatform::DataPack:     return "datapack";
+    }
+    return "mod";
+}
+
+void ModPlatform::searchMods(Platform platform, const QString &query, int page, int pageSize,
+                               std::function<void(bool, QList<ModResource>)> onComplete) {
+    searchResources(platform, Mod, query, page, pageSize, onComplete);
+}
+
+void ModPlatform::searchResources(Platform platform, ResourceType type, const QString &query,
+                                    int page, int pageSize,
+                                    std::function<void(bool, QList<ModResource>)> onComplete) {
+    switch (platform) {
+    case CurseForge: searchCurseForge(query, page, pageSize, cfClassIdFor(type), onComplete); break;
+    case Modrinth:   searchModrinth(query, page, pageSize, mrProjectTypeFor(type), onComplete); break;
+    }
 }
 
 void ModPlatform::getModDetails(Platform platform, const QString &modId,
@@ -147,12 +169,12 @@ void ModPlatform::downloadMod(Platform platform, const QString &modId,
 
 // CurseForge API implementation
 
-void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize,
+void ModPlatform::searchCurseForge(const QString &query, int page, int pageSize, int classId,
                                      std::function<void(bool, QList<ModResource>)> onComplete) {
     QUrl url(CF_API + "/mods/search");
     QUrlQuery q;
     q.addQueryItem("gameId", "432"); // Minecraft
-    q.addQueryItem("classId", "6");  // Mods
+    q.addQueryItem("classId", QString::number(classId));
     if (!query.isEmpty()) q.addQueryItem("searchFilter", query);
     q.addQueryItem("index", QString::number(page * pageSize));
     q.addQueryItem("pageSize", QString::number(pageSize));
@@ -241,14 +263,14 @@ void ModPlatform::getCurseForgeFiles(const QString &modId,
 
 // Modrinth API implementation
 
-void ModPlatform::searchModrinth(const QString &query, int page, int pageSize,
+void ModPlatform::searchModrinth(const QString &query, int page, int pageSize, const QString &projectType,
                                    std::function<void(bool, QList<ModResource>)> onComplete) {
     QUrl url(MR_API + "/search");
     QUrlQuery q;
     if (!query.isEmpty()) q.addQueryItem("query", query);
     q.addQueryItem("offset", QString::number(page * pageSize));
     q.addQueryItem("limit", QString::number(pageSize));
-    q.addQueryItem("facets", "[[\"project_type:mod\"]]");
+    q.addQueryItem("facets", QString("[[\"project_type:%1\"]]").arg(projectType));
     url.setQuery(q);
 
     DownloadManager::instance().downloadJson(

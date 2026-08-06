@@ -480,4 +480,23 @@ bool extractTarGz(const QString &tgzPath, const QString &destDir, QString *error
     return failed == 0;
 }
 
+bool removeDirContents(const QString &path) {
+    QDir d(path);
+    bool ok = true;
+    const auto entries = d.entryInfoList(QDir::AllEntries | QDir::NoDotAndDotDot | QDir::Hidden | QDir::System);
+    for (const auto &entry : entries) {
+        if (entry.isSymLink() || entry.isFile())
+            ok = QFile::remove(entry.absoluteFilePath()) && ok;
+        else if (entry.isDir())
+            ok = QDir(entry.absoluteFilePath()).removeRecursively() && ok;
+    }
+    return ok;
+}
+
+bool removeTree(const QString &path) {
+    if (!QDir(path).exists()) return true;
+    bool ok = removeDirContents(path);
+    return QDir().rmdir(path) && ok;
+}
+
 } // namespace FileUtils

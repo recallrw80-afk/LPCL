@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.16)
 # ---- cli — CLI frontend ----
 # 依赖 ../liblpclcore（解耦的纯 C++ 核心库）
 
-project(lpcl-cli VERSION 0.1 LANGUAGES CXX)
+project(lpcl VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
@@ -45,26 +45,26 @@ endif()
 
 find_package(Qt6 REQUIRED COMPONENTS Core)
 
-add_executable(lpcl-cli main.cpp test.cpp tui_select.cpp tui_prompt.cpp)
+add_executable(lpcl main.cpp test.cpp tui_select.cpp tui_prompt.cpp)
 
-target_include_directories(lpcl-cli PRIVATE
+target_include_directories(lpcl PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../sdk/include
 )
 
-target_link_libraries(lpcl-cli PRIVATE lpclcore Qt6::Core)
+target_link_libraries(lpcl PRIVATE lpclcore Qt6::Core)
 
-target_compile_definitions(lpcl-cli PRIVATE
+target_compile_definitions(lpcl PRIVATE
     GIT_DESCRIBE="${GIT_DESCRIBE}"
     GIT_COMMIT_HASH="${GIT_COMMIT_HASH}"
 )
 
-target_compile_features(lpcl-cli PRIVATE cxx_std_20)
+target_compile_features(lpcl PRIVATE cxx_std_20)
 
 # rpath: 优先在同目录及 lib/ 子目录找依赖库（打包后依赖放 lib/，开发时 .so 放旁边）
 # 必须用老式 DT_RPATH（--disable-new-dtags）：RUNPATH 不可传递，间接依赖
 # （如 libgssapi_krb5 依赖 libkrb5）会漏到系统路径；RPATH 对整个进程传递生效
-set_target_properties(lpcl-cli PROPERTIES
+set_target_properties(lpcl PROPERTIES
     BUILD_RPATH "$ORIGIN;$ORIGIN/lib"
     INSTALL_RPATH "$ORIGIN;$ORIGIN/lib"
 )
-target_link_options(lpcl-cli PRIVATE "-Wl,--disable-new-dtags")
+target_link_options(lpcl PRIVATE "-Wl,--disable-new-dtags")

@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import LPCL
 
 // Download tab — 游戏安装与资源下载
-// 左侧：分类导航（游戏安装默认选中） | 右侧：游戏安装页 / Mod 资源浏览 / 其余分类“即将推出”占位
+// 左侧：分类导航（游戏安装默认选中） | 右侧：游戏安装页 / Mod·整合包·材质包·光影包资源浏览 / 数据包“即将推出”占位
 Item {
     id: page
     property bool isActive: false
@@ -49,11 +49,13 @@ Item {
     readonly property int modDownloadPercent: ModPlatformBridge.downloadPercent
     // qmllint enable unqualified
 
-    // ---- Mod 资源浏览状态 ----
-    // modLastReq: 最近一次成功发起的搜索请求 {platform, query, page}，
+    // ---- 资源浏览状态（Mod/整合包/材质包/光影包共用一套工作区，对应当前分类） ----
+    // modLastReq: 最近一次成功发起的搜索请求 {platform, category, query, page}，
     //             全局单例信号回调时据此校验，避免旧响应覆盖新列表
     // modSearchQueued: 搜索飞行中又触发新搜索时排队（bridge 互斥会吞掉并发请求），
     //                  待 searchFinished 后补发最新意图
+    // resCache: 每分类最近一次搜索缓存 cat → {results, page, hasMore, platform, query}，
+    //           切走再切回时若平台与关键词未变则直接恢复，不重搜
     // instanceList: 目标实例下拉快照（远程清单合入后 versionIds 会混入远程条目，
     //               与 installedIds 同理仅在“仅本地”状态时刷新）
     property int modPlatform: 0
@@ -64,9 +66,10 @@ Item {
     property var modLastReq: null
     property bool modSearchQueued: false
     property bool modQueuedReset: true
+    property var resCache: ({})
     property var instanceList: []
 
-    // ---- Mod 文件选择面板状态 ----
+    // ---- 文件选择面板状态 ----
     property bool filesVisible: false
     property bool filesLoading: false
     property string filesModId: ""
@@ -74,26 +77,48 @@ Item {
     property int filesPlatform: 0
     property var fileList: []
 
-    // ---- Mod 下载状态（modDownloadPending 标记下载由本页发起，回调据此过滤） ----
+    // ---- 下载状态（两个 Pending 标记由本页发起的下载/导入，回调据此过滤） ----
     property string downloadTargetInstance: ""
     property bool modDownloadPending: false
+    property bool modpackImportPending: false
+    property string pendingModpackName: ""
 
     readonly property string selectedNavName: selectedNav >= 0
                                               && selectedNav < navModel.length ? navModel[selectedNav].name : ""
     readonly property string selectedNavIcon: selectedNav >= 0
                                               && selectedNav < navModel.length ? navModel[selectedNav].icon : "package"
+    // 当前资源分类：导航 1..4 → 分类 0..3（0=Mod 1=整合包 2=材质包 3=光影包），其余为 -1
+    readonly property int currentCategory: selectedNav >= 1 && selectedNav <= 4 ? selectedNav - 1 : -1
 
     // ---- 导航单选（RadioBox 互斥由使用方维护） ----
     function selectNav(idx, item) {
+        if (idx === selectedNav)
+            return;
         selectedNav = idx;
         if (currentNavItem !== null && currentNavItem !== item)
             currentNavItem.checked = false;
         currentNavItem = item;
-        // 首次进入 Mod 分类自动搜一次空串（热门）；离开时关闭文件选择面板
-        if (idx === 1 && !modSearched)
+        // 切换分类一律关闭文件选择面板；进入资源分类时恢复缓存或自动搜一次
+        closeFiles();
+        if (currentCategory >= 0)
+            enterCategory(currentCategory);
+    }
+
+    // ---- 进入资源分类：平台与关键词未变且有缓存则直接恢复，否则清空并自动搜一次（默认空串=热门） ----
+    function enterCategory(cat) {
+        var c = resCache[cat];
+        if (c !== undefined && c.platform === modPlatform && c.query === modSearchBox.text.trim()) {
+            modResults = c.results;
+            modPage = c.page;
+            modHasMore = c.hasMore;
+            modSearched = true;
+        } else {
+            modResults = [];
+            modPage = -1;
+            modHasMore = false;
+            modSearched = false;
             startModSearch(true);
-        if (idx !== 1)
-            closeFiles();
+        }
     }
 
     // ---- 从 VersionManager 同步远程清单与本地已装快照 ----
@@ -217,7 +242,7 @@ Item {
         return Math.max(1, Math.round(v / 1024)) + " KB";
     }
 
-    // ---- Mod 列表项副标题：作者 · 下载量 · 简介 ----
+    // ---- 资源列表项副标题：作者 · 下载量 · 简介 ----
     function modInfoText(m) {
         var parts = [];
         var author = String(m.author);
@@ -230,7 +255,7 @@ Item {
         return parts.join(" · ");
     }
 
-    // ---- Mod 文件项副标题：适配版本（前 3 个）+ 加载器 + 大小 ----
+    // ---- 文件项副标题：适配版本（前 3 个）+ 加载器 + 大小 ----
     function modFileInfo(f) {
         var parts = [];
         var gv = f.gameVersions || [];
@@ -246,8 +271,10 @@ Item {
         return parts.join(" · ");
     }
 
-    // ---- 发起 Mod 搜索（reset=true 重搜第 0 页，false 追加下一页） ----
+    // ---- 发起当前分类搜索（reset=true 重搜第 0 页，false 追加下一页） ----
     function startModSearch(reset) {
+        if (currentCategory < 0)
+            return;
         if (modSearching) {
             // bridge 互斥会吞掉飞行中的并发请求：记录最新意图，完成后补发
             modSearchQueued = true;
@@ -256,14 +283,15 @@ Item {
         }
         var query = modSearchBox.text.trim();
         var targetPage = reset ? 0 : modPage + 1;
-        modLastReq = { "platform": modPlatform, "query": query, "page": targetPage };
+        modLastReq = { "platform": modPlatform, "category": currentCategory,
+                       "query": query, "page": targetPage };
         modSearched = true;
         // qmllint disable unqualified
-        ModPlatformBridge.search(modPlatform, query, targetPage);
+        ModPlatformBridge.search(modPlatform, currentCategory, query, targetPage);
         // qmllint enable unqualified
     }
 
-    // ---- 打开 Mod 文件选择面板并拉取文件列表 ----
+    // ---- 打开文件选择面板并拉取文件列表 ----
     function openModFiles(modData) {
         filesModId = String(modData.id);
         filesModName = String(modData.name);
@@ -283,18 +311,38 @@ Item {
         fileList = [];
     }
 
-    // ---- 安装指定文件到目标实例 ----
+    // ---- 安装指定文件：整合包走下载+导入管线（创建新实例），其余下载到目标实例对应子目录 ----
     function installModFile(fileData) {
+        if (modDownloading)
+            return;
+        if (currentCategory === 1) {
+            // 先置标志再调用：bridge 校验失败会同步 emit modpackImportFinished
+            modpackImportPending = true;
+            pendingModpackName = filesModName;
+            // qmllint disable unqualified
+            ModPlatformBridge.downloadModpackAndImport(filesPlatform, filesModId,
+                                                       String(fileData.id), String(fileData.fileName));
+            // qmllint enable unqualified
+            return;
+        }
         var target = cmbInstance.currentText;
-        if (target === "" || modDownloading)
+        if (target === "")
             return;
         downloadTargetInstance = target;
         // 先置标志再调用：实例不存在时 bridge 会同步 emit downloadFinished
         modDownloadPending = true;
         // qmllint disable unqualified
-        ModPlatformBridge.downloadModToInstance(filesPlatform, filesModId,
-                                                String(fileData.id), String(fileData.fileName),
-                                                target);
+        if (currentCategory === 2 || currentCategory === 3) {
+            // 材质包装到 resourcepacks/，光影包装到 shaderpacks/
+            ModPlatformBridge.downloadModToInstance(filesPlatform, filesModId,
+                                                    String(fileData.id), String(fileData.fileName),
+                                                    target,
+                                                    currentCategory === 2 ? "resourcepacks" : "shaderpacks");
+        } else {
+            ModPlatformBridge.downloadModToInstance(filesPlatform, filesModId,
+                                                    String(fileData.id), String(fileData.fileName),
+                                                    target);
+        }
         // qmllint enable unqualified
     }
 
@@ -331,19 +379,27 @@ Item {
         function onSearchFinished(ok, mods) {
             var req = page.modLastReq;
             var matched = req !== null && req.platform === page.modPlatform
+                          && req.category === page.currentCategory
                           && req.query === modSearchBox.text.trim();
-            if (page.selectedNav === 1 && matched) {
+            if (page.currentCategory >= 0 && matched) {
                 if (ok) {
-                    page.modResults = req.page === 0 ? mods : page.modResults.concat(mods);
+                    var newResults = req.page === 0 ? mods : page.modResults.concat(mods);
+                    page.modResults = newResults;
                     page.modPage = req.page;
                     // 每页 25 条，不足一页即没有更多
                     page.modHasMore = mods.length >= 25;
+                    // 写入当前分类缓存，切走再切回可直接恢复
+                    var cache = page.resCache;
+                    cache[req.category] = { "results": newResults, "page": req.page,
+                                            "hasMore": page.modHasMore,
+                                            "platform": req.platform, "query": req.query };
+                    page.resCache = cache;
                 } else {
                     if (req.page === 0)
                         page.modResults = [];
                     page.modHasMore = false;
                     // qmllint disable missing-property
-                    Window.window.showHint("Mod 搜索失败，请稍后重试", "error");
+                    Window.window.showHint(page.selectedNavName + " 搜索失败，请稍后重试", "error");
                     // qmllint enable missing-property
                 }
             }
@@ -355,14 +411,14 @@ Item {
         }
 
         function onModFilesFinished(ok, modId, files) {
-            // 面板已关闭或已切到另一个 Mod → 丢弃
+            // 面板已关闭或已切到另一个资源 → 丢弃
             if (!page.filesVisible || String(modId) !== page.filesModId)
                 return;
             page.filesLoading = false;
             page.fileList = ok ? files : [];
             if (!ok) {
                 // qmllint disable missing-property
-                Window.window.showHint("获取 Mod 文件列表失败", "error");
+                Window.window.showHint("获取文件列表失败", "error");
                 // qmllint enable missing-property
             }
         }
@@ -378,7 +434,23 @@ Item {
                 // qmllint enable missing-property
             } else {
                 // qmllint disable missing-property
-                Window.window.showMsg({ title: "Mod 安装失败", text: msg, warn: true });
+                Window.window.showMsg({ title: "资源安装失败", text: msg, warn: true });
+                // qmllint enable missing-property
+            }
+        }
+
+        function onModpackImportFinished(ok, msg, data) {
+            // 仅处理本页发起的整合包导入；data 为附带的实例列表，本页暂不使用
+            if (!page.modpackImportPending)
+                return;
+            page.modpackImportPending = false;
+            if (ok) {
+                // qmllint disable missing-property
+                Window.window.showHint("整合包 " + page.pendingModpackName + " 导入完成", "success");
+                // qmllint enable missing-property
+            } else {
+                // qmllint disable missing-property
+                Window.window.showMsg({ title: "整合包导入失败", text: msg, warn: true });
                 // qmllint enable missing-property
             }
         }
@@ -395,8 +467,8 @@ Item {
     onIsActiveChanged: {
         if (isActive && remoteVersions.length === 0 && !versionsLoading)
             refreshRemote();
-        // 页面激活且停在 Mod 分类、尚未搜索过时补一次自动搜索
-        if (isActive && selectedNav === 1 && !modSearched)
+        // 页面激活且停在资源分类、尚未搜索过时补一次自动搜索
+        if (isActive && currentCategory >= 0 && !modSearched)
             startModSearch(true);
     }
 
@@ -602,14 +674,14 @@ Item {
                 }
             }
 
-            // ---- Mod 资源浏览 ----
+            // ---- 资源浏览（Mod/整合包/材质包/光影包共用） ----
             ColumnLayout {
                 anchors.fill: parent
                 anchors.margins: Theme.contentMargin
                 spacing: Theme.itemSpacing
-                visible: page.selectedNav === 1
+                visible: page.currentCategory >= 0
 
-                // 搜索行：关键词 + 来源平台 + 目标实例
+                // 搜索行：关键词 + 来源平台 + 目标实例（整合包创建新实例，不显示实例下拉）
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: Theme.itemSpacing
@@ -617,7 +689,7 @@ Item {
                     LPCLSearchBox {
                         id: modSearchBox
                         Layout.fillWidth: true
-                        hintText: "搜索 Mod..."
+                        hintText: "搜索 " + page.selectedNavName + "..."
                         onTextChanged: modSearchTimer.restart()
                         onAccepted: {
                             modSearchTimer.stop();
@@ -639,12 +711,14 @@ Item {
                         }
                     }
                     Text {
+                        visible: page.currentCategory !== 1
                         text: "安装到"
                         color: Theme.gray3
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                     }
                     LPCLComboBox {
                         id: cmbInstance
+                        visible: page.currentCategory !== 1
                         Layout.preferredWidth: 180
                         Layout.preferredHeight: 40
                         model: page.instanceList
@@ -683,7 +757,7 @@ Item {
                                     logoScale: 1.2
                                     imageSource: String(modItem.modelData.iconUrl) !== ""
                                                  ? String(modItem.modelData.iconUrl) : ""
-                                    lucideIcon: String(modItem.modelData.iconUrl) === "" ? "package" : ""
+                                    lucideIcon: String(modItem.modelData.iconUrl) === "" ? page.selectedNavIcon : ""
                                     checkType: 1
                                     onClicked: page.openModFiles(modItem.modelData)
                                 }
@@ -714,17 +788,17 @@ Item {
                     Text {
                         anchors.centerIn: parent
                         visible: !page.modSearching && page.modResults.length === 0
-                        text: page.modSearched ? "没有匹配的 Mod" : "输入关键词开始搜索"
+                        text: page.modSearched ? "没有匹配的 " + page.selectedNavName : "输入关键词开始搜索"
                         color: Theme.gray3
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
                     }
                 }
             }
 
-            // ---- 其余分类：即将推出 ----
+            // ---- 数据包：即将推出（装到具体存档，语义复杂，后续实现） ----
             ColumnLayout {
                 anchors.centerIn: parent
-                visible: page.selectedNav > 1
+                visible: page.selectedNav === 5
                 spacing: 10
 
                 LPCLIcon {
@@ -747,11 +821,11 @@ Item {
                 }
             }
 
-            // ---- Mod 文件选择覆盖层（参考 LPCLMsg 遮罩：半透明 + 点击空白关闭） ----
+            // ---- 文件选择覆盖层（参考 LPCLMsg 遮罩：半透明 + 点击空白关闭） ----
             Rectangle {
                 id: filesOverlay
                 anchors.fill: parent
-                visible: page.filesVisible && page.selectedNav === 1
+                visible: page.filesVisible && page.currentCategory >= 0
                 color: Qt.rgba(Theme.color1.r, Theme.color1.g, Theme.color1.b, 0.35)
 
                 // 遮罩：吞掉事件，点击关闭面板（进行中的下载不中断，完成后照常提示）
@@ -812,7 +886,9 @@ Item {
                                 Layout.fillWidth: true
                                 Text {
                                     Layout.fillWidth: true
-                                    text: "正在下载到 " + page.downloadTargetInstance + "..."
+                                    text: page.modpackImportPending
+                                          ? "正在下载并导入 " + page.pendingModpackName + "..."
+                                          : "正在下载到 " + page.downloadTargetInstance + "..."
                                     color: Theme.color1
                                     font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize
                                     elide: Text.ElideRight
@@ -864,7 +940,8 @@ Item {
                                                 LPCLButton {
                                                     text: "安装"
                                                     colorType: 1
-                                                    enabled: cmbInstance.currentText !== ""
+                                                    enabled: (page.currentCategory === 1
+                                                              || cmbInstance.currentText !== "")
                                                              && !page.modDownloading
                                                     onClicked: page.installModFile(fileItem.modelData)
                                                 }

@@ -1,8 +1,10 @@
 #include "bridge/mod_platform_bridge.h"
 
+#include <QDir>
 #include <QTimer>
 
 #include "lpcl.h"
+#include "core/versionmanager.h"
 #include "download/modplatform.h"
 
 ModPlatformBridge& ModPlatformBridge::instance() {
@@ -18,14 +20,17 @@ static QVariantMap modResourceToMap(const ModResource &r) {
     };
 }
 
-void ModPlatformBridge::search(int platform, const QString &query, int page) {
+static ModPlatform::Platform toPlatform(int platform) {
+    return platform == 1 ? ModPlatform::Modrinth : ModPlatform::CurseForge;
+}
+
+void ModPlatformBridge::search(int platform, int category, const QString &query, int page) {
     if (m_searching) return;
     m_searching = true;
     emit searchingChanged();
 
-    ModPlatform::instance().searchMods(
-        platform == 1 ? ModPlatform::Modrinth : ModPlatform::CurseForge,
-        query, page, 25,
+    auto type = static_cast<ModPlatform::ResourceType>(qBound(0, category, 4));
+    ModPlatform::instance().searchResources(toPlatform(platform), type, query, page, 25,
         [this](bool ok, QList<ModResource> mods) {
             QTimer::singleShot(0, this, [this, ok, mods]() {
                 QVariantList out;
@@ -39,7 +44,7 @@ void ModPlatformBridge::search(int platform, const QString &query, int page) {
 
 void ModPlatformBridge::getModFiles(int platform, const QString &modId) {
     ModPlatform::instance().getModFiles(
-        platform == 1 ? ModPlatform::Modrinth : ModPlatform::CurseForge,
+        toPlatform(platform),
         modId,
         [this, modId](bool ok, QList<ModFileInfo> files) {
             QTimer::singleShot(0, this, [this, ok, modId, files]() {
@@ -59,8 +64,14 @@ void ModPlatformBridge::getModFiles(int platform, const QString &modId) {
 
 void ModPlatformBridge::downloadModToInstance(int platform, const QString &modId,
                                               const QString &fileId, const QString &fileName,
-                                              const QString &instanceName) {
+                                              const QString &instanceName,
+                                              const QString &targetSubDir) {
     if (m_downloading) return;
+    // 子目录只允许简单名字，防路径拼接出格
+    if (targetSubDir.isEmpty() || targetSubDir.contains('/') || targetSubDir.contains("..")) {
+        emit downloadFinished(false, QStringLiteral("非法目标子目录"));
+        return;
+    }
     auto info = lpcl::instanceInfo(instanceName);
     if (info.dirName.isEmpty()) {
         emit downloadFinished(false, QStringLiteral("实例不存在: ") + instanceName);
@@ -71,9 +82,10 @@ void ModPlatformBridge::downloadModToInstance(int platform, const QString &modId
     emit downloadingChanged();
     emit downloadProgressChanged();
 
-    QString savePath = info.path + "mods/" + fileName;
+    QDir().mkpath(info.path + targetSubDir);
+    QString savePath = info.path + targetSubDir + "/" + fileName;
     ModPlatform::instance().downloadMod(
-        platform == 1 ? ModPlatform::Modrinth : ModPlatform::CurseForge,
+        toPlatform(platform),
         modId, fileId, savePath,
         [this](bool ok, QString msg) {
             QTimer::singleShot(0, this, [this, ok, msg]() {
@@ -81,6 +93,57 @@ void ModPlatformBridge::downloadModToInstance(int platform, const QString &modId
                 emit downloadingChanged();
                 emit downloadFinished(ok, msg);
             });
+        },
+        [this](qint64 received, qint64 total) {
+            if (total <= 0) return;
+            QTimer::singleShot(0, this, [this, received, total]() {
+                m_downloadPercent = int(received * 100 / total);
+                emit downloadProgressChanged();
+            });
+        });
+}
+
+void ModPlatformBridge::downloadModpackAndImport(int platform, const QString &modId,
+                                                 const QString &fileId, const QString &fileName) {
+    if (m_downloading) return;
+    m_downloading = true;
+    m_downloadPercent = 0;
+    emit downloadingChanged();
+    emit downloadProgressChanged();
+
+    // 暂存到 cache/（不能放 tmp/——导入管线入口会清空 tmp/），导入完成无论成败都删暂存
+    QString stageDir = VersionManager::instance().mcFolder() + "cache/";
+    QDir().mkpath(stageDir);
+    QString savePath = stageDir + fileName;
+
+    ModPlatform::instance().downloadMod(
+        toPlatform(platform),
+        modId, fileId, savePath,
+        [this, savePath](bool ok, QString msg) {
+            if (!ok) {
+                QTimer::singleShot(0, this, [this, ok, msg]() {
+                    m_downloading = false;
+                    emit downloadingChanged();
+                    emit modpackImportFinished(false, msg, {});
+                });
+                return;
+            }
+            // 下载成功 → 走导入管线（进度与完成回调都投递回 UI 线程）
+            lpcl::importModpack(savePath, QString(), QString(),
+                [this](const lpcl::ImportProgress &p) {
+                    QTimer::singleShot(0, this, [this, percent = p.percent]() {
+                        m_downloadPercent = percent;
+                        emit downloadProgressChanged();
+                    });
+                },
+                [this, savePath](bool ok2, const QString &msg2, const QStringList &data) {
+                    QTimer::singleShot(0, this, [this, ok2, msg2, data, savePath]() {
+                        QFile::remove(savePath);
+                        m_downloading = false;
+                        emit downloadingChanged();
+                        emit modpackImportFinished(ok2, msg2, data);
+                    });
+                });
         },
         [this](qint64 received, qint64 total) {
             if (total <= 0) return;

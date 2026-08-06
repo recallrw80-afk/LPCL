@@ -30,6 +30,7 @@ Makefile*
 moc_*.cpp
 ui_*.h
 qrc_*.cpp
+*_qml_module_dir_map.qrc
 Thumbs.db
 *.res
 *.rc
@@ -86,6 +87,7 @@ CMakeLists.txt.user*
 /.qtcreator/
 *.md
 !README.md
+!README.zh-CN.md
 !CONTRIBUTING.md
 cmake-build-debug/
 cmake-build-release/

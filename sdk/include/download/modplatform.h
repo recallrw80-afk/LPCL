@@ -54,6 +54,15 @@ public:
         Modrinth = 1
     };
 
+    /// 资源类型（映射 CF classId / Modrinth project_type）
+    enum ResourceType {
+        Mod = 0,
+        ModPack = 1,
+        ResourcePack = 2,
+        Shader = 3,
+        DataPack = 4
+    };
+
     static ModPlatform& instance();
 
     // ---- Search ----
@@ -62,9 +71,11 @@ public:
     void searchMods(Platform platform, const QString &query, int page, int pageSize,
                     std::function<void(bool, QList<ModResource>)> onComplete);
 
-    /// Search by category/filters
-    void searchByCategory(Platform platform, int category, int page,
-                          std::function<void(bool, QList<ModResource>)> onComplete);
+    /// 按资源类型搜索（CF classId：Mod=6 ModPack=4471 ResourcePack=12 Shader=6552 DataPack=6945；
+    /// Modrinth project_type：mod/modpack/resourcepack/shader/datapack）
+    void searchResources(Platform platform, ResourceType type, const QString &query,
+                         int page, int pageSize,
+                         std::function<void(bool, QList<ModResource>)> onComplete);
 
     // ---- Mod details ----
 
@@ -99,7 +110,7 @@ private:
     ModPlatform() = default;
 
     // CurseForge API
-    void searchCurseForge(const QString &query, int page, int pageSize,
+    void searchCurseForge(const QString &query, int page, int pageSize, int classId,
                           std::function<void(bool, QList<ModResource>)> onComplete);
     void getCurseForgeModDetails(const QString &modId,
                                   std::function<void(bool, ModResource)> onComplete);
@@ -107,7 +118,7 @@ private:
                              std::function<void(bool, QList<ModFileInfo>)> onComplete);
 
     // Modrinth API
-    void searchModrinth(const QString &query, int page, int pageSize,
+    void searchModrinth(const QString &query, int page, int pageSize, const QString &projectType,
                         std::function<void(bool, QList<ModResource>)> onComplete);
     void getModrinthModDetails(const QString &modId,
                                 std::function<void(bool, ModResource)> onComplete);

@@ -133,6 +133,33 @@ LPCLCORE_EXPORT bool removePlayer(const QString &uuid);
 /// 选择当前玩家（UUID 不存在时返回 false，不修改选中项）
 LPCLCORE_EXPORT bool selectPlayer(const QString &uuid);
 
+// ---- 微软登录（设备码 + 持久化） ----
+
+/// 微软登录状态快照
+struct MsLoginInfo {
+    bool    loggedIn = false;
+    QString name;
+    QString uuid;
+};
+
+/// 设备码回调：(userCode, verificationUrl) —— 展示给用户去浏览器输入
+using MsDeviceCodeCallback = std::function<void(const QString &userCode, const QString &verificationUrl)>;
+/// 登录完成回调：(ok, errorOrName, info)
+using MsLoginCallback = std::function<void(bool ok, const QString &errorOrName, const MsLoginInfo &info)>;
+
+/// 微软设备码登录（异步）。成功后自动加密持久化 refresh token：
+/// 之后 launchVersion 自动用微软账号启动（每次启动在线刷新，失败回退离线）。
+LPCLCORE_EXPORT void loginMs(MsDeviceCodeCallback onDeviceCode, MsLoginCallback onComplete);
+
+/// 清除持久化的微软登录态（launch 回退为离线玩家）
+LPCLCORE_EXPORT void logoutMs();
+
+/// 当前持久化的微软登录信息（纯本地读取，无网络）
+LPCLCORE_EXPORT MsLoginInfo currentMsLogin();
+
+/// 本构建是否配置了微软 OAuth Client ID（false 时 loginMs 必失败，见 CONTRIBUTING「Azure 应用注册」）
+LPCLCORE_EXPORT bool msLoginAvailable();
+
 } // namespace lpcl
 
 #endif // LPCLCORE_LPCL_H

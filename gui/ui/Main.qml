@@ -539,6 +539,24 @@ ApplicationWindow {
                     isActive: navTabs.currentIndex === 3
                 }
 
+                // PanDownload — 下载任务面板（对应原版 PageSpeedLeft 精简版：左下角悬浮按钮 + 可展开任务列表）
+                LPCLDownloadPanel {
+                    id: panDownload
+                    anchors.fill: parent
+                    z: 80  // 低于 PanHint(90) 与 PanMsg(100)，避免遮挡提示和弹窗
+                }
+
+                // DownloadManager 全局下载信号 → 任务面板
+                // qmllint disable unqualified
+                Connections {
+                    target: DownloadManager
+
+                    function onDownloadStarted(url) { panDownload.addTask(url); }
+                    function onDownloadProgress(url, received, total) { panDownload.updateTask(url, received, total); }
+                    function onDownloadFinished(url, success, msg) { panDownload.finishTask(url, success, msg); }
+                }
+                // qmllint enable unqualified
+
                 // PanHint — 轻提示层（对应原版 PanHint：左下角滑入提示，覆盖于页面之上）
                 LPCLHint {
                     id: panHint
@@ -616,8 +634,10 @@ ApplicationWindow {
             entranceDelay.start();
 
             // Initialize — C++ singletons handle startup logic
+            // qmllint disable unqualified
             JavaManager.scanSystemJava();
             VersionManager.loadLocalVersions();
+            // qmllint enable unqualified
         }
     }
 }

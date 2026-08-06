@@ -53,6 +53,13 @@ inline QString pathJoin(const QString &a, const QString &b) {
 LPCLCORE_EXPORT bool extractTarGz(const QString &tgzPath, const QString &destDir,
                                   QString *errorOut = nullptr);
 
+/// 清空目录内容但不顺符号链接：链接/普通文件用 QFile::remove，只有真实目录才 removeRecursively
+/// （QDir::removeRecursively 作用于指向目录的符号链接时会删掉链接目标的内容——越界删除）
+LPCLCORE_EXPORT bool removeDirContents(const QString &path);
+
+/// 安全删除整棵目录树（含目录本身；不顺符号链接）。路径不存在返回 true
+LPCLCORE_EXPORT bool removeTree(const QString &path);
+
 } // namespace FileUtils
 
 #endif // LPCL_FILE_UTILS_H

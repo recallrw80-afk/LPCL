@@ -1,150 +1,186 @@
-# lpcl-cli — Linux 上的 Minecraft 启动器
+# lpcl — A Minecraft Launcher for Linux
 
-**LPCL（Linux Plain Craft Launcher）** 是 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的跨平台移植版——一个用 C++/Qt 编写的 Minecraft 启动器。`lpcl-cli` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
+**English** | [简体中文](README.zh-CN.md)
 
-## 功能特性
+**LPCL (Linux Plain Craft Launcher)** is a cross-platform port of [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) — a Minecraft launcher written in C++/Qt. `lpcl` is its command-line frontend: no graphical interface needed, just a few MB of memory, with support for modpack import, multi-version management, and game launching.
 
-- **整合包导入**：CurseForge / Modrinth / MCBBS / MultiMC / HMCL / 启动器外壳包 / 压缩 `.minecraft` / 纯 Mod 包，自动完成游戏本体、Modloader（Forge/NeoForge/Fabric）、Mod 下载
-- **多实例管理**：每个实例独立目录，互不干扰；支持批量删除
-- **原版下载**：任意 MC 版本一键下载安装、校验补齐
-- **Java 管理**：自动检测系统 Java，按 MC 版本自动选择；缺失时自动从 Adoptium 下载安装
-- **多玩家配置**：多个离线玩家档案，支持皮肤类型（slim/wide）
-- **断点续传与校验**：所有下载按 SHA1 校验，重复操作自动跳过已有文件
-- **中文/英文界面**：`set-lang zh` 一键切换中文
+## Features
 
-## 环境要求
+- **Modpack import**: CurseForge / Modrinth / MCBBS / MultiMC / HMCL / launcher-shell packs / compressed `.minecraft` / plain mod packs — game files, modloaders (Forge/NeoForge/Fabric), and mods downloaded automatically
+- **Multi-instance management**: isolated directory per instance; batch removal supported
+- **Vanilla download**: one-command install of any MC version, with verify-and-repair
+- **Java management**: detects system Java, picks per MC version automatically, downloads from Adoptium when missing
+- **Player profiles**: multiple offline player profiles with skin types (slim/wide)
+- **Resume & verify**: every download is SHA1-verified; re-running skips existing files
+- **Chinese/English UI**: switch with `set-lang zh`
 
-- Linux（x86_64 / aarch64）
-- 运行游戏需要 Java 运行时（没有也没关系，启动时会自动下载）
+## Requirements
 
-## 安装
+- Linux (x86_64 / aarch64)
+- A Java runtime to play (don't worry — it's downloaded automatically on launch if missing)
 
-### 一键安装（待发布）
+## Install
 
-```bash
-curl -fsSL <发布地址>/install.sh | bash
-```
+### Build from source (recommended)
 
-> 发布页尚未上线，目前请使用下方的源码构建。
-
-脚本自动完成：下载对应架构的包 → 解压到 `~/.local/lib/lpcl/` → 在 `~/.local/bin/` 注册 `lpcl-cli` 命令。完成后任意目录直接：
+Clone the release source code, then compile and install on your machine (`~/.local/lib/lpcl/` + `~/.local/bin/lpcl`):
 
 ```bash
-lpcl-cli help
-```
-
-### 源码构建
-
-```bash
+git clone https://github.com/recallrw80-afk/LPCL.git
 cd LPCL
-make cli            # 构建 lpcl-cli + liblpclcore.so
-make package-cli    # 打包到 dist/cli/，可拷贝到任意位置独立运行
-make package-tar    # 生成发布压缩包 dist/lpcl-cli-linux-<arch>.tar.gz
+make install        # build Release → zero-dependency package → install
 ```
 
-## 快速上手
+Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
+
+Then run from anywhere:
 
 ```bash
-# 1. 设置游戏目录（默认是程序旁的 ./mc/，可省略）
-./lpcl-cli set-folder /home/yourname/mc
-
-# 2. 导入一个整合包
-./lpcl-cli inpack ~/Downloads/某某整合包.zip
-
-# 3. 看看有哪些实例
-./lpcl-cli list
-
-# 4. 启动！
-./lpcl-cli launch
-# 或者直接指定：
-./lpcl-cli launch 实例名
+lpcl help
 ```
 
-没有整合包？先装个原版：
+### Install a package built on another machine
+
+Run `make package-tar` on the build machine to produce the zero-dependency tarball `cli/dist/lpcl-linux-<arch>.tar.gz`, copy it to the target machine, then:
 
 ```bash
-./lpcl-cli mc-install          # 最新正式版
-./lpcl-cli mc-install 1.20.1   # 指定版本
-./lpcl-cli launch 1.20.1
+bash install.sh lpcl-linux-x86_64.tar.gz
 ```
 
-## 命令参考
+(`install.sh` lives in `cli/` in the repo; it's also available from the release page.)
 
-### 实例
+### One-liner (available once the repo goes public)
 
-| 命令 | 说明 |
+```bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+```
+
+> The repo is currently private and release downloads are unavailable — use build-from-source above.
+
+### Update & uninstall
+
+```bash
+lpcl update         # check GitHub Releases and update in place (install.sh-installed copies only)
+lpcl uninstall      # uninstall (clears the game folder)
+lpcl uninstall -r   # uninstall but keep game folder contents
+```
+
+### Common build targets
+
+```bash
+make cli            # build lpcl + liblpclcore.so (Debug)
+make package-tar    # zero-dependency tarball at cli/dist/lpcl-linux-<arch>.tar.gz
+make run            # build & launch the QML GUI (test version, binary name lpcl-gui)
+```
+
+## Quick start
+
+```bash
+# 1. Set the game folder (defaults to ./mc/ next to the binary; optional)
+lpcl set-folder /home/yourname/mc
+
+# 2. Import a modpack
+lpcl inpack ~/Downloads/some-modpack.zip
+
+# 3. See what instances you have
+lpcl list
+
+# 4. Launch!
+lpcl launch
+# or pick directly:
+lpcl launch <instance-name>
+```
+
+No modpack? Install vanilla first:
+
+```bash
+lpcl mc-install          # latest release
+lpcl mc-install 1.20.1   # specific version
+lpcl launch 1.20.1
+```
+
+## Command reference
+
+### Instances
+
+| Command | Description |
 |---|---|
-| `list` | 列出所有实例 |
-| `mods <名称>` | 列出实例的 Mod（文件大小 + 启用/禁用状态） |
-| `list-rm [名称\|*]` | 删除实例（无参时上下键选择 + 二次确认；`*` 删除全部，注意加引号） |
-| `mc-list` | 列出已下载的原版 MC 版本 |
-| `launch [名称]` | 启动游戏；不填名称时**上下键选择**（列表含实例 + 原版/加载器版本；非 TTY 退回输序号） |
+| `list` | List all instances |
+| `mods <name>` | List an instance's mods (file size + enabled state) |
+| `list-rm [name\|*]` | Remove instances (interactive picker + confirmation without args; `*` removes all — quote it) |
+| `mc-list` | List downloaded vanilla MC versions |
+| `launch [name]` | Launch the game; without a name, an **arrow-key picker** appears (instances + vanilla/loader versions; falls back to numeric input on non-TTY) |
 
-### 下载与导入
+### Download & import
 
-| 命令 | 说明 |
+| Command | Description |
 |---|---|
-| `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包；`--r` 重命名实例；Mod 包需 `--to` 指定目标实例 |
-| `mc-install [版本]` | 下载原版 MC 版本（不带参数为最新正式版） |
-| `java-install <大版本>` | 下载安装 Java（Adoptium JRE） |
+| `inpack <file> [--r <name>] [--to <instance>] [--folder <path>]` | Import a modpack; `--r` renames the instance; mod packs need `--to` for the target instance |
+| `mc-install [version]` | Download a vanilla MC version (latest release without args) |
+| `java-install <major>` | Download and install Java (Adoptium JRE) |
 
 ### Java
 
-| 命令 | 说明 |
+| Command | Description |
 |---|---|
-| `list-javas` | 列出检测到的 Java |
+| `list-javas` | List detected Java installations |
 
-### 玩家
+### Players
 
-| 命令 | 说明 |
+| Command | Description |
 |---|---|
-| `player-add [名称] [--avatar <路径>] [--skin <slim\|wide\|default>]` | 添加玩家；不带参数进入交互向导（名字 → 皮肤 → 头像 → 高级配置自定义 UUID） |
-| `player-edit [uuid\|序号]` | 修改玩家配置（交互向导，回车保留原值；无参时上下键选择玩家） |
-| `player-rm [uuid\|序号]` | 删除玩家（无参时上下键选择 + 二次确认） |
-| `player-list` | 列出玩家（带序号，`*` 为当前选中） |
-| `player-select <uuid\|序号>` | 选择当前玩家（可用序号；无参时上下键选择） |
+| `player-add [name] [--avatar <path>] [--skin <slim\|wide\|default>]` | Add a player; interactive wizard without args (name → skin → avatar → advanced custom UUID) |
+| `player-edit [uuid\|index]` | Edit a player (wizard, Enter keeps current value; interactive picker without args) |
+| `player-rm [uuid\|index]` | Remove a player (interactive picker + confirmation without args) |
+| `player-list` | List players (numbered, `*` marks the selected one) |
+| `player-select <uuid\|index>` | Select the active player (index accepted; interactive picker without args) |
 
-### 配置与其他
+### Config & misc
 
-| 命令 | 说明 |
+| Command | Description |
 |---|---|
-| `set-folder <路径>` | 设置默认游戏目录 |
-| `set-lang <en\|zh>` | 设置界面语言（默认英文） |
-| `set-mem <MB\|auto>` | 设置游戏最大内存；`auto`（默认）按可用内存 50% 自动分配（上限 16G） |
-| `update` | 检查 GitHub Releases 是否有新版本并自动更新 |
-| `uninstall [-r]` | 卸载启动器；`-r` 保留游戏目录内容 |
-| `config` | 查看当前配置 |
-| `report [描述]` | 生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏） |
-| `test` | 全系统自检 |
-| `help` / `version` | 帮助 / 版本号 |
+| `set-folder <path>` | Set the default game folder |
+| `set-lang <en\|zh>` | Set the UI language (English by default) |
+| `set-mem <MB\|auto>` | Set max game memory; `auto` (default) allocates 50% of available RAM (capped at 16G) |
+| `login` | Microsoft account login (device code flow; session encrypted & persisted, auto-refreshed at launch) |
+| `logout` | Log out the Microsoft account, falling back to the offline player |
+| `update` | Check GitHub Releases and update in place (install.sh-installed copies only; override repo with `LPCL_REPO`) |
+| `uninstall [-r]` | Uninstall the launcher; `-r` keeps game folder contents |
+| `config` | Show current config |
+| `report [description]` | Generate a prefilled GitHub Issue link (environment info + recent launch log attached, sanitized) |
+| `test` | Full system self-check |
+| `help` / `version` | Help / version |
 
-## 游戏文件放在哪
+## Where the game files live
 
-默认在启动器旁的 `mc/` 目录（可用 `set-folder` 修改）：
+By default in `mc/` next to the launcher (change with `set-folder`):
 
 ```
 mc/
-├── instances/      # 你导入的每个整合包实例（独立目录）
-├── versions/       # 下载的 MC 版本
-├── libraries/      # 游戏依赖库（多实例共享）
-├── assets/         # 游戏资源（多实例共享）
-├── javas/          # 自动下载的 Java
-└── logs/           # 启动器日志（lpcl-launch-*.log，滚动保留 10 份）
+├── instances/      # each imported modpack instance (isolated)
+├── versions/       # downloaded MC versions
+├── libraries/      # game libraries (shared across instances)
+├── assets/         # game assets (shared across instances)
+├── javas/          # auto-downloaded Java runtimes
+└── logs/           # launcher logs (lpcl-launch-*.log, last 10 kept)
 ```
 
-游戏自己的日志在 `<实例>/logs/latest.log`（MC/mod 标准位置）；启动器每次 `launch` 另写一份完整会话日志（启动命令行 + 全部游戏输出 + 退出码）到 `mc/logs/lpcl-launch-<时间戳>.log`，排查启动问题看这个。
+The game's own log is at `<instance>/logs/latest.log` (standard MC/mod location); each `launch` also writes a full session log (launch command line + all game output + exit code) to `mc/logs/lpcl-launch-<timestamp>.log` — check that one for launch problems.
 
-## 常见问题
+## FAQ
 
-**导入 CurseForge 整合包需要 API key 吗？**
-不需要。官方发布的预编译包内嵌了 key（走官方 API，最快最稳）；源码构建默认不带 key，自动使用 MCIM 镜像下载。key 失效或被吊销时会自动回退镜像重试，无需手动处理。
+**Do I need an API key to import CurseForge modpacks?**
+No. Official prebuilt packages embed a key (fastest, official API); source builds ship without one and automatically use the MCIM mirror. If a key expires or is revoked, requests automatically fall back to the mirror — nothing to handle manually.
 
-**界面怎么变成中文？**
-`lpcl-cli set-lang zh`（一次设置，永久生效）。
+**How do I switch the UI to Chinese?**
+`lpcl set-lang zh` (persistent, one-time).
 
-**导入失败会怎样？**
-任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。
+**Is there a GUI?**
+The QML GUI is currently a test version sharing the same SDK as the CLI. Start it with `make run` from a dev build (binary name `lpcl-gui`); release packages containing the GUI register an `lpcl-gui` command.
 
-## 许可与声明
+**What happens when an import fails?**
+Any failed download stage (game files / modloader / mods) rolls back everything — no half-installed instance is left behind; just retry.
 
-本项目以 [GNU GPL v3](../LICENSE) 开源。本项目是独立开发的开源软件：与 Mojang / Microsoft 无关联（"Minecraft" 是 Mojang Synergies AB 的商标），与 [PCL](https://github.com/Hex-Dragon/PCL2) 官方亦无隶属或授权关系。按"原样"提供，不承担使用责任（见许可证第 15、16 条）。
+## License & notice
+
+Licensed under [GNU GPL v3](../LICENSE). This is independently developed open-source software: not affiliated with Mojang / Microsoft ("Minecraft" is a trademark of Mojang Synergies AB) and not affiliated with or authorized by the official [PCL](https://github.com/Hex-Dragon/PCL2). Provided "as is" — no liability accepted (see sections 15–16 of the license).

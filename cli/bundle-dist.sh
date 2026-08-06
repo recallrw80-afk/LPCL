@@ -1,13 +1,13 @@
 #!/bin/bash
-# bundle-dist.sh — 把 lpcl-cli 运行所需的 Qt/第三方库收进 dist/，实现零依赖分发
+# bundle-dist.sh — 把 lpcl 运行所需的 Qt/第三方库收进 dist/，实现零依赖分发
 # 用法: bundle-dist.sh <dist目录> <Qt前缀>
-# 产物布局: dist/lpcl-cli + dist/lib/*.so + dist/plugins/tls/*.so
+# 产物布局: dist/lpcl + dist/lib/*.so + dist/plugins/tls/*.so
 # 只收应用私有依赖；glibc / libstdc++ / libgcc 属系统基线，一律不带
 set -euo pipefail
 
 DIST="$1"
 QT_PREFIX="$2"
-BIN="$DIST/lpcl-cli"
+BIN="$DIST/lpcl"
 LIBDIR="$DIST/lib"
 mkdir -p "$LIBDIR" "$DIST/plugins/tls"
 

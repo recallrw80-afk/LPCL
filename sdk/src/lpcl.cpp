@@ -1,11 +1,13 @@
 #include "lpcl.h"
 #include "modpack.h"
+#include "ms_client_id.h"  // CMake 生成：LPCL_MS_CLIENT_ID（msLoginAvailable 用）
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "core/javamanager.h"
 #include "core/launcher.h"
 #include "core/launchbuilder.h"
 #include "auth/offlineauth.h"
+#include "auth/msauth.h"
 #include "download/assetdownloader.h"
 #include "download/downloadmanager.h"
 #include "util/file_utils.h"
@@ -239,6 +241,9 @@ static void maybeInstallGlfw34(const McVersion &version) {
 
 namespace lpcl {
 
+// 微软登录持久化（定义见文件尾部 "微软登录" 一节）
+static void persistMsLogin(const LoginResult &r);
+
 QStringList listVersions() {
     auto &vm = VersionManager::instance();
     vm.loadLocalVersions();
@@ -368,12 +373,33 @@ bool launchVersion(const QString &versionId,
         version = VersionManager::instance().loadVersion(versionId);
     if (!version.isValid) return false;
 
-    // 登录：使用选中的玩家 Profile（名字 + 皮肤类型，不再硬编码 "Player"）
-    QString playerUuid = Settings::instance().selectedPlayer();
-    QString playerName = Settings::instance().getProfile(playerUuid, "Name", "Player");
-    if (playerName.isEmpty()) playerName = "Player";
-    QString skinType = Settings::instance().getProfile(playerUuid, "SkinType", "slim");
-    auto login = OfflineAuth::createOfflineLogin(playerName, skinType);
+    // 登录：优先持久化的微软账号（在线刷新换全新 token 链）；无登录态或刷新失败回退离线玩家
+    LoginResult login;
+    QString savedRefresh = Settings::instance().getEncrypted("MsAuth/RefreshToken");
+    if (!savedRefresh.isEmpty()) {
+        MsAuth auth;
+        bool done = false, refreshed = false;
+        LoginResult r;
+        QEventLoop loop;
+        QPointer<QEventLoop> guard = &loop;
+        auth.loginWithRefreshToken(savedRefresh,
+            [&](bool ok, LoginResult res) { refreshed = ok; r = res; done = true; if (guard) guard->quit(); });
+        if (!done) loop.exec();  // done 标志防同步完成导致裸等
+        if (refreshed && !r.refreshToken.isEmpty()) {
+            persistMsLogin(r);  // MS 轮换的 refresh token 回写
+            login = r;
+        } else {
+            qWarning() << "微软登录刷新失败（token 过期或网络问题），回退离线模式。重新登录: lpcl login";
+        }
+    }
+    if (!login.isValid()) {
+        // 离线：使用选中的玩家 Profile（名字 + 皮肤类型，不再硬编码 "Player"）
+        QString playerUuid = Settings::instance().selectedPlayer();
+        QString playerName = Settings::instance().getProfile(playerUuid, "Name", "Player");
+        if (playerName.isEmpty()) playerName = "Player";
+        QString skinType = Settings::instance().getProfile(playerUuid, "SkinType", "slim");
+        login = OfflineAuth::createOfflineLogin(playerName, skinType);
+    }
 
     if (jm.javaList().isEmpty()) {
         jm.scanSystemJava();
@@ -461,13 +487,14 @@ bool removeInstance(const QString &name) {
         QString instanceDir = folder + "instances/" + dirName;
         // 先删 INI 映射，再删目录（即使目录删除失败，映射也已清理）
         Settings::instance().removeInstanceDir(dirName);
-        return QDir(instanceDir).removeRecursively();
+        // removeTree 不顺符号链接：实例目录里指向外部的链接只删链接本身
+        return FileUtils::removeTree(instanceDir);
     }
 
     // 回退：直接用显示名作为目录名（兼容旧格式或测试）
     QString instanceDir = folder + "instances/" + name;
     if (!QDir(instanceDir).exists()) return false;
-    bool ok = QDir(instanceDir).removeRecursively();
+    bool ok = FileUtils::removeTree(instanceDir);
     // 也尝试清理可能残留的 INI 映射
     Settings::instance().removeInstanceDir(name);
     return ok;
@@ -620,6 +647,59 @@ bool selectPlayer(const QString &uuid) {
     if (!Settings::instance().playerProfiles().contains(uuid)) return false;
     Settings::instance().selectPlayer(uuid);
     return true;
+}
+
+// ---- 微软登录（设备码 + 持久化） ----
+
+// refresh token 加密落盘（CryptoUtils DES），名称/UUID 明文仅用于展示
+static void persistMsLogin(const LoginResult &r) {
+    auto &s = Settings::instance();
+    s.setEncrypted("MsAuth/RefreshToken", r.refreshToken);
+    s.setString("MsAuth/Name", r.name);
+    s.setString("MsAuth/Uuid", r.uuid);
+}
+
+void loginMs(MsDeviceCodeCallback onDeviceCode, MsLoginCallback onComplete) {
+    auto *auth = new MsAuth();  // 流程结束即 deleteLater 自毁
+    if (onDeviceCode) {
+        QObject::connect(auth, &MsAuth::deviceCodeReady, auth,
+                         [onDeviceCode](const QString &code, const QString &url) { onDeviceCode(code, url); });
+    }
+    auth->login([auth, onComplete](bool ok, LoginResult r) {
+        auth->deleteLater();
+        MsLoginInfo info;
+        if (ok && !r.refreshToken.isEmpty()) {
+            persistMsLogin(r);
+            info.loggedIn = true;
+            info.name = r.name;
+            info.uuid = r.uuid;
+            if (onComplete) onComplete(true, r.name, info);
+        } else {
+            if (onComplete) onComplete(false, ok ? QStringLiteral("no refresh token") : QString(), info);
+        }
+    });
+}
+
+void logoutMs() {
+    auto &s = Settings::instance();
+    s.setEncrypted("MsAuth/RefreshToken", "");
+    s.setString("MsAuth/Name", "");
+    s.setString("MsAuth/Uuid", "");
+}
+
+MsLoginInfo currentMsLogin() {
+    MsLoginInfo info;
+    auto &s = Settings::instance();
+    if (!s.getEncrypted("MsAuth/RefreshToken").isEmpty()) {
+        info.loggedIn = true;
+        info.name = s.getString("MsAuth/Name");
+        info.uuid = s.getString("MsAuth/Uuid");
+    }
+    return info;
+}
+
+bool msLoginAvailable() {
+    return !QStringLiteral(LPCL_MS_CLIENT_ID).isEmpty();
 }
 
 } // namespace lpcl

@@ -49,7 +49,7 @@ set(CORE_HEADERS gui/include/util/file_drop_handler.h
                  gui/include/bridge/instance_bridge.h
                  gui/include/bridge/mod_platform_bridge.h)
 
-qt_add_executable(LiunxPlainCraftLauncher gui/src/main.cpp)
+qt_add_executable(lpcl-gui gui/src/main.cpp)
 
 # Lucide icons
 set(LUCIDE_ICONS "play" "bolt" "arrow-down-to-line" "layout-grid" "x" "minus"
@@ -84,20 +84,20 @@ endforeach()
 file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/icons/*.svg)
 file(GLOB ASSET_SVG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/*.svg)
 list(APPEND ICON_FILES ${ASSET_SVG_FILES})
-qt_add_resources(LiunxPlainCraftLauncher "assets" PREFIX "/" FILES ${ICON_FILES})
+qt_add_resources(lpcl-gui "assets" PREFIX "/" FILES ${ICON_FILES})
 
-target_include_directories(LiunxPlainCraftLauncher PUBLIC
+target_include_directories(lpcl-gui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/src
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/include
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/include/util
     ${CMAKE_CURRENT_SOURCE_DIR}/sdk/include
     ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include)
 
-target_link_libraries(LiunxPlainCraftLauncher
+target_link_libraries(lpcl-gui
     PUBLIC Qt6::Quick Qt6::Network Qt6::Concurrent
     PUBLIC nlohmann_json::nlohmann_json ZLIB::ZLIB lpclcore)
 
-target_compile_definitions(LiunxPlainCraftLauncher PRIVATE
+target_compile_definitions(lpcl-gui PRIVATE
     APP_VERSION="${PROJECT_VERSION}"
     GIT_DESCRIBE="${GIT_DESCRIBE}"
     GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
@@ -105,7 +105,7 @@ target_compile_definitions(LiunxPlainCraftLauncher PRIVATE
 # Theme.qml singleton
 set_source_files_properties(gui/ui/styles/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
-qt_add_qml_module(LiunxPlainCraftLauncher URI LPCL VERSION 1.0
+qt_add_qml_module(lpcl-gui URI LPCL VERSION 1.0
     QML_FILES
         gui/ui/Main.qml
         gui/ui/pages/PageLaunch.qml
@@ -127,16 +127,17 @@ qt_add_qml_module(LiunxPlainCraftLauncher URI LPCL VERSION 1.0
         gui/ui/components/LPCLScrollViewer.qml
         gui/ui/components/LPCLMsg.qml
         gui/ui/components/LPCLHint.qml
+        gui/ui/components/LPCLDownloadPanel.qml
         gui/ui/styles/Theme.qml
     SOURCES ${CORE_SOURCES} ${CORE_HEADERS})
 
-set_target_properties(LiunxPlainCraftLauncher PROPERTIES
+set_target_properties(lpcl-gui PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE)
 
 include(GNUInstallDirs)
-install(TARGETS LiunxPlainCraftLauncher
+install(TARGETS lpcl-gui
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

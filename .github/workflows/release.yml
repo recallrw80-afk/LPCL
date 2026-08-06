@@ -1,0 +1,85 @@
+name: Release
+
+# tag 推送（v*）触发构建并自动创建 GitHub Release；也可手动触发
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: ubuntu-latest
+            qt_arch: gcc_64          # aqt 的 x86_64 Qt
+            pkg_arch: x86_64
+          - runner: ubuntu-24.04-arm # GitHub 官方 ARM runner（公开仓库免费）
+            qt_arch: gcc_arm64       # aqt 的 aarch64 Qt（需 Qt >= 6.7；若该版本无此 arch，改用发行版源 Qt）
+            pkg_arch: aarch64
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build zlib1g-dev libgl1-mesa-dev
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.11.1'
+          arch: ${{ matrix.qt_arch }}
+          cache: true
+
+      - name: Prepare embedded keys (optional)
+        # Secrets 配了才写入 .env（CI 临时文件，不进 git）：
+        #   LPCL_CURSEFORGE_API_KEY — 嵌入发布产物（开箱走官方 CF API）；未配置走 MCIM 镜像
+        #   LPCL_MS_CLIENT_ID     — 微软 OAuth 应用 ID（公开信息非秘密），未配置则 login 不可用
+        # fork PR 读不到 secrets，天然不会泄露到 PR 构建。
+        env:
+          CF_KEY: ${{ secrets.LPCL_CURSEFORGE_API_KEY }}
+          MS_ID: ${{ secrets.LPCL_MS_CLIENT_ID }}
+        run: |
+          echo "EMBED_CF=OFF" >> "$GITHUB_ENV"
+          if [ -n "$CF_KEY" ]; then
+            echo "LPCL_CURSEFORGE_API_KEY=$CF_KEY" >> .env
+            echo "EMBED_CF=ON" >> "$GITHUB_ENV"
+          fi
+          if [ -n "$MS_ID" ]; then
+            echo "LPCL_MS_CLIENT_ID=$MS_ID" >> .env
+          fi
+
+      - name: Build zero-dependency package
+        # .env 由上一步按需生成（无 Secret 则不存在）；LPCL_EMBED_CF_KEY 控制是否嵌入
+        run: make package-tar QT_PREFIX="$Qt6_DIR/../../.." LPCL_EMBED_CF_KEY="${{ env.EMBED_CF }}"
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: lpcl-linux-${{ matrix.pkg_arch }}
+          path: cli/dist/lpcl-linux-*.tar.gz
+          retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # install.sh 一并发布：curl -fsSL .../releases/latest/download/install.sh | bash
+          files: |
+            **/lpcl-linux-*.tar.gz
+            cli/install.sh
+          generate_release_notes: true

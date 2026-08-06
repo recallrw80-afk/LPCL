@@ -1,6 +1,0 @@
-<RCC>
-  <qresource prefix="/">
-    <file alias="/qt/qml/LPCL">/home/recall/RwFile/PCL/LPCL</file>
-
-  </qresource>
-</RCC>

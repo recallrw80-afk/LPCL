@@ -202,6 +202,23 @@ static QList<TestItem> runCommandTests() {
         skip("player-rm",     "player-add 失败，跳过");
     }
 
+    // 微软登录态持久化往返（加密写入 → currentMsLogin 读回 → logoutMs 清除）
+    {
+        auto &s = Settings::instance();
+        s.setEncrypted("MsAuth/RefreshToken", "_lpcl_test_refresh_");
+        s.setString("MsAuth/Name", "_lpcl_test_");
+        s.setString("MsAuth/Uuid", "00000000-0000-0000-0000-000000000000");
+        auto info = lpcl::currentMsLogin();
+        bool readOk = info.loggedIn && info.name == "_lpcl_test_"
+                      && s.getEncrypted("MsAuth/RefreshToken") == "_lpcl_test_refresh_";
+        lpcl::logoutMs();
+        bool cleared = !lpcl::currentMsLogin().loggedIn;
+        if (readOk && cleared)
+            ok("login-persist", "加密持久化/读取/注销 往返正常");
+        else
+            fail("login-persist", QString("readOk=%1 cleared=%2").arg(readOk).arg(cleared));
+    }
+
     // list-javas
     {
         auto names = lpcl::listJavas();
