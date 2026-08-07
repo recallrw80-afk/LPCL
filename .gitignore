@@ -89,6 +89,7 @@ CMakeLists.txt.user*
 !README.md
 !README.zh-CN.md
 !CONTRIBUTING.md
+!THIRD-PARTY-NOTICES.md
 cmake-build-debug/
 cmake-build-release/
 /.idea

@@ -48,7 +48,8 @@ package-cli:
 ARCH := $(shell uname -m | sed 's/arm64/aarch64/')
 package-tar: package-cli
 	bash $(CLI_SRC)/bundle-dist.sh $(CLI_PKG_DIR) $(QT_PREFIX)
-	tar -czf $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz -C $(CLI_PKG_DIR) lpcl lib plugins
+	cp THIRD-PARTY-NOTICES.md $(CLI_PKG_DIR)/
+	tar -czf $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz -C $(CLI_PKG_DIR) lpcl lib plugins THIRD-PARTY-NOTICES.md
 	@echo "发布包: $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz"
 
 # ---- 编译并安装到本机（~/.local/lib/lpcl + ~/.local/bin/lpcl） ----

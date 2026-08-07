@@ -1082,6 +1082,7 @@ static int handleUninstall(const QStringList &args) {
         QFile::remove(root + "/lpcl");
         QFile::remove(root + "/lpcl-cli");            // 改名前遗留二进制
         QFile::remove(root + "/lpcl-gui");
+        QFile::remove(root + "/THIRD-PARTY-NOTICES.md");
         FileUtils::removeTree(root + "/lib");       // 零依赖包收编的 Qt/第三方库
         FileUtils::removeTree(root + "/plugins");   // TLS 插件
         QFile::remove(root + "/liblpclcore.so");  // 旧动态布局遗留
@@ -1185,7 +1186,7 @@ static int handleUpdate(const QStringList &args) {
             // 避免出现"二进制新、库文件旧"的版本错配。同目录 rename 无跨盘问题。
             QString backupDir = tmpDir + "/old";
             QDir().mkpath(backupDir);
-            const QStringList items = {"lpcl", "lib", "plugins"};
+            const QStringList items = {"lpcl", "lib", "plugins", "THIRD-PARTY-NOTICES.md"};
             QStringList swapped;
             bool swapOk = true;
             for (const auto &item : items) {
