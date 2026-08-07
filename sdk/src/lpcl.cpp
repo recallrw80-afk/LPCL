@@ -1,18 +1,18 @@
 #include "lpcl.h"
 #include "modpack.h"
-#include "ms_client_id.h"  // CMake 生成：LPCL_MS_CLIENT_ID（msLoginAvailable 用）
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "core/javamanager.h"
 #include "core/launcher.h"
 #include "core/launchbuilder.h"
 #include "auth/offlineauth.h"
-#include "auth/msauth.h"
+#include "auth/authlibauth.h"
 #include "download/assetdownloader.h"
 #include "download/downloadmanager.h"
 #include "util/file_utils.h"
 #include "util/platform_utils.h"
 #include <QCoreApplication>
+#include <QCryptographicHash>
 #include <QDir>
 #include <QEventLoop>
 #include <QFile>
@@ -39,6 +39,52 @@ static bool waitForAsync(const std::function<void(std::function<void(bool, QStri
     });
     if (!*done) loop.exec();  // 同步完成路径下 quit 先于 exec，不能裸等
     return *state;
+}
+
+// 确保 authlib-injector jar 就位（{mcFolder}/authlib-injector.jar）：
+// 缺失则从官方源下载（失败回退 BMCLAPI 镜像），并按 latest.json 的 sha256 校验（javaagent 是代码注入，必须验完整性）
+static bool ensureAuthlibInjector() {
+    QString jarPath = VersionManager::instance().mcFolder() + "authlib-injector.jar";
+    if (QFile::exists(jarPath)) return true;
+
+    qWarning() << "下载 authlib-injector ...";
+    json meta;
+    bool gotMeta = false;
+    for (const char *metaUrl : {"https://authlib-injector.yushi.moe/artifact/latest.json",
+                                "https://bmclapi2.bangbang93.com/mirrors/authlib-injector/artifact/latest.json"}) {
+        gotMeta = waitForAsync([&](std::function<void(bool, QString)> cb) {
+            DownloadManager::instance().downloadJson(QString::fromLatin1(metaUrl),
+                [&](bool ok, QString, json j) { if (ok && j.is_object()) meta = std::move(j); cb(ok, {}); });
+        });
+        if (gotMeta) break;
+    }
+    if (!gotMeta) return false;
+
+    QString url = QString::fromStdString(meta.value("download_url", ""));
+    QString expectedSha;
+    if (meta.contains("checksums") && meta["checksums"].is_object())
+        expectedSha = QString::fromStdString(meta["checksums"].value("sha256", ""));
+    if (url.isEmpty()) return false;
+
+    bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+        DownloadManager::instance().download(url, jarPath, nullptr,
+            [cb](bool dlOk, QString) { cb(dlOk, {}); });
+    });
+    if (!ok) { QFile::remove(jarPath); return false; }
+
+    if (!expectedSha.isEmpty()) {
+        QFile f(jarPath);
+        if (!f.open(QIODevice::ReadOnly)) { QFile::remove(jarPath); return false; }
+        QCryptographicHash h(QCryptographicHash::Sha256);
+        h.addData(&f);
+        if (h.result().toHex().toLower() != expectedSha.toLower()) {
+            qWarning() << "authlib-injector sha256 校验失败";
+            QFile::remove(jarPath);
+            return false;
+        }
+    }
+    qWarning() << "authlib-injector 已下载:" << jarPath;
+    return true;
 }
 
 // 启动预检：补齐缺失的游戏文件（对照原版 PCL 的 DlClientFix 补全下载）
@@ -241,8 +287,8 @@ static void maybeInstallGlfw34(const McVersion &version) {
 
 namespace lpcl {
 
-// 微软登录持久化（定义见文件尾部 "微软登录" 一节）
-static void persistMsLogin(const LoginResult &r);
+// 外置登录持久化（定义见文件尾部 "外置登录" 一节）
+static void persistAuthlibLogin(const LoginResult &r);
 
 QStringList listVersions() {
     auto &vm = VersionManager::instance();
@@ -373,23 +419,33 @@ bool launchVersion(const QString &versionId,
         version = VersionManager::instance().loadVersion(versionId);
     if (!version.isValid) return false;
 
-    // 登录：优先持久化的微软账号（在线刷新换全新 token 链）；无登录态或刷新失败回退离线玩家
+    // 登录：优先持久化的外置登录（authlib-injector，在线刷新换新 token）；
+    // 无登录态或刷新/jar 准备失败回退离线玩家
     LoginResult login;
-    QString savedRefresh = Settings::instance().getEncrypted("MsAuth/RefreshToken");
-    if (!savedRefresh.isEmpty()) {
-        MsAuth auth;
+    auto savedLogin = currentAuthlibLogin();
+    if (savedLogin.loggedIn) {
+        AuthlibAuth auth;
+        auth.setServerUrl(savedLogin.server);
+        auth.setTokens(Settings::instance().getEncrypted("Authlib/AccessToken"),
+                       Settings::instance().getEncrypted("Authlib/ClientToken"));
         bool done = false, refreshed = false;
         LoginResult r;
         QEventLoop loop;
         QPointer<QEventLoop> guard = &loop;
-        auth.loginWithRefreshToken(savedRefresh,
-            [&](bool ok, LoginResult res) { refreshed = ok; r = res; done = true; if (guard) guard->quit(); });
+        auth.refresh([&](bool ok, LoginResult res) {
+            refreshed = ok; r = res; done = true; if (guard) guard->quit(); });
         if (!done) loop.exec();  // done 标志防同步完成导致裸等
-        if (refreshed && !r.refreshToken.isEmpty()) {
-            persistMsLogin(r);  // MS 轮换的 refresh token 回写
-            login = r;
+        if (refreshed) {
+            if (r.name.isEmpty()) r.name = savedLogin.name;  // refresh 未回角色则沿用本地
+            if (r.uuid.isEmpty()) r.uuid = savedLogin.uuid;
+            persistAuthlibLogin(r);  // 新 accessToken 回写
+            if (ensureAuthlibInjector()) {
+                login = r;
+            } else {
+                qWarning() << "authlib-injector 下载失败，回退离线模式";
+            }
         } else {
-            qWarning() << "微软登录刷新失败（token 过期或网络问题），回退离线模式。重新登录: lpcl login";
+            qWarning() << "外置登录刷新失败（token 过期或网络问题），回退离线模式。重新登录: lpcl login";
         }
     }
     if (!login.isValid()) {
@@ -649,57 +705,60 @@ bool selectPlayer(const QString &uuid) {
     return true;
 }
 
-// ---- 微软登录（设备码 + 持久化） ----
+// ---- 外置登录（authlib-injector，如 LittleSkin） ----
 
-// refresh token 加密落盘（CryptoUtils DES），名称/UUID 明文仅用于展示
-static void persistMsLogin(const LoginResult &r) {
+// accessToken/clientToken 加密落盘（CryptoUtils DES），服务器/名称/UUID 明文仅用于展示
+static void persistAuthlibLogin(const LoginResult &r) {
     auto &s = Settings::instance();
-    s.setEncrypted("MsAuth/RefreshToken", r.refreshToken);
-    s.setString("MsAuth/Name", r.name);
-    s.setString("MsAuth/Uuid", r.uuid);
+    s.setString("Authlib/Server", r.serverUrl);
+    s.setEncrypted("Authlib/AccessToken", r.accessToken);
+    s.setEncrypted("Authlib/ClientToken", r.clientToken);
+    s.setString("Authlib/Name", r.name);
+    s.setString("Authlib/Uuid", r.uuid);
 }
 
-void loginMs(MsDeviceCodeCallback onDeviceCode, MsLoginCallback onComplete) {
-    auto *auth = new MsAuth();  // 流程结束即 deleteLater 自毁
-    if (onDeviceCode) {
-        QObject::connect(auth, &MsAuth::deviceCodeReady, auth,
-                         [onDeviceCode](const QString &code, const QString &url) { onDeviceCode(code, url); });
-    }
+void loginAuthlib(const QString &serverUrl, const QString &username, const QString &password,
+                  AuthlibLoginCallback onComplete) {
+    auto *auth = new AuthlibAuth();  // 流程结束即 deleteLater 自毁
+    auth->setServerUrl(serverUrl);
+    auth->setUsername(username);
+    auth->setPassword(password);
     auth->login([auth, onComplete](bool ok, LoginResult r) {
         auth->deleteLater();
-        MsLoginInfo info;
-        if (ok && !r.refreshToken.isEmpty()) {
-            persistMsLogin(r);
+        AuthlibLoginInfo info;
+        if (ok) {
+            persistAuthlibLogin(r);
             info.loggedIn = true;
+            info.server = r.serverUrl;
             info.name = r.name;
             info.uuid = r.uuid;
             if (onComplete) onComplete(true, r.name, info);
         } else {
-            if (onComplete) onComplete(false, ok ? QStringLiteral("no refresh token") : QString(), info);
+            if (onComplete) onComplete(false, r.errorMessage, info);
         }
     });
 }
 
-void logoutMs() {
+void logoutAuthlib() {
     auto &s = Settings::instance();
-    s.setEncrypted("MsAuth/RefreshToken", "");
-    s.setString("MsAuth/Name", "");
-    s.setString("MsAuth/Uuid", "");
+    s.setString("Authlib/Server", "");
+    s.setEncrypted("Authlib/AccessToken", "");
+    s.setEncrypted("Authlib/ClientToken", "");
+    s.setString("Authlib/Name", "");
+    s.setString("Authlib/Uuid", "");
 }
 
-MsLoginInfo currentMsLogin() {
-    MsLoginInfo info;
+AuthlibLoginInfo currentAuthlibLogin() {
+    AuthlibLoginInfo info;
     auto &s = Settings::instance();
-    if (!s.getEncrypted("MsAuth/RefreshToken").isEmpty()) {
+    QString server = s.getString("Authlib/Server");
+    if (!server.isEmpty() && !s.getEncrypted("Authlib/AccessToken").isEmpty()) {
         info.loggedIn = true;
-        info.name = s.getString("MsAuth/Name");
-        info.uuid = s.getString("MsAuth/Uuid");
+        info.server = server;
+        info.name = s.getString("Authlib/Name");
+        info.uuid = s.getString("Authlib/Uuid");
     }
     return info;
-}
-
-bool msLoginAvailable() {
-    return !QStringLiteral(LPCL_MS_CLIENT_ID).isEmpty();
 }
 
 } // namespace lpcl

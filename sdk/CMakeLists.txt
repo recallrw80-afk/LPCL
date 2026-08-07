@@ -88,37 +88,25 @@ endif()
 # CurseForge API key：开发构建从 LPCL/.env 嵌入（发布构建 -DLPCL_EMBED_CF_KEY=OFF 跳过）
 option(LPCL_EMBED_CF_KEY "Embed CurseForge API key from .env (dev builds)" ON)
 set(LPCL_CF_KEY "")
-# 微软 OAuth Client ID（公开信息，非秘密——用户授权页地址栏可见）：所有构建都嵌入
-set(LPCL_MS_CLIENT_ID "")
-if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../.env")
+if(LPCL_EMBED_CF_KEY AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/../.env")
     file(STRINGS "${CMAKE_CURRENT_SOURCE_DIR}/../.env" _lpcl_env_lines)
     foreach(_line IN LISTS _lpcl_env_lines)
         # 兼容 LPCL_CURSEFORGE_API_KEY= 和 API_KEY= 两种写法
-        if(LPCL_EMBED_CF_KEY AND _line MATCHES "^(LPCL_CURSEFORGE_API_KEY|API_KEY)=(.*)$")
+        if(_line MATCHES "^(LPCL_CURSEFORGE_API_KEY|API_KEY)=(.*)$")
             set(LPCL_CF_KEY "${CMAKE_MATCH_2}")
-        endif()
-        if(_line MATCHES "^LPCL_MS_CLIENT_ID=(.*)$")
-            set(LPCL_MS_CLIENT_ID "${CMAKE_MATCH_1}")
         endif()
     endforeach()
     # 去掉可能的首尾引号和 C 字符串转义
     string(REGEX REPLACE "^[\"'](.*)[\"']$" "\\1" LPCL_CF_KEY "${LPCL_CF_KEY}")
     string(REPLACE "\\" "\\\\" LPCL_CF_KEY "${LPCL_CF_KEY}")
     string(REPLACE "\"" "\\\"" LPCL_CF_KEY "${LPCL_CF_KEY}")
-    string(REGEX REPLACE "^[\"'](.*)[\"']$" "\\1" LPCL_MS_CLIENT_ID "${LPCL_MS_CLIENT_ID}")
-    string(STRIP "${LPCL_MS_CLIENT_ID}" LPCL_MS_CLIENT_ID)
 endif()
 # 始终生成头文件（禁用时为空串），源码无需条件编译
 file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/cf_key_embedded.h"
      "#pragma once\n#define LPCL_CF_API_KEY_EMBEDDED \"${LPCL_CF_KEY}\"\n")
-file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/ms_client_id.h"
-     "#pragma once\n#define LPCL_MS_CLIENT_ID \"${LPCL_MS_CLIENT_ID}\"\n")
 target_include_directories(lpclcore PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 if(LPCL_CF_KEY)
     message(STATUS "LPCL: CurseForge API key embedded from .env")
-endif()
-if(LPCL_MS_CLIENT_ID)
-    message(STATUS "LPCL: MS OAuth client ID embedded from .env")
 endif()
 
 # Mark this build as the library itself (for export/import macros)

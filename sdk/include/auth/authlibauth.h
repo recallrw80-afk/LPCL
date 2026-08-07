@@ -30,6 +30,14 @@ public:
 
     QString serverUrl() const { return m_serverUrl; }
 
+    /// 已有 token 续期：POST {server}/authserver/refresh（accessToken 过期后免密换新）
+    /// 成功后 LoginResult 带新 accessToken（clientToken 不变），调用方须重新持久化
+    void setTokens(const QString &accessToken, const QString &clientToken) {
+        m_accessToken = accessToken;
+        m_clientToken = clientToken;
+    }
+    void refresh(Callback onComplete);
+
 private:
     void doAuthlibLogin(Callback onComplete);
     void doNideLogin(Callback onComplete);
@@ -41,6 +49,8 @@ private:
     QString m_serverUrl;
     QString m_username;
     QString m_password;
+    QString m_accessToken;
+    QString m_clientToken;
 
     QNetworkAccessManager *m_nam = nullptr;
     bool m_cancelled = false;

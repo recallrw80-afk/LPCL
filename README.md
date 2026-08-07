@@ -13,7 +13,7 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 - **Isolated instances**: each instance gets its own directory; `.incomplete` marker + full rollback on failure — no half-installed instances
 - **Vanilla download**: install any MC version with one command (latest release by default); re-running verifies and repairs
 - **Java management**: detects system Java, picks per MC version compatibility matrix, auto-downloads JRE from Adoptium when missing
-- **Player profiles**: multiple offline player profiles (name / avatar / skin type) with interactive add/edit/remove/select; Microsoft account login via device code (session encrypted & persisted, auto-refreshed online at launch)
+- **Player profiles**: multiple offline player profiles (name / avatar / skin type) with interactive add/edit/remove/select; authlib-injector external login (e.g. LittleSkin) with encrypted, persisted sessions auto-refreshed online at launch
 - **Launch stability**: automatic memory sizing (50% of available RAM, capped at 16G), GC tiers, auto-fix for fcitx/ibus XIM crashes (GLFW 3.4 replacement), full launch logs on disk
 - **QML GUI** (test version): shares the same SDK (liblpclcore) with the CLI
 

@@ -13,6 +13,9 @@ std::optional<QString> tuiInput(const QString &label,
                                 const QString &def = QString(),
                                 const QString &placeholder = QString());
 
+/// 密码输入：同 tuiInput，但回显为 *，定稿行不显示内容
+std::optional<QString> tuiPassword(const QString &label);
+
 /// 确认开关：`◇ label? (y/N)`，y/n 直接选择，回车取 def，ESC 取消。
 std::optional<bool> tuiConfirm(const QString &label, bool def = false);
 

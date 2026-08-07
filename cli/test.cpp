@@ -202,17 +202,20 @@ static QList<TestItem> runCommandTests() {
         skip("player-rm",     "player-add 失败，跳过");
     }
 
-    // 微软登录态持久化往返（加密写入 → currentMsLogin 读回 → logoutMs 清除）
+    // 外置登录态持久化往返（加密写入 → currentAuthlibLogin 读回 → logoutAuthlib 清除）
     {
         auto &s = Settings::instance();
-        s.setEncrypted("MsAuth/RefreshToken", "_lpcl_test_refresh_");
-        s.setString("MsAuth/Name", "_lpcl_test_");
-        s.setString("MsAuth/Uuid", "00000000-0000-0000-0000-000000000000");
-        auto info = lpcl::currentMsLogin();
+        s.setString("Authlib/Server", "https://example.com/api/yggdrasil");
+        s.setEncrypted("Authlib/AccessToken", "_lpcl_test_token_");
+        s.setEncrypted("Authlib/ClientToken", "_lpcl_test_client_");
+        s.setString("Authlib/Name", "_lpcl_test_");
+        s.setString("Authlib/Uuid", "00000000-0000-0000-0000-000000000000");
+        auto info = lpcl::currentAuthlibLogin();
         bool readOk = info.loggedIn && info.name == "_lpcl_test_"
-                      && s.getEncrypted("MsAuth/RefreshToken") == "_lpcl_test_refresh_";
-        lpcl::logoutMs();
-        bool cleared = !lpcl::currentMsLogin().loggedIn;
+                      && info.server == "https://example.com/api/yggdrasil"
+                      && s.getEncrypted("Authlib/AccessToken") == "_lpcl_test_token_";
+        lpcl::logoutAuthlib();
+        bool cleared = !lpcl::currentAuthlibLogin().loggedIn;
         if (readOk && cleared)
             ok("login-persist", "加密持久化/读取/注销 往返正常");
         else

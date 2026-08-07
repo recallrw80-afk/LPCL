@@ -74,6 +74,17 @@ bool LaunchBuilder::build(const McVersion &version,
     m_jvmArgs = buildJvmArgs(version, java);
     m_gameArgs = buildGameArgs(version, login);
 
+    // 外置登录（authlib-injector）：注入 javaagent（jar 由启动流程预下载到约定位置；
+    // 缺失时启动必然无法通过服务器验证，直接判失败）
+    if (login.type == "Auth" && !login.serverUrl.isEmpty()) {
+        QString jar = VersionManager::instance().mcFolder() + "authlib-injector.jar";
+        if (!QFile::exists(jar)) {
+            qCWarning(logBuild) << "authlib-injector.jar missing at" << jar;
+            return false;
+        }
+        m_jvmArgs.prepend(QString("-javaagent:%1=%2").arg(jar, login.serverUrl));
+    }
+
     // Build replacements and apply
     QMap<QString, QString> repl = buildReplacements(version, java, login);
 

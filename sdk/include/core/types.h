@@ -70,7 +70,8 @@ public:
     QString type;        // "Legacy", "Nide", "Auth", "Ms"
     QString clientToken;
     QString profileJson; // Microsoft profile JSON
-    QString refreshToken; // MS OAuth refresh token（仅内存传递，不落 QML；持久化由 SDK 加密负责）
+    QString serverUrl;   // 外置登录（authlib/Nide）服务器地址；启动时注入 javaagent 用
+    QString errorMessage; // 失败原因（仅失败时填充，内存传递不落盘）
 
     bool isValid() const {
         return !name.isEmpty() && !uuid.isEmpty();

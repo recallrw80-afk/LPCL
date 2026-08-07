@@ -38,22 +38,17 @@ jobs:
           arch: ${{ matrix.qt_arch }}
           cache: true
 
-      - name: Prepare embedded keys (optional)
-        # Secrets 配了才写入 .env（CI 临时文件，不进 git）：
-        #   LPCL_CURSEFORGE_API_KEY — 嵌入发布产物（开箱走官方 CF API）；未配置走 MCIM 镜像
-        #   LPCL_MS_CLIENT_ID     — 微软 OAuth 应用 ID（公开信息非秘密），未配置则 login 不可用
+      - name: Prepare embedded CF key (optional)
+        # 仓库 Settings → Secrets 配了 LPCL_CURSEFORGE_API_KEY 时嵌入发布产物
+        # （用户开箱即走官方 API）；未配置则产物无 key，自动走 MCIM 镜像。
         # fork PR 读不到 secrets，天然不会泄露到 PR 构建。
         env:
           CF_KEY: ${{ secrets.LPCL_CURSEFORGE_API_KEY }}
-          MS_ID: ${{ secrets.LPCL_MS_CLIENT_ID }}
         run: |
           echo "EMBED_CF=OFF" >> "$GITHUB_ENV"
           if [ -n "$CF_KEY" ]; then
-            echo "LPCL_CURSEFORGE_API_KEY=$CF_KEY" >> .env
+            echo "LPCL_CURSEFORGE_API_KEY=$CF_KEY" > .env
             echo "EMBED_CF=ON" >> "$GITHUB_ENV"
-          fi
-          if [ -n "$MS_ID" ]; then
-            echo "LPCL_MS_CLIENT_ID=$MS_ID" >> .env
           fi
 
       - name: Build zero-dependency package

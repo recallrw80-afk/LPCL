@@ -1,19 +1,15 @@
 #include "auth/msauth.h"
-#include "ms_client_id.h"  // CMake 生成：编译期嵌入的 MS OAuth Client ID（未配置为空串）
 
 #include <QJsonDocument>
 #include <QJsonObject>
 #include <QJsonArray>
 #include <QNetworkReply>
 #include <QLoggingCategory>
-#include <QUrl>
 
 static Q_LOGGING_CATEGORY(logMs, "lpcl.auth.ms")
 
 // Microsoft OAuth constants
-// 官方启动器的 client ID 不支持设备码流程（AADSTS700016），必须用自注册的 Azure 应用
-// （公开客户端，无需 secret；注册步骤见 CONTRIBUTING「Azure 应用注册」）
-static const QString CLIENT_ID = QStringLiteral(LPCL_MS_CLIENT_ID);
+static const QString CLIENT_ID = "00000000402b5328"; // Official Minecraft launcher client ID
 static const QString DEVICE_CODE_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/devicecode";
 static const QString TOKEN_URL = "https://login.microsoftonline.com/consumers/oauth2/v2.0/token";
 static const QString XBL_AUTH_URL = "https://user.auth.xboxlive.com/user/authenticate";
@@ -31,7 +27,6 @@ void MsAuth::login(Callback onComplete) {
     m_callback = onComplete;
     m_cancelled = false;
     m_pollRetries = 0;
-    m_refreshToken.clear();
     emit loginProgress("Requesting device code...");
     requestDeviceCode();
 }
@@ -48,11 +43,6 @@ void MsAuth::finishLogin(bool success, const LoginResult &result) {
 }
 
 void MsAuth::requestDeviceCode() {
-    if (CLIENT_ID.isEmpty()) {
-        qCWarning(logMs) << "MS client ID not embedded (build without LPCL_MS_CLIENT_ID)";
-        finishLogin(false, LoginResult());
-        return;
-    }
     QNetworkRequest request(DEVICE_CODE_URL);
     request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
 
@@ -153,58 +143,8 @@ void MsAuth::pollForToken(const QString &deviceCode, int intervalSeconds) {
             return;
         }
 
-        // offline_access scope 会带回 refresh token——持久化它才能跨会话免登录
-        m_refreshToken = root.value("refresh_token").toString();
         qCInfo(logMs) << "Got Microsoft access token";
 
-        emit loginProgress("Authenticating with Xbox Live...");
-        authenticateWithXbl(accessToken);
-    });
-}
-
-void MsAuth::loginWithRefreshToken(const QString &refreshToken, Callback onComplete) {
-    m_callback = onComplete;
-    m_cancelled = false;
-    if (refreshToken.isEmpty()) {
-        finishLogin(false, LoginResult());
-        return;
-    }
-    m_refreshToken = refreshToken;  // 未下发新 token 时沿用它
-    emit loginProgress("Refreshing Microsoft token...");
-
-    QNetworkRequest request(TOKEN_URL);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/x-www-form-urlencoded");
-    QByteArray data = QString("grant_type=refresh_token&client_id=%1&refresh_token=%2"
-                              "&scope=XboxLive.signin%20offline_access")
-                          .arg(CLIENT_ID, QString(QUrl::toPercentEncoding(refreshToken))).toUtf8();
-
-    QNetworkReply *reply = m_nam->post(request, data);
-    connect(reply, &QNetworkReply::finished, this, [this, reply]() {
-        reply->deleteLater();
-        if (m_cancelled) return;
-
-        QJsonDocument doc = QJsonDocument::fromJson(reply->readAll());
-        QJsonObject root = doc.object();
-
-        QString error = root.value("error").toString();
-        if (!error.isEmpty()) {  // invalid_grant = token 过期/被撤销，需重新设备码登录
-            qCWarning(logMs) << "Refresh token error:" << error;
-            finishLogin(false, LoginResult());
-            return;
-        }
-
-        QString accessToken = root.value("access_token").toString();
-        if (accessToken.isEmpty()) {
-            qCWarning(logMs) << "No access token in refresh response";
-            finishLogin(false, LoginResult());
-            return;
-        }
-
-        // MS 轮换 refresh token：优先保存新token，未下发则沿用旧的
-        QString newRefresh = root.value("refresh_token").toString();
-        m_refreshToken = newRefresh.isEmpty() ? m_refreshToken : newRefresh;
-
-        qCInfo(logMs) << "Refreshed Microsoft access token";
         emit loginProgress("Authenticating with Xbox Live...");
         authenticateWithXbl(accessToken);
     });
@@ -355,7 +295,6 @@ void MsAuth::getMinecraftProfile(const QString &mcAccessToken) {
         result.type = "Ms";
         result.clientToken = ""; // Generated separately
         result.profileJson = QString::fromUtf8(doc.toJson());
-        result.refreshToken = m_refreshToken;  // 由调用方持久化（launch 时换新）
 
         if (result.name.isEmpty() || result.uuid.isEmpty()) {
             qCWarning(logMs) << "Empty profile - need to buy Minecraft?";

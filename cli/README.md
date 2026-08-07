@@ -142,8 +142,8 @@ lpcl launch 1.20.1
 | `set-folder <path>` | Set the default game folder |
 | `set-lang <en\|zh>` | Set the UI language (English by default) |
 | `set-mem <MB\|auto>` | Set max game memory; `auto` (default) allocates 50% of available RAM (capped at 16G) |
-| `login` | Microsoft account login (device code flow; session encrypted & persisted, auto-refreshed at launch) |
-| `logout` | Log out the Microsoft account, falling back to the offline player |
+| `login [server] [email]` | External authlib-injector login (e.g. LittleSkin; token encrypted & persisted, auto-refreshed at launch) |
+| `logout` | Log out the external account, falling back to the offline player |
 | `update` | Check GitHub Releases and update in place (install.sh-installed copies only; override repo with `LPCL_REPO`) |
 | `uninstall [-r]` | Uninstall the launcher; `-r` keeps game folder contents |
 | `config` | Show current config |

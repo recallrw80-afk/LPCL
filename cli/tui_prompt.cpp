@@ -108,6 +108,44 @@ std::optional<QString> tuiInput(const QString &label, const QString &def, const 
     return result;
 }
 
+std::optional<QString> tuiPassword(const QString &label) {
+    if (!enterRaw()) return std::nullopt;
+
+    QByteArray text;
+    std::optional<QString> result;
+    auto draw = [&] {
+        wr("\r\x1b[2K\x1b[36m◇\x1b[0m " + label.toUtf8() + ": " + QByteArray(text.size(), '*'));
+    };
+    draw();
+
+    for (;;) {
+        int b = readByte();
+        if (b < 0 || b == 27) { result = std::nullopt; break; }
+        if (b == '\r' || b == '\n') {
+            result = QString::fromUtf8(text);
+            break;
+        }
+        if (b == 127 || b == 8) {
+            while (!text.isEmpty() && (text.back() & 0xC0) == 0x80) text.chop(1);
+            if (!text.isEmpty()) text.chop(1);
+        } else if (b >= 0x20) {
+            text.append((char)b);
+        } else {
+            continue;
+        }
+        draw();
+    }
+
+    // 定稿行只留星号，密码本身不上屏
+    wr("\r\x1b[2K");
+    leaveRaw();
+    if (result)
+        wr("\x1b[32m◇\x1b[0m " + label.toUtf8() + ": " + QByteArray(text.size(), '*') + "\n");
+    else
+        wr("\n");
+    return result;
+}
+
 std::optional<bool> tuiConfirm(const QString &label, bool def) {
     if (!enterRaw()) return std::nullopt;
 

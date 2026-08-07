@@ -52,19 +52,3 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 3. 打新 tag 发版，CI 会用新 key 构建
 
 注意：已发布二进制里的旧 key 无法召回，只能靠第 1 步作废它。key 失效期间用户侧无感——客户端遇 401/403/429 会自动回退 MCIM 镜像。
-
-## Azure 应用注册（微软登录）
-
-`lpcl login` / GUI 微软登录用 OAuth 设备码流程，必须用**自己注册的 Azure 应用**（官方启动器的 client ID 不支持设备码流程，会报 AADSTS700016）。Client ID 是公开信息（出现在用户授权页地址栏），不是秘密，但仍需每个项目各注册各的：
-
-1. 到 <https://portal.azure.com/> → Microsoft Entra ID → 应用注册 → 新注册
-2. 受支持账户类型选「任何组织目录中的账户和个人 Microsoft 账户」
-3. 注册后进入「身份验证」→ 开启「允许公共客户端流」（设备码流程必需）
-4. 复制「应用程序(客户端) ID」
-
-配置方式（任选）：
-
-- 本地开发：写入 `LPCL/.env` 的 `LPCL_MS_CLIENT_ID=`（见 `.env.example` 模板），重新编译即嵌入
-- CI 发布：仓库 Secret 配 `LPCL_MS_CLIENT_ID`，workflow 会写入临时 `.env` 嵌入产物
-
-未配置时构建照常成功，仅 `lpcl login` 报「未配置 Client ID」并提示本节的注册步骤。

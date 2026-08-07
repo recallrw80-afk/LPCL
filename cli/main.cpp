@@ -723,8 +723,11 @@ static void printHelp() {
          "player-select <uuid|index>",
          "选择当前玩家（按列表序号或 uuid）",
          "Select current player (by index or uuid)"},
-        {"login", "login", "微软账号登录（设备码，持久保存）", "Microsoft account login (device code, persisted)"},
-        {"logout", "logout", "退出微软账号登录", "Log out the Microsoft account"},
+        {"login [服务器] [邮箱]",
+         "login [server] [email]",
+         "外置登录（authlib-injector，如 LittleSkin；登录态持久保存）",
+         "External authlib-injector login (e.g. LittleSkin; session persisted)"},
+        {"logout", "logout", "退出外置登录", "Log out the external account"},
         {"config", "config", "查看当前配置", "Show current configuration"},
         {"report [描述]", "report [description]", "生成 GitHub Issue 预填链接（附环境+日志）", "Create a prefilled GitHub issue link (env + logs attached)"},
         {"update", "update", "检查并更新到最新版本", "Check for and apply updates"},
@@ -788,34 +791,23 @@ static int handleConfig() {
                       << " → " << it.value().toStdString() << std::endl;
         }
     }
-
-    // 微软登录态（持久化）
-    auto ms = lpcl::currentMsLogin();
-    std::cout << _("微软账号: ", "Microsoft account: ");
-    if (ms.loggedIn)
-        std::cout << ms.name.toStdString() << " (" << ms.uuid.toStdString() << ")" << std::endl;
+    // 外置登录态（authlib，持久化）
+    auto al = lpcl::currentAuthlibLogin();
+    std::cout << _("外置登录: ", "External login: ");
+    if (al.loggedIn)
+        std::cout << al.name.toStdString() << " @ " << al.server.toStdString() << std::endl;
     else
         std::cout << _("（未登录）\n", "(not logged in)\n");
     return 0;
 }
 
-// ---- 微软登录（设备码 + 持久化） ----
+// ---- 外置登录（authlib-injector，如 LittleSkin） ----
 
 static int handleLogin(const QStringList &args) {
-    Q_UNUSED(args);
-    if (!lpcl::msLoginAvailable()) {
-        std::cerr << _("error:  此构建未配置微软应用 Client ID，无法使用微软登录。\n"
-                       "       注册 Azure 应用（免费）并把 LPCL_MS_CLIENT_ID=<id> 写入 LPCL/.env 后重新编译，\n"
-                       "       步骤见 CONTRIBUTING.md「Azure 应用注册」。\n",
-                       "error:  this build has no Microsoft app client ID; MS login unavailable.\n"
-                       "       Register a free Azure app, put LPCL_MS_CLIENT_ID=<id> into LPCL/.env,\n"
-                       "       then rebuild. See CONTRIBUTING.md (Azure app registration).\n");
-        return 1;
-    }
-    auto cur = lpcl::currentMsLogin();
+    auto cur = lpcl::currentAuthlibLogin();
     if (cur.loggedIn) {
-        std::cout << T("当前已登录: %1（%2）\n", "Currently logged in: %1 (%2)\n")
-                         .arg(cur.name, cur.uuid).toStdString();
+        std::cout << T("当前已登录: %1 @ %2\n", "Currently logged in: %1 @ %2\n")
+                         .arg(cur.name, cur.server).toStdString();
         if (isatty(fileno(stdin))) {
             auto again = tuiConfirm(_("重新登录？", "Log in again?"), false);
             if (!again || !*again) return 0;
@@ -825,48 +817,65 @@ static int handleLogin(const QStringList &args) {
         }
     }
 
+    // 位置参数可预填服务器/邮箱；密码只走交互输入（不进命令行与 shell 历史）
+    QString server = args.size() >= 2 ? args[1] : QString();
+    QString email  = args.size() >= 3 ? args[2] : QString();
+    if (!isatty(fileno(stdin))) {
+        std::cerr << _("error:  login 需要交互终端（用法: lpcl login [服务器] [邮箱]）\n",
+                       "error:  login requires an interactive terminal (usage: lpcl login [server] [email])\n");
+        return 1;
+    }
+    if (server.isEmpty()) {
+        auto s = tuiInput(_("外置登录服务器", "Auth server"),
+                          "https://littleskin.cn/api/yggdrasil",
+                          _("如 LittleSkin", "e.g. LittleSkin"));
+        if (!s) { std::cerr << _("已取消\n", "Cancelled\n"); return 1; }
+        server = *s;
+    }
+    while (server.endsWith('/')) server.chop(1);
+    if (email.isEmpty()) {
+        auto e = tuiInput(_("邮箱 / 用户名", "Email / username"), {}, _("必填", "required"));
+        if (!e) { std::cerr << _("已取消\n", "Cancelled\n"); return 1; }
+        email = *e;
+    }
+    auto p = tuiPassword(_("密码", "Password"));
+    if (!p) { std::cerr << _("已取消\n", "Cancelled\n"); return 1; }
+    if (email.isEmpty() || p->isEmpty()) {
+        std::cerr << _("error:  邮箱和密码不能为空\n", "error:  email and password must not be empty\n");
+        return 1;
+    }
+
+    std::cout << _("正在登录...\n", "Logging in...\n");
     bool done = false, ok = false;
     QString msg;
-    lpcl::MsLoginInfo info;
     QEventLoop loop;
     QPointer<QEventLoop> guard = &loop;
-
-    lpcl::loginMs(
-        [](const QString &code, const QString &url) {
-            std::cout << T("请在浏览器打开: %1\n输入代码: %2\n",
-                           "Open in browser: %1\nEnter code: %2\n")
-                             .arg(url, code).toStdString();
-            std::cout << _("等待授权（最长 10 分钟）...\n", "Waiting for approval (up to 10 min)...\n");
-            std::cout.flush();
-            if (isatty(fileno(stdin)))
-                QProcess::startDetached("xdg-open", {url});
-        },
-        [&](bool o, const QString &m, const lpcl::MsLoginInfo &i) {
-            ok = o; msg = m; info = i; done = true;
+    lpcl::loginAuthlib(server, email, *p,
+        [&](bool o, const QString &m, const lpcl::AuthlibLoginInfo &) {
+            ok = o; msg = m; done = true;
             if (guard) guard->quit();
         });
     if (!done) loop.exec();  // done 标志防同步完成导致裸等
 
     if (ok) {
-        std::cout << T("登录成功: %1\n启动游戏将使用此微软账号（每次启动自动在线刷新）。\n",
-                       "Logged in: %1\nLaunches will use this Microsoft account (auto-refreshed online).\n")
-                         .arg(info.name).toStdString();
+        std::cout << T("登录成功: %1 @ %2\n启动游戏将使用此外置账号（每次启动自动在线刷新）。\n",
+                       "Logged in: %1 @ %2\nLaunches will use this account (auto-refreshed online).\n")
+                         .arg(msg, server).toStdString();
         return 0;
     }
-    std::cerr << T("error:  登录失败或已取消 %1\n", "error:  login failed or cancelled %1\n")
-                     .arg(msg).toStdString();
+    std::cerr << T("error:  登录失败: %1\n", "error:  login failed: %1\n").arg(msg).toStdString();
     return 1;
 }
 
 static int handleLogout(const QStringList &args) {
     Q_UNUSED(args);
-    auto cur = lpcl::currentMsLogin();
+    auto cur = lpcl::currentAuthlibLogin();
     if (!cur.loggedIn) {
-        std::cout << _("当前没有微软登录态\n", "No Microsoft login to clear\n");
+        std::cout << _("当前没有外置登录态\n", "No external login to clear\n");
         return 0;
     }
-    lpcl::logoutMs();
-    std::cout << T("已退出微软账号 %1，启动将回退为离线玩家\n",
+    lpcl::logoutAuthlib();
+    std::cout << T("已退出外置账号 %1，启动将回退为离线玩家\n",
                    "Logged out %1; launches fall back to the offline player\n")
                      .arg(cur.name).toStdString();
     return 0;
