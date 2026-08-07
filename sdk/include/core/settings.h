@@ -6,6 +6,8 @@
 #include <QSettings>
 #include <QVariant>
 #include <QString>
+#include <QMutex>
+#include <QRecursiveMutex>
 
 /**
  * Cross-platform settings manager.
@@ -13,6 +15,9 @@
  *
  * Uses QSettings (INI file on Linux/Mac, registry on Windows).
  * Stored in <app data>/LPCL.ini on all platforms for consistency.
+ *
+ * 线程安全：所有直接访问 m_settings 的公开方法持有 m_mutex（递归锁——
+ * 便捷方法会嵌套调用模板方法，如 getEncrypted → get<QString>）。
  */
 class LPCLCORE_EXPORT Settings : public QObject
 {
@@ -25,6 +30,7 @@ public:
     // Typed getters
     template<typename T>
     T get(const QString &key, const T &defaultValue = T()) const {
+        QMutexLocker locker(&m_mutex);
         if (!m_settings) return defaultValue;
         QVariant v = m_settings->value(key);
         if (!v.isValid() || v.isNull()) return defaultValue;
@@ -34,6 +40,7 @@ public:
     // Typed setter
     template<typename T>
     void set(const QString &key, const T &value) {
+        QMutexLocker locker(&m_mutex);
         if (!m_settings) return;
         m_settings->setValue(key, QVariant::fromValue(value));
         m_settings->sync();
@@ -111,29 +118,34 @@ private:
     Settings& operator=(const Settings&) = delete;
 
     QSettings *m_settings = nullptr;
+    mutable QRecursiveMutex m_mutex;  // 保护 m_settings 的一切访问（含头文件模板方法）
 };
 
 // Template specializations for common types
 template<>
 inline QString Settings::get<QString>(const QString &key, const QString &defaultValue) const {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toString();
 }
 
 template<>
 inline int Settings::get<int>(const QString &key, const int &defaultValue) const {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toInt();
 }
 
 template<>
 inline bool Settings::get<bool>(const QString &key, const bool &defaultValue) const {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue).toBool();
 }
 
 template<>
 inline void Settings::set<QString>(const QString &key, const QString &value) {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
@@ -141,6 +153,7 @@ inline void Settings::set<QString>(const QString &key, const QString &value) {
 
 template<>
 inline void Settings::set<int>(const QString &key, const int &value) {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();
@@ -148,6 +161,7 @@ inline void Settings::set<int>(const QString &key, const int &value) {
 
 template<>
 inline void Settings::set<bool>(const QString &key, const bool &value) {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return;
     m_settings->setValue(key, value);
     m_settings->sync();

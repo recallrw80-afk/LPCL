@@ -30,7 +30,32 @@ QNetworkReply* DownloadManager::download(const QString &url, const QString &save
                                           ProgressCallback onProgress,
                                           CompletionCallback onComplete,
                                           int maxRetries) {
-    return downloadInternal(url, savePath, onProgress, onComplete, maxRetries);
+    // 全局限流：在传满 kMaxInFlight 时进自有队列（此刻还没有 socket，谈不上挂死），
+    // 超时计时从真实派发起算——从根上消除 QNAM 内部排队造成的假超时
+    if (m_inFlight >= kMaxInFlight) {
+        m_pending.enqueue({url, savePath, onProgress, onComplete, maxRetries});
+        return nullptr;  // 排队中，暂无 reply
+    }
+    m_inFlight++;
+    auto tracked = [this, onComplete](bool ok, QString msg) {
+        m_inFlight--;
+        if (onComplete) onComplete(ok, msg);
+        dispatchPending();
+    };
+    return downloadInternal(url, savePath, onProgress, tracked, maxRetries);
+}
+
+void DownloadManager::dispatchPending() {
+    while (m_inFlight < kMaxInFlight && !m_pending.isEmpty()) {
+        PendingDownload p = m_pending.dequeue();
+        m_inFlight++;
+        auto tracked = [this, cb = p.onComplete](bool ok, QString msg) {
+            m_inFlight--;
+            if (cb) cb(ok, msg);
+            dispatchPending();
+        };
+        downloadInternal(p.url, p.savePath, p.onProgress, tracked, p.retries);
+    }
 }
 
 QNetworkReply* DownloadManager::downloadInternal(const QString &url,
@@ -48,17 +73,18 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
 
     QNetworkReply *reply = m_nam->get(request);
 
-    // 停滞超时：首个字节到达才开始计时，之后每次传输活动重置，超时 abort 走重试。
-    // 不能用 setTransferTimeout——它从请求创建即计时，QNAM 内部排队未传输的请求会假超时
+    // 两阶段超时：首字节 60s（连接/响应头阶段兜底，服务器装死最多挂这么久就被 abort 进重试链）；
+    // 首字节后每次传输活动重置为 30s 停滞计时。不能用 setTransferTimeout——它从请求创建即计时
     QTimer *stallTimer = new QTimer(reply);
     stallTimer->setSingleShot(true);
-    stallTimer->setInterval(30000);
     connect(stallTimer, &QTimer::timeout, reply, [reply, url]() {
-        qCWarning(logDl) << "Transfer stalled (no data for 30s), aborting:" << url;
+        qCWarning(logDl) << "Transfer stalled, aborting:" << url;
         reply->abort();
     });
-    auto restartStallTimer = [stallTimer]() { stallTimer->start(); };
+    auto restartStallTimer = [stallTimer]() { stallTimer->start(30000); };
     connect(reply, &QNetworkReply::readyRead, this, restartStallTimer);
+    connect(reply, &QNetworkReply::metaDataChanged, this, restartStallTimer);
+    stallTimer->start(60000);
 
     // Progress
     connect(reply, &QNetworkReply::downloadProgress, this,
@@ -183,15 +209,18 @@ QNetworkReply* DownloadManager::downloadToStringWithStatus(const QString &url,
 
     QNetworkReply *reply = m_nam->get(request);
 
-    // 停滞超时（同 downloadInternal）：首个字节到达才计时，避免 QNAM 排队期假超时
+    // 两阶段超时（同 downloadInternal）：首字节 30s（连接/响应头阶段兜底），
+    // 首字节后每次传输活动重置 30s 停滞计时
     QTimer *stallTimer = new QTimer(reply);
     stallTimer->setSingleShot(true);
-    stallTimer->setInterval(30000);
     connect(stallTimer, &QTimer::timeout, reply, [reply, url]() {
-        qCWarning(logDl) << "Transfer stalled (no data for 30s), aborting:" << url;
+        qCWarning(logDl) << "Transfer stalled, aborting:" << url;
         reply->abort();
     });
-    connect(reply, &QNetworkReply::readyRead, this, [stallTimer]() { stallTimer->start(); });
+    auto restartStallTimer = [stallTimer]() { stallTimer->start(30000); };
+    connect(reply, &QNetworkReply::readyRead, this, restartStallTimer);
+    connect(reply, &QNetworkReply::metaDataChanged, this, restartStallTimer);
+    stallTimer->start(30000);
 
     // Capture headers by value for retry recursion.
     connect(reply, &QNetworkReply::finished, this, [=, this]() {

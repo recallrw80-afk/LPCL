@@ -7,6 +7,7 @@
 #include <termios.h>
 #include <unistd.h>
 #include <signal.h>
+#include <sys/ioctl.h>
 
 namespace {
 
@@ -30,25 +31,88 @@ void tuiWrite(const QByteArray &s) {
     (void)::write(STDOUT_FILENO, s.constData(), s.size());
 }
 
-void drawMenu(const QString &title, const QStringList &items, int current, bool first) {
-    if (!first) {
-        // 光标移回菜单顶部（标题行 + items.size() 行）
-        tuiWrite("\x1b[" + QByteArray::number(items.size() + 1) + "A");
+// 可视窗口行数：跟随终端高度（留 4 行给标题/提示/边界），收在 [5, 12]
+int visibleRows(int itemCount) {
+    int rows = 10;
+    winsize ws{};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_row > 0)
+        rows = qBound(5, int(ws.ws_row) - 4, 12);
+    return qMin(rows, itemCount);
+}
+
+// 终端列宽（读不到按 80）
+int termCols() {
+    winsize ws{};
+    if (ioctl(STDOUT_FILENO, TIOCGWINSZ, &ws) == 0 && ws.ws_col > 0) return ws.ws_col;
+    return 80;
+}
+
+// 单码点列宽：CJK 全角/宽字符占 2 列，控制字符 0，其余 1（不依赖 locale）
+int charCols(uint ucs4) {
+    if (ucs4 < 0x20 || (ucs4 >= 0x7F && ucs4 < 0xA0)) return 0;
+    if ((ucs4 >= 0x1100 && ucs4 <= 0x115F) || (ucs4 >= 0x2E80 && ucs4 <= 0xA4CF) ||
+        (ucs4 >= 0xAC00 && ucs4 <= 0xD7A3) || (ucs4 >= 0xF900 && ucs4 <= 0xFAFF) ||
+        (ucs4 >= 0xFE30 && ucs4 <= 0xFE6F) || (ucs4 >= 0xFF00 && ucs4 <= 0xFF60) ||
+        (ucs4 >= 0xFFE0 && ucs4 <= 0xFFE6) || (ucs4 >= 0x20000 && ucs4 <= 0x3FFFD))
+        return 2;
+    return 1;
+}
+
+// 截断到 maxCols 列：超长补 …，保证返回值渲染后不换行（换行会打乱菜单的行数数学）
+QString fitCols(const QString &text, int maxCols) {
+    const auto cps = text.toUcs4();
+    int cols = 0;
+    int kept = 0;
+    for (uint cp : cps) {
+        int w = charCols(cp);
+        if (cols + w > maxCols) break;
+        cols += w;
+        kept++;
     }
+    if (kept >= cps.size()) return text;
+    // 超长了：留 1 列给省略号
+    QString out;
+    cols = 0;
+    for (int i = 0; i < kept; ++i) {
+        int w = charCols(cps[i]);
+        if (cols + w > maxCols - 1) break;
+        cols += w;
+        out.append(QString::fromUcs4(&cps[i], 1));
+    }
+    return out + QChar(0x2026);  // …
+}
+
+// 只渲染窗口内 visible 行（重绘/清理的行数恒定，长列表不再刷屏错位）。
+// 窗口外还有内容时，在首/末行的边栏画 ↑/↓ 提示。
+void drawMenu(const QString &title, const QStringList &items, int current,
+              int top, int visible, bool first) {
+    if (!first) {
+        // 光标移回菜单顶部（标题行 + visible 条目行）
+        tuiWrite("\x1b[" + QByteArray::number(visible + 1) + "A");
+    }
+    const int cols = termCols();
     // 标题行
-    tuiWrite("\x1b[2K\x1b[1m" + title.toUtf8() + "\x1b[0m\r\n");
-    for (int i = 0; i < items.size(); ++i) {
+    tuiWrite("\x1b[2K\x1b[1m" + fitCols(title, cols).toUtf8() + "\x1b[0m\r\n");
+    for (int row = 0; row < visible; ++row) {
+        int i = top + row;
         tuiWrite("\x1b[2K");
         if (i == current)
-            tuiWrite("\x1b[7m> " + items[i].toUtf8() + "\x1b[0m\r\n");
-        else
-            tuiWrite("  " + items[i].toUtf8() + "\r\n");
+            tuiWrite("\x1b[7m> " + fitCols(items[i], cols - 2).toUtf8() + "\x1b[0m\r\n");
+        else {
+            QByteArray gutter = "  ";
+            if (row == 0 && top > 0) gutter = "\x1b[90m↑ \x1b[0m";
+            else if (row == visible - 1 && top + visible < items.size()) gutter = "\x1b[90m↓ \x1b[0m";
+            tuiWrite(gutter + fitCols(items[i], cols - 2).toUtf8() + "\r\n");
+        }
     }
-    tuiWrite("\x1b[2K\x1b[90m(↑/↓ 选择, Enter 确认, q/ESC 取消)\x1b[0m");
+    bool paged = items.size() > visible;
+    QString hint = paged ? QStringLiteral("(↑/↓ 选择, PgUp/PgDn 翻页, Enter 确认, q/ESC 取消)")
+                         : QStringLiteral("(↑/↓ 选择, Enter 确认, q/ESC 取消)");
+    tuiWrite("\x1b[2K\x1b[90m" + fitCols(hint, cols).toUtf8() + "\x1b[0m");
     fflush(stdout);
 }
 
-// 读一个键：返回值 0=上 1=下 2=Home 3=End 4=确认 -1=取消 -2=其他
+// 读一个键：返回值 0=上 1=下 2=Home 3=End 4=确认 5=PgUp 6=PgDn -1=取消 -2=其他
 int readKey() {
     char c;
     if (::read(STDIN_FILENO, &c, 1) != 1) return -1;
@@ -65,16 +129,23 @@ int readKey() {
             return -2;
         }
         if (seq[0] != '[') return -1;
-        // CSI 序列：按规则读到最终字节 0x40-0x7E（如 ESC [ 3 ~ 是 Delete），上限防异常序列死循环
+        // CSI 序列：读参数（数字/;）直到最终字节 0x40-0x7E，上限防异常序列死循环
+        int param = 0;
+        char fin = 0;
         for (int i = 0; i < 16; ++i) {
             if (::read(STDIN_FILENO, &seq[1], 1) != 1) return -1;
-            if (seq[1] >= 0x40 && seq[1] <= 0x7E) break;
+            if (seq[1] >= 0x40 && seq[1] <= 0x7E) { fin = seq[1]; break; }
+            if (seq[1] >= '0' && seq[1] <= '9') param = param * 10 + (seq[1] - '0');
         }
-        switch (seq[1]) {
+        switch (fin) {
         case 'A': return 0;  // ↑
         case 'B': return 1;  // ↓
         case 'H': return 2;  // Home
         case 'F': return 3;  // End
+        case '~':
+            if (param == 5) return 5;  // PgUp
+            if (param == 6) return 6;  // PgDn
+            return -2;                 // Delete(3) 等忽略
         default: return -2;
         }
     }
@@ -98,11 +169,19 @@ int tuiSelect(const QString &title, const QStringList &items, int initial) {
     signal(SIGINT, onSignal);
     signal(SIGTERM, onSignal);
 
+    const int visible = visibleRows(items.size());
     int current = (initial >= 0 && initial < items.size()) ? initial : 0;
+    int top = 0;
     int result = -1;
     bool first = true;
 
-    drawMenu(title, items, current, first);
+    // 让 current 落在窗口内：current < top 上卷，current >= top+visible 下卷
+    auto adjustWindow = [&]() {
+        if (current < top) top = current;
+        if (current >= top + visible) top = current - visible + 1;
+    };
+    adjustWindow();
+    drawMenu(title, items, current, top, visible, first);
     first = false;
 
     for (;;) {
@@ -113,16 +192,19 @@ int tuiSelect(const QString &title, const QStringList &items, int initial) {
         else if (key == 1 && current < items.size() - 1) current++;
         else if (key == 2) current = 0;
         else if (key == 3) current = items.size() - 1;
+        else if (key == 5) current = qMax(0, current - visible);                      // PgUp
+        else if (key == 6) current = qMin(items.size() - 1, current + visible);       // PgDn
         else continue;
-        drawMenu(title, items, current, first);
+        adjustWindow();
+        drawMenu(title, items, current, top, visible, first);
     }
 
     // 结束后：清理菜单区，留一行干净的输出位置。
-    // 此时光标在尾行（提示行）行尾；菜单共 标题+N条目+尾行 三部分的 N+2 行。
+    // 此时光标在尾行（提示行）行尾；菜单共 标题+visible条目+尾行 的 visible+2 行。
     tuiWrite("\r\x1b[2K");  // 先清掉光标所在的尾行
-    tuiWrite("\x1b[" + QByteArray::number(items.size() + 1) + "A");  // 回到标题行
-    for (int i = 0; i <= items.size(); ++i)
-        tuiWrite("\x1b[2K" + QByteArray(i < items.size() ? "\x1b[1B" : ""));
+    tuiWrite("\x1b[" + QByteArray::number(visible + 1) + "A");  // 回到标题行
+    for (int i = 0; i <= visible; ++i)
+        tuiWrite("\x1b[2K" + QByteArray(i < visible ? "\x1b[1B" : ""));
     // 光标在最后一个条目行（已清），换行离开菜单区，后续输出从干净行开始
     tuiWrite("\r\n");
 

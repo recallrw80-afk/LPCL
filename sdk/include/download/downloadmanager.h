@@ -5,6 +5,7 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QMap>
+#include <QQueue>
 #include <functional>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
@@ -96,6 +97,18 @@ private:
                                      ProgressCallback onProgress,
                                      CompletionCallback onComplete,
                                      int retriesRemaining);
+
+    // 全局限流（见 download()）：同时在传数量有限，其余进自有队列
+    struct PendingDownload {
+        QString url, savePath;
+        ProgressCallback onProgress;
+        CompletionCallback onComplete;
+        int retries;
+    };
+    static constexpr int kMaxInFlight = 16;
+    void dispatchPending();
+    int m_inFlight = 0;
+    QQueue<PendingDownload> m_pending;
 
     QNetworkAccessManager *m_nam = nullptr;
 };

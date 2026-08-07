@@ -49,6 +49,7 @@ void Settings::initialize(const QString &configPath) {
 }
 
 void Settings::initDefaults() {
+    QMutexLocker locker(&m_mutex);
     // 默认游戏目录：可执行文件旁边的 mc/ 目录
     if (!m_settings->contains("LaunchFolderSelect")) {
         QString defaultMc = QCoreApplication::applicationDirPath() + "/mc/";
@@ -119,14 +120,19 @@ void Settings::setString(const QString &key, const QString &value) {
 
 QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return defaultValue;
     return m_settings->value(key, defaultValue);
 }
 
 void Settings::setValue(const QString &key, const QVariant &value) {
-    if (!m_settings) return;
-    m_settings->setValue(key, value);
-    m_settings->sync();
+    m_mutex.lock();
+    if (m_settings) {
+        m_settings->setValue(key, value);
+        m_settings->sync();
+    }
+    m_mutex.unlock();
+    // 信号在锁外发：槽函数可能回读 Settings（递归锁可重入，但锁外更不易死锁）
     emit settingChanged(key);
 }
 
@@ -178,6 +184,7 @@ QString Settings::instancePath(const QString &instanceId) const
 
 QStringList Settings::playerProfiles() const
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return {};
     m_settings->beginGroup("Profile");
     QStringList uuids = m_settings->childGroups();
@@ -188,6 +195,7 @@ QStringList Settings::playerProfiles() const
 QString Settings::getProfile(const QString &uuid, const QString &key,
                              const QString &defaultValue) const
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings || uuid.isEmpty()) return defaultValue;
     QString fullKey = QString("Profile/%1/%2").arg(uuid, key);
     return m_settings->value(fullKey, defaultValue).toString();
@@ -195,6 +203,7 @@ QString Settings::getProfile(const QString &uuid, const QString &key,
 
 void Settings::setProfile(const QString &uuid, const QString &key, const QString &value)
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings || uuid.isEmpty()) return;
     QString fullKey = QString("Profile/%1/%2").arg(uuid, key);
     m_settings->setValue(fullKey, value);
@@ -203,6 +212,7 @@ void Settings::setProfile(const QString &uuid, const QString &key, const QString
 
 void Settings::removeProfile(const QString &uuid)
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings || uuid.isEmpty()) return;
     m_settings->beginGroup("Profile");
     m_settings->remove(uuid);
@@ -224,6 +234,7 @@ void Settings::selectPlayer(const QString &uuid)
 
 void Settings::setInstanceDir(const QString &dirName, const QString &displayName)
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return;
     m_settings->beginGroup("Instances");
     m_settings->setValue(dirName, displayName);
@@ -233,6 +244,7 @@ void Settings::setInstanceDir(const QString &dirName, const QString &displayName
 
 QMap<QString, QString> Settings::instanceDirs() const
 {
+    QMutexLocker locker(&m_mutex);
     QMap<QString, QString> result;
     if (!m_settings) return result;
     m_settings->beginGroup("Instances");
@@ -245,6 +257,7 @@ QMap<QString, QString> Settings::instanceDirs() const
 
 void Settings::removeInstanceDir(const QString &dirName)
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings) return;
     m_settings->beginGroup("Instances");
     m_settings->remove(dirName);
@@ -254,6 +267,7 @@ void Settings::removeInstanceDir(const QString &dirName)
 
 QString Settings::dirForDisplayName(const QString &displayName) const
 {
+    QMutexLocker locker(&m_mutex);
     if (!m_settings || displayName.isEmpty()) return {};
     m_settings->beginGroup("Instances");
     const auto keys = m_settings->childKeys();
