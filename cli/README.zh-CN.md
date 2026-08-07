@@ -11,6 +11,8 @@
 - **原版下载**：任意 MC 版本一键下载安装、校验补齐
 - **Java 管理**：自动检测系统 Java，按 MC 版本自动选择；缺失时自动从 Adoptium 下载安装
 - **多玩家配置**：多个离线玩家档案，支持皮肤类型（slim/wide）
+- **外置登录**：authlib-injector（如 LittleSkin）账号登录，登录态加密持久化，启动自动在线刷新
+- **本地开服**：原版/Forge/Fabric/NeoForge 服务端一键安装与前台启动，控制台直通，可从实例复制 mods/config
 - **断点续传与校验**：所有下载按 SHA1 校验，重复操作自动跳过已有文件
 - **中文/英文界面**：`set-lang zh` 一键切换中文
 
@@ -97,6 +99,110 @@ lpcl mc-install 1.20.1   # 指定版本
 lpcl launch 1.20.1
 ```
 
+## 本地开服
+
+不需要图形界面，两条命令开一个能进人的服务端。
+
+### 1. 安装服务端
+
+```bash
+# 原版
+lpcl server-install 1.20.1
+
+# 加载器（Forge / Fabric / NeoForge）——裸写自动选最新加载器版本，也可带值指定
+lpcl server-install 1.20.1 --forge
+lpcl server-install 1.20.1 --fabric 0.16.9
+```
+
+安装产物在 `{游戏目录}/servers/<标识>/`：原版标识就是版本号（`1.20.1`），加载器标识带后缀（`1.20.1-forge-47.3.0`）。
+
+要把你正在玩的整合包搬进服务端，加 `--from <实例名>`——会把该实例的 `mods/`、`config/`、`defaultconfigs/` 复制进服务端目录：
+
+```bash
+lpcl server-install 1.20.1 --forge --from 我的整合包
+```
+
+> **注意**：客户端专属 mod（Sodium 等渲染/界面类）会让服务端启动崩溃。启动失败就先从服务端的 `mods/` 里删掉它们。
+
+### 2. 启动
+
+```bash
+lpcl server-start 1.20.1-forge-47.3.0
+```
+
+- **首次启动**要求同意 [Minecraft EULA](https://aka.ms/MinecraftEULA)：交互终端里回答确认，或加 `--eula` 参数书面同意（只问一次，写入 `eula.txt` 后不再问）
+- 首次启动自动写最小 `server.properties`（含 `online-mode=false`，这是离线和外置登录玩家能进服的前提；文件已存在则不覆盖你的改动）
+- 控制台直通终端：直接敲 `/stop`、`/op 名字`、`/whitelist ...` 等服务端命令
+- Java 按版本矩阵自动选择；内存默认 2G（`set-mem` 可改）
+
+### 3. 让别人连进来
+
+- 同一局域网：直接连 `<你的内网IP>:25565`
+- 公网：需要公网地址 + 路由器端口转发（TCP 25565），或 frp 类内网穿透（SakuraFrp / playit.gg 等）
+
+### 4. 安全提醒（重要）
+
+`online-mode=false` 的服在公网上**任何人输任何名字都能进，包括冒名顶替**。开服后请立刻开白名单：
+
+```
+whitelist on
+whitelist add 朋友的名字
+```
+
+## 使用示例
+
+四个常见场景的完整指令流。
+
+### 场景 1：玩整合包
+
+```bash
+lpcl set-folder ~/mc                          # 设置游戏目录（可选，默认程序旁的 ./mc/）
+lpcl inpack ~/Downloads/ATM9.zip              # 导入整合包（自动下齐游戏本体/Forge/Mod）
+lpcl list                                     # 查看已有实例
+lpcl mods "All the Mods 9"                    # 查看实例的 Mod 列表和启用状态
+lpcl launch "All the Mods 9"                  # 启动（也可省略名称，上下键选择）
+```
+
+### 场景 2：快速玩原版
+
+```bash
+lpcl mc-install 1.20.1                        # 下载 1.20.1（无参 = 最新正式版）
+lpcl launch 1.20.1                            # 启动
+```
+
+### 场景 3：开服和朋友玩
+
+```bash
+lpcl server-install 1.20.1 --forge            # 装 Forge 服务端（原版去掉 --forge）
+lpcl server-start 1.20.1-forge-47.3.0         # 首次会问 EULA（或加 --eula）
+
+# 服务端跑起来后，直接在终端敲控制台命令：
+whitelist on                                  # 开白名单（公网必做）
+whitelist add 小明                            # 加朋友进白名单
+op 小明                                       # 给管理权限
+stop                                          # 关服
+```
+
+朋友在游戏里「多人游戏 → 添加服务器」填 `<你的IP>:25565`。
+
+### 场景 4：外置登录（LittleSkin 等）
+
+```bash
+lpcl login                                    # 向导：服务器地址 → 邮箱 → 密码（默认 LittleSkin）
+lpcl launch 我的整合包                         # 启动自动用外置账号（每次启动在线刷新）
+lpcl config                                   # 查看当前登录状态
+lpcl logout                                   # 退出登录，回退离线玩家
+```
+
+### 场景 5：日常维护
+
+```bash
+lpcl update                                   # 检查并更新 lpcl 自身
+lpcl test                                     # 全系统自检（出问题先跑这个）
+lpcl report 启动1.20.1闪退                     # 生成预填 Issue 链接（自动附环境+日志，已脱敏）
+lpcl uninstall -r                             # 卸载但保留游戏内容
+```
+
 ## 命令参考
 
 ### 实例
@@ -116,6 +222,8 @@ lpcl launch 1.20.1
 | `inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]` | 导入整合包；`--r` 重命名实例；Mod 包需 `--to` 指定目标实例 |
 | `mc-install [版本]` | 下载原版 MC 版本（不带参数为最新正式版） |
 | `java-install <大版本>` | 下载安装 Java（Adoptium JRE） |
+| `server-install [版本] [--forge\|--fabric\|--neoforge [版本]] [--from 实例]` | 下载/安装服务端（无参=最新正式版；加载器裸写=自动最新；`--from` 复制实例的 mods/config） |
+| `server-start <标识> [--eula]` | 前台启动本地服务端（控制台直通，`/stop` 关服；`--eula` 表示同意 EULA；标识如 `1.20.1` 或 `1.20.1-forge-47.4.10`） |
 
 ### Java
 
@@ -160,6 +268,7 @@ mc/
 ├── libraries/      # 游戏依赖库（多实例共享）
 ├── assets/         # 游戏资源（多实例共享）
 ├── javas/          # 自动下载的 Java
+├── servers/        # 本地服务端（server-install 的产物，每个版本/加载器一个目录）
 └── logs/           # 启动器日志（lpcl-launch-*.log，滚动保留 10 份）
 ```
 
@@ -178,6 +287,9 @@ QML GUI 目前是测试版，与 CLI 共享同一套 SDK。开发构建后用 `m
 
 **导入失败会怎样？**
 任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。
+
+**没有图形界面怎么开服联机？整合包服务端行不行？**
+都行，见上文「本地开服」一节：`server-install` + `server-start` 两条命令，加载器服务端加 `--forge/--fabric/--neoforge`，搬实例 mod 加 `--from`。
 
 ## 许可与声明
 

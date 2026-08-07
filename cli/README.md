@@ -11,6 +11,8 @@
 - **Vanilla download**: one-command install of any MC version, with verify-and-repair
 - **Java management**: detects system Java, picks per MC version automatically, downloads from Adoptium when missing
 - **Player profiles**: multiple offline player profiles with skin types (slim/wide)
+- **External login**: authlib-injector accounts (e.g. LittleSkin), session encrypted & persisted, auto-refreshed at launch
+- **Local server hosting**: one-command install & foreground start for vanilla/Forge/Fabric/NeoForge servers, console attached, mods/config copyable from instances
 - **Resume & verify**: every download is SHA1-verified; re-running skips existing files
 - **Chinese/English UI**: switch with `set-lang zh`
 
@@ -97,8 +99,111 @@ lpcl mc-install 1.20.1   # specific version
 lpcl launch 1.20.1
 ```
 
-## Command reference
+## Local server hosting
 
+No GUI needed — two commands to a joinable server.
+
+### 1. Install a server
+
+```bash
+# Vanilla
+lpcl server-install 1.20.1
+
+# Loaders (Forge / Fabric / NeoForge) — bare flag picks the latest loader version, or pin one
+lpcl server-install 1.20.1 --forge
+lpcl server-install 1.20.1 --fabric 0.16.9
+```
+
+Files land in `{game folder}/servers/<id>/`: the vanilla id is just the version (`1.20.1`); loader ids carry a suffix (`1.20.1-forge-47.3.0`).
+
+To bring the modpack you play onto the server, add `--from <instance>` — this copies the instance's `mods/`, `config/`, and `defaultconfigs/` into the server directory:
+
+```bash
+lpcl server-install 1.20.1 --forge --from my-modpack
+```
+
+> **Note**: client-only mods (rendering/UI ones like Sodium) crash dedicated servers. If startup fails, remove them from the server's `mods/` first.
+
+### 2. Start
+
+```bash
+lpcl server-start 1.20.1-forge-47.3.0
+```
+
+- **First start** requires accepting the [Minecraft EULA](https://aka.ms/MinecraftEULA): answer the interactive prompt, or pass `--eula` (asked once, written to `eula.txt`)
+- A minimal `server.properties` is created on first start (with `online-mode=false`, required for offline/authlib players to join; an existing file is never overwritten)
+- The console is attached to your terminal: type `/stop`, `/op <name>`, `/whitelist ...` directly
+- Java is auto-selected per version; memory defaults to 2G (change with `set-mem`)
+
+### 3. Let others connect
+
+- Same LAN: connect to `<your LAN IP>:25565`
+- Public internet: a public address + router port forwarding (TCP 25565), or a tunnel (SakuraFrp / playit.gg / frp on a VPS)
+
+### 4. Security note (important)
+
+A public server with `online-mode=false` lets **anyone join with any name, including impersonating you**. Enable the whitelist right away:
+
+```
+whitelist on
+whitelist add your-friend
+```
+
+## Examples
+
+End-to-end command flows for four common scenarios.
+
+### Scenario 1: Play a modpack
+
+```bash
+lpcl set-folder ~/mc                          # set game folder (optional, defaults to ./mc/ next to the binary)
+lpcl inpack ~/Downloads/ATM9.zip              # import modpack (game files/Forge/mods auto-downloaded)
+lpcl list                                     # show instances
+lpcl mods "All the Mods 9"                    # list the instance's mods + enabled state
+lpcl launch "All the Mods 9"                  # launch (omit the name for an interactive picker)
+```
+
+### Scenario 2: Quick vanilla
+
+```bash
+lpcl mc-install 1.20.1                        # download 1.20.1 (no arg = latest release)
+lpcl launch 1.20.1                            # launch
+```
+
+### Scenario 3: Host a server for friends
+
+```bash
+lpcl server-install 1.20.1 --forge            # Forge server (drop --forge for vanilla)
+lpcl server-start 1.20.1-forge-47.3.0         # asks for the EULA on first run (or pass --eula)
+
+# once the server is up, type console commands right into the terminal:
+whitelist on                                  # enable whitelist (a must on public internet)
+whitelist add Alex                            # allow a friend
+op Alex                                       # grant operator
+stop                                          # shut down
+```
+
+Friends add the server under "Multiplayer → Add Server" with `<your-ip>:25565`.
+
+### Scenario 4: External login (LittleSkin etc.)
+
+```bash
+lpcl login                                    # wizard: server address → email → password (LittleSkin by default)
+lpcl launch my-modpack                        # launches with the external account (auto-refreshed)
+lpcl config                                   # show current login state
+lpcl logout                                   # log out, back to the offline player
+```
+
+### Scenario 5: Maintenance
+
+```bash
+lpcl update                                   # check for and apply lpcl updates
+lpcl test                                     # full system self-check (run this first when things break)
+lpcl report crash on 1.20.1                   # prefilled issue link (env + logs attached, sanitized)
+lpcl uninstall -r                             # uninstall but keep game contents
+```
+
+## Command reference
 ### Instances
 
 | Command | Description |
@@ -116,6 +221,8 @@ lpcl launch 1.20.1
 | `inpack <file> [--r <name>] [--to <instance>] [--folder <path>]` | Import a modpack; `--r` renames the instance; mod packs need `--to` for the target instance |
 | `mc-install [version]` | Download a vanilla MC version (latest release without args) |
 | `java-install <major>` | Download and install Java (Adoptium JRE) |
+| `server-install [version] [--forge\|--fabric\|--neoforge [ver]] [--from inst]` | Install a server (latest release without args; bare loader flag = auto-latest; `--from` copies instance mods/config) |
+| `server-start <id> [--eula]` | Run a local server in the foreground (console attached, `/stop` to halt; `--eula` accepts the EULA; id like `1.20.1` or `1.20.1-forge-47.4.10`) |
 
 ### Java
 
@@ -160,6 +267,7 @@ mc/
 ├── libraries/      # game libraries (shared across instances)
 ├── assets/         # game assets (shared across instances)
 ├── javas/          # auto-downloaded Java runtimes
+├── servers/        # local servers (server-install output; one dir per version/loader)
 └── logs/           # launcher logs (lpcl-launch-*.log, last 10 kept)
 ```
 
@@ -178,6 +286,9 @@ The QML GUI is currently a test version sharing the same SDK as the CLI. Start i
 
 **What happens when an import fails?**
 Any failed download stage (game files / modloader / mods) rolls back everything — no half-installed instance is left behind; just retry.
+
+**Can I host a server (even a modded one) without a GUI?**
+Yes — see "Local server hosting" above: `server-install` + `server-start`; add `--forge/--fabric/--neoforge` for loader servers, `--from` to copy an instance's mods.
 
 ## License & notice
 

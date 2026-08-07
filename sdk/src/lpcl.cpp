@@ -5,6 +5,7 @@
 #include "core/javamanager.h"
 #include "core/launcher.h"
 #include "core/launchbuilder.h"
+#include "core/installer.h"
 #include "auth/offlineauth.h"
 #include "auth/authlibauth.h"
 #include "download/assetdownloader.h"
@@ -14,6 +15,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QDirIterator>
 #include <QEventLoop>
 #include <QFile>
 #include <QPointer>
@@ -787,6 +789,213 @@ AuthlibLoginInfo currentAuthlibLogin() {
         info.uuid = s.getString("Authlib/Uuid");
     }
     return info;
+}
+
+// ---- 服务端（本地开服） ----
+
+bool installServer(const QString &versionId, const QString &loaderType,
+                   const QString &loaderVersion,
+                   std::function<void(const ImportProgress &)> onProgress) {
+    // 版本清单：拿版本 json 的 URL（空版本号 = 最新正式版）
+    json manifest;
+    bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+        DownloadManager::instance().downloadJson(
+            "https://launchermeta.mojang.com/mc/game/version_manifest.json",
+            [&manifest, cb](bool ok2, QString err, json m) { manifest = std::move(m); cb(ok2, err); });
+    });
+    if (!ok || !manifest.is_object() || !manifest.contains("versions") || !manifest["versions"].is_array())
+        return false;
+
+    QString id = versionId;
+    if (id.isEmpty() && manifest.contains("latest") && manifest["latest"].is_object())
+        id = QString::fromStdString(manifest["latest"].value("release", ""));
+    QString jsonUrl;
+    for (const auto &v : manifest["versions"]) {
+        if (!v.is_object()) continue;
+        QString vid = v.contains("id") && v["id"].is_string()
+                          ? QString::fromStdString(v["id"].get<std::string>()) : QString();
+        if (vid == id) {
+            if (v.contains("url") && v["url"].is_string())
+                jsonUrl = QString::fromStdString(v["url"].get<std::string>());
+            break;
+        }
+    }
+    if (id.isEmpty() || jsonUrl.isEmpty()) return false;
+
+    // ---- 加载器服务端（Forge / Fabric / NeoForge） ----
+    if (!loaderType.isEmpty()) {
+        // 解析加载器版本（空 = 最新）
+        QString lv = loaderVersion;
+        if (lv.isEmpty()) {
+            auto &inst = Installer::instance();
+            if (loaderType == "fabric") {
+                lv = inst.detectBestFabricVersion(id);
+            } else {
+                ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+                    if (loaderType == "forge")
+                        inst.detectBestForgeVersion(id, [&lv, cb](QString v) { lv = v; cb(true, {}); });
+                    else if (loaderType == "neoforge")
+                        inst.detectBestNeoForgeVersion(id, [&lv, cb](QString v) { lv = v; cb(true, {}); });
+                    else
+                        cb(false, {});
+                });
+                if (!ok) return false;
+            }
+            if (lv.isEmpty()) return false;
+        }
+        QString serverId = id + "-" + loaderType + "-" + lv;
+        QString dir = VersionManager::instance().mcFolder() + "servers/" + serverId + "/";
+        QDir().mkpath(dir);
+
+        // 安装器需要 Java：按版本矩阵选
+        auto &jm = JavaManager::instance();
+        if (jm.javaList().isEmpty()) {
+            jm.scanSystemJava();
+            jm.waitForScanFinished();
+        }
+        McVersion ver;
+        ver.id = id;
+        ver.vanillaVersion = QVersionNumber::fromString(id);
+        JavaEntry java = jm.selectJavaForVersion(ver);
+        if (java.pathJava.isEmpty()) java = jm.selectJava();
+        if (java.pathJava.isEmpty()) return false;
+
+        if (onProgress) onProgress({"Installing " + loaderType + " " + lv + " server...", 30});
+        ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+            Installer::instance().installLoaderServer(loaderType, dir, id, lv, java.pathJava,
+                [cb](bool ok2, QString err) { cb(ok2, err); });
+        });
+        if (onProgress) onProgress({ok ? "Complete" : "Installer failed", 100});
+        return ok;
+    }
+
+    // ---- 原版服务端 ----
+    // 版本 json → downloads.server
+    json vj;
+    ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+        DownloadManager::instance().downloadJson(jsonUrl,
+            [&vj, cb](bool ok2, QString err, json j) { vj = std::move(j); cb(ok2, err); });
+    });
+    if (!ok || !vj.is_object()) return false;
+    if (!vj.contains("downloads") || !vj["downloads"].is_object()
+        || !vj["downloads"].contains("server") || !vj["downloads"]["server"].is_object())
+        return false;  // 该版本没有官方服务端 jar（加载器版本走不通这条路）
+    const json &srv = vj["downloads"]["server"];
+    QString url = srv.contains("url") && srv["url"].is_string()
+                      ? QString::fromStdString(srv["url"].get<std::string>()) : QString();
+    QString sha1 = srv.contains("sha1") && srv["sha1"].is_string()
+                       ? QString::fromStdString(srv["sha1"].get<std::string>()) : QString();
+    if (url.isEmpty()) return false;
+
+    QString dir = VersionManager::instance().mcFolder() + "servers/" + id + "/";
+    QDir().mkpath(dir);
+    QString jar = dir + "server.jar";
+    if (QFile::exists(jar) && !sha1.isEmpty() && FileUtils::verifySha1(jar, sha1)) {
+        if (onProgress) onProgress({"Server jar up-to-date", 100});
+        return true;
+    }
+    if (onProgress) onProgress({"Downloading server " + id + "...", 30});
+    ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
+        DownloadManager::instance().download(url, jar, nullptr,
+            [cb](bool dlOk, QString) { cb(dlOk, {}); });
+    });
+    if (!ok) { QFile::remove(jar); return false; }
+    if (!sha1.isEmpty() && !FileUtils::verifySha1(jar, sha1)) {
+        qWarning() << "server.jar sha1 校验失败:" << id;
+        QFile::remove(jar);
+        return false;
+    }
+    if (onProgress) onProgress({"Complete", 100});
+    return true;
+}
+
+bool startServer(const QString &versionId, LogCallback onLog, ExitCallback onExit) {
+    QString dir = VersionManager::instance().mcFolder() + "servers/" + versionId + "/";
+    if (!QDir(dir).exists()) return false;
+
+    // EULA 闸门：只检查不接受（接受动作在 CLI 交互里）
+    QFile eulaFile(dir + "eula.txt");
+    bool accepted = eulaFile.open(QIODevice::ReadOnly)
+                    && eulaFile.readAll().contains("eula=true");
+    if (!accepted) return false;
+
+    // 最小 server.properties：只在缺失时写（不覆盖用户手改）；
+    // online-mode=false 是离线/authlib 外置登录玩家能进服的前提
+    if (!QFile::exists(dir + "server.properties")) {
+        QFile f(dir + "server.properties");
+        if (f.open(QIODevice::WriteOnly))
+            f.write("online-mode=false\n");
+    }
+
+    auto &jm = JavaManager::instance();
+    if (jm.javaList().isEmpty()) {
+        jm.scanSystemJava();
+        jm.waitForScanFinished();
+    }
+    // versionId 可能带加载器后缀（1.20.1-forge-47.4.10），矩阵取 MC 版本号部分
+    McVersion ver;
+    ver.id = versionId;
+    ver.vanillaVersion = QVersionNumber::fromString(versionId.section('-', 0, 0));
+    JavaEntry java = jm.selectJavaForVersion(ver);
+    if (java.pathJava.isEmpty()) java = jm.selectJava();
+    if (java.pathJava.isEmpty()) return false;
+
+    int maxMem = Settings::instance().getString("LaunchMaxMemory", "0").toInt();
+    if (maxMem <= 0) maxMem = 2048;
+
+    // 布局识别：现代 Forge/NeoForge（unix_args.txt）> 旧版 Forge（universal jar）
+    //          > Fabric（fabric-server-launch.jar）> 原版（server.jar）
+    QStringList args;
+    QStringList memArgs = {"-Xmx" + QString::number(maxMem) + "M", "-Xms512M"};
+    QString unixArgs;
+    QDirIterator it(dir + "libraries", {"unix_args.txt"}, QDir::Files,
+                    QDirIterator::Subdirectories);
+    if (it.hasNext()) unixArgs = it.next();
+    if (!unixArgs.isEmpty()) {
+        args = memArgs;
+        if (QFile::exists(dir + "user_jvm_args.txt"))
+            args << "@" + dir + "user_jvm_args.txt";
+        args << "@" + unixArgs << "nogui";
+    } else {
+        QString jarToRun;
+        for (const auto &pat : {"forge-*-universal.jar", "fabric-server-launch.jar", "server.jar"}) {
+            const auto hits = QDir(dir).entryList({pat}, QDir::Files);
+            if (!hits.isEmpty()) { jarToRun = dir + hits.first(); break; }
+        }
+        if (jarToRun.isEmpty()) return false;
+        args = memArgs << "-jar" << jarToRun << "nogui";
+    }
+
+    auto *proc = new QProcess();
+    proc->setWorkingDirectory(dir);
+    proc->setProgram(java.pathJava);
+    proc->setArguments(args);
+    proc->setInputChannelMode(QProcess::ForwardedInputChannel);  // 控制台命令直通（/stop 等）
+    if (onLog) {
+        QObject::connect(proc, &QProcess::readyReadStandardOutput, proc, [proc, onLog]() {
+            for (const auto &line : proc->readAllStandardOutput().split('\n'))
+                if (!line.isEmpty()) onLog(QString::fromUtf8(line));
+        });
+        QObject::connect(proc, &QProcess::readyReadStandardError, proc, [proc, onLog]() {
+            for (const auto &line : proc->readAllStandardError().split('\n'))
+                if (!line.isEmpty()) onLog(QString::fromUtf8(line));
+        });
+    }
+    // 错误处理约定：FailedToStart 不发 finished 由 errorOccurred 上报；
+    // Crashed 的终态由 finished 统一上报，errorOccurred 里忽略避免双触发
+    QObject::connect(proc, &QProcess::errorOccurred, proc,
+        [proc, onExit](QProcess::ProcessError e) {
+            if (e != QProcess::FailedToStart) return;
+            if (onExit) onExit(-1);
+            proc->deleteLater();
+        });
+    QObject::connect(proc, &QProcess::finished, proc,
+        [proc, onExit](int code, QProcess::ExitStatus) {
+            if (onExit) onExit(code);
+            proc->deleteLater();
+        });
+    proc->start();
+    return true;
 }
 
 } // namespace lpcl

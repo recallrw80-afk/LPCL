@@ -190,6 +190,26 @@ void Installer::installFabric(const QString &mcDir, const QString &mcVersion,
         });
 }
 
+// 服务端模式：Forge/NeoForge 用 --installServer，Fabric 用 server 子命令 + 下载原版服务端
+void Installer::installLoaderServer(const QString &loaderType, const QString &dir,
+                                      const QString &mcVersion, const QString &loaderVersion,
+                                      const QString &javaPath,
+                                      std::function<void(bool, QString)> onComplete) {
+    downloadInstaller(loaderType, mcVersion, loaderVersion,
+        [this, loaderType, dir, mcVersion, loaderVersion, javaPath, onComplete](bool ok, QString jarPath) {
+            if (!ok) { if (onComplete) onComplete(false, jarPath); return; }
+            QStringList args;
+            if (loaderType == "fabric") {
+                args << "-jar" << jarPath << "server" << "-dir" << dir
+                     << "-mcversion" << mcVersion << "-loader" << loaderVersion
+                     << "-downloadMinecraft";
+            } else {
+                args << "-jar" << jarPath << "--installServer" << dir;
+            }
+            runInstallerJar(jarPath, javaPath, args, onComplete);
+        });
+}
+
 void Installer::installNeoForge(const QString &mcDir, const QString &mcVersion,
                                   const QString &neoVersion, const QString &javaPath,
                                   std::function<void(bool, QString)> onComplete) {

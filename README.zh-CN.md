@@ -15,6 +15,7 @@
 - **Java 管理**：自动检测系统 Java、按 MC 版本兼容矩阵选择；缺失时自动从 Adoptium 下载 JRE
 - **多玩家档案**：多个离线玩家配置（名称 / 头像 / 皮肤类型），交互式增删改选；支持 authlib-injector 外置登录（如 LittleSkin，登录态加密持久化，启动自动在线刷新）
 - **启动稳定性**：自动内存分配（可用内存 50%，上限 16G）、GC 档位、fcitx/ibus XIM 崩溃自动修复（GLFW 3.4 替换）、每次启动落盘完整日志
+- **本地开服**：原版/Forge/Fabric/NeoForge 服务端一键安装与前台启动（`server-install`/`server-start`），控制台直通，headless 环境友好
 - **QML GUI**（测试版）：与 CLI 共享同一套 SDK（liblpclcore）
 
 ## 安装

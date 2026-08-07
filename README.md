@@ -15,6 +15,7 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 - **Java management**: detects system Java, picks per MC version compatibility matrix, auto-downloads JRE from Adoptium when missing
 - **Player profiles**: multiple offline player profiles (name / avatar / skin type) with interactive add/edit/remove/select; authlib-injector external login (e.g. LittleSkin) with encrypted, persisted sessions auto-refreshed online at launch
 - **Launch stability**: automatic memory sizing (50% of available RAM, capped at 16G), GC tiers, auto-fix for fcitx/ibus XIM crashes (GLFW 3.4 replacement), full launch logs on disk
+- **Local server hosting**: install and run vanilla/Forge/Fabric/NeoForge servers with two commands (`server-install`/`server-start`), console attached, headless-friendly
 - **QML GUI** (test version): shares the same SDK (liblpclcore) with the CLI
 
 ## Install

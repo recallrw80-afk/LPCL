@@ -157,6 +157,24 @@ LPCLCORE_EXPORT void logoutAuthlib();
 /// 当前持久化的外置登录信息（纯本地读取，无网络）
 LPCLCORE_EXPORT AuthlibLoginInfo currentAuthlibLogin();
 
+// ---- 服务端（本地开服） ----
+
+/// 下载/安装服务端到 {mcFolder}/servers/<标识>/（标识 = 版本 或 版本-加载器-加载器版本）。
+/// loaderType 为空 = 原版（sha1 校验，已存在跳过）；传 "forge"/"fabric"/"neoforge" 走对应安装器
+/// （--installServer / fabric server 模式），loaderVersion 空 = 自动解析最新。
+/// 返回 false 即失败（原因经 onProgress/日志）。
+LPCLCORE_EXPORT bool installServer(const QString &versionId,
+                                   const QString &loaderType = QString(),
+                                   const QString &loaderVersion = QString(),
+                                   std::function<void(const ImportProgress &)> onProgress = nullptr);
+
+/// 前台运行服务端（nogui，控制台输入直通；进程退出经 onExit 回调）。
+/// 需先 installServer 且在服务端目录写好 eula.txt（eula=true）——EULA 确认由调用方负责。
+/// 首次启动自动生成最小 server.properties（online-mode=false，离线/外置登录玩家进服的前提）。
+LPCLCORE_EXPORT bool startServer(const QString &versionId,
+                                 LogCallback onLog = nullptr,
+                                 ExitCallback onExit = nullptr);
+
 } // namespace lpcl
 
 #endif // LPCLCORE_LPCL_H

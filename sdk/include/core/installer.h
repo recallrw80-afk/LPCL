@@ -47,6 +47,12 @@ public:
                        const QString &loaderVersion, const QString &javaPath,
                        std::function<void(bool, QString)> onComplete);
 
+    /// 以服务端模式安装加载器到 dir（Forge/NeoForge: --installServer；Fabric: server 子命令）
+    void installLoaderServer(const QString &loaderType, const QString &dir,
+                             const QString &mcVersion, const QString &loaderVersion,
+                             const QString &javaPath,
+                             std::function<void(bool, QString)> onComplete);
+
     /// Install Forge loader
     void installForge(const QString &mcDir, const QString &mcVersion,
                       const QString &forgeVersion, const QString &javaPath,
