@@ -23,9 +23,31 @@
 
 ## 安装
 
-### 源码编译安装（推荐）
+### 一键安装（推荐）
 
-克隆正式版本代码后编译并安装到本机（`~/.local/lib/lpcl/` + `~/.local/bin/lpcl`）：
+下载并安装官方预编译包——**完整体验**（CI 构建，内嵌 CurseForge key，Mod 下载走官方 API）：
+
+```bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+```
+
+支持 x86_64 / aarch64（x86_64 即 amd64）。完成后任意目录直接：
+
+```bash
+lpcl help
+```
+
+### 预编译包手动安装
+
+从 [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest) 下载对应架构的 `lpcl-linux-<arch>.tar.gz`，与 `install.sh` 放同一目录：
+
+```bash
+bash install.sh lpcl-linux-x86_64.tar.gz
+```
+
+### 源码编译安装
+
+适合改代码/自定义构建。**注意**：本地编译的包不内嵌 CF key（CurseForge 自动走 MCIM 镜像，功能可用但非最佳链路），追求完整体验请用上面的官方包。
 
 ```bash
 git clone https://github.com/recallrw80-afk/LPCL.git
@@ -35,27 +57,7 @@ make install        # 编译 Release → 零依赖打包 → 安装到本机
 
 依赖：Qt 6.11+（Core/Network）、CMake 3.16+、Ninja、C++20 编译器、nlohmann-json 3.11+、ZLIB。Qt 路径默认 `$HOME/Qt/6.11.1/gcc_64`，可用 `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64` 覆盖。
 
-完成后任意目录直接：
-
-```bash
-lpcl help
-```
-
-### 其他电脑编译的包安装到本机
-
-在编译机上 `make package-tar` 生成零依赖压缩包 `cli/dist/lpcl-linux-<arch>.tar.gz`，拷贝到目标机后：
-
-```bash
-bash install.sh lpcl-linux-x86_64.tar.gz
-```
-
-（`install.sh` 就在仓库 `cli/` 下；没有仓库也可以从发布页获取。）
-
-### 一键安装
-
-```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
-```
+其他电脑编译的包拷到本机安装：编译机 `make package-tar` 生成 `cli/dist/lpcl-linux-<arch>.tar.gz`，拷贝后 `bash cli/install.sh lpcl-linux-<arch>.tar.gz`。
 
 ### 更新与卸载
 

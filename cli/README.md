@@ -23,9 +23,31 @@
 
 ## Install
 
-### Build from source (recommended)
+### One-liner (recommended)
 
-Clone the release source code, then compile and install on your machine (`~/.local/lib/lpcl/` + `~/.local/bin/lpcl`):
+Downloads the official prebuilt package — **the full experience** (CI-built, with an embedded CurseForge key so mod downloads use the official API):
+
+```bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+```
+
+Supports x86_64 (amd64) / aarch64. Then run from anywhere:
+
+```bash
+lpcl help
+```
+
+### Manual prebuilt install
+
+Download `lpcl-linux-<arch>.tar.gz` from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, then:
+
+```bash
+bash install.sh lpcl-linux-x86_64.tar.gz
+```
+
+### Build from source
+
+For hacking/custom builds. **Note**: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror — works, but not the best path); for the full experience use the official package above.
 
 ```bash
 git clone https://github.com/recallrw80-afk/LPCL.git
@@ -35,27 +57,7 @@ make install        # build Release → zero-dependency package → install
 
 Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
 
-Then run from anywhere:
-
-```bash
-lpcl help
-```
-
-### Install a package built on another machine
-
-Run `make package-tar` on the build machine to produce the zero-dependency tarball `cli/dist/lpcl-linux-<arch>.tar.gz`, copy it to the target machine, then:
-
-```bash
-bash install.sh lpcl-linux-x86_64.tar.gz
-```
-
-(`install.sh` lives in `cli/` in the repo; it's also available from the release page.)
-
-### One-liner
-
-```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
-```
+To install a package built on another machine: `make package-tar` there, copy `cli/dist/lpcl-linux-<arch>.tar.gz` over, then `bash cli/install.sh lpcl-linux-<arch>.tar.gz`.
 
 ### Update & uninstall
 

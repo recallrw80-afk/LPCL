@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # lpcl 安装脚本
 # 用法:
-#   bash install.sh                                  # 从 GitHub Releases 下载最新版安装
-#   bash install.sh ./lpcl-linux-x86_64.tar.gz       # 安装本地包（其他电脑 make package-tar 的产物，scp 拷来即可）
+#   bash install.sh                                  # 【默认】下载官方预编译包（CI 构建，内嵌 CF key，完整体验）
+#   bash install.sh ./lpcl-linux-x86_64.tar.gz       # 安装本地包（自己 make package-tar 的产物——不含内嵌 key）
 #   curl -fsSL <发布地址>/install.sh | bash           # 一键安装
 #
 # 安装内容:
@@ -19,8 +19,8 @@ INSTALL_BIN="${LPCL_INSTALL_BIN:-$HOME/.local/bin}"
 
 # ---- 架构检测 ----
 case "$(uname -m)" in
-    x86_64)        ARCH="x86_64" ;;
-    aarch64|arm64) ARCH="aarch64" ;;
+    x86_64|amd64)    ARCH="x86_64" ;;
+    aarch64|arm64)   ARCH="aarch64" ;;
     *) echo "不支持的架构: $(uname -m)" >&2; exit 1 ;;
 esac
 
@@ -41,7 +41,7 @@ else
     PKG_PATH="${TMP}/${PKG}"
     echo "==> 下载 ${URL}"
     if ! curl -fSL --retry 3 -o "$PKG_PATH" "$URL"; then
-        echo "下载失败（请检查网络或 LPCL_RELEASE_URL 配置；仓库未公开时请改用本地包安装）" >&2
+        echo "下载失败（请检查网络；或到 Releases 页面手动下载后用本地包模式安装）" >&2
         exit 1
     fi
 fi

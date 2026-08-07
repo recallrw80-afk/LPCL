@@ -20,9 +20,19 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 
 ## Install
 
-### Build from source (recommended)
+### One-liner (recommended)
 
-Clone the release source code, then compile and install on your machine:
+Official prebuilt package (CI-built, embedded CurseForge key — the full experience), for x86_64 / aarch64:
+
+```bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+```
+
+Or grab the tarball from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, and run `bash install.sh lpcl-linux-<arch>.tar.gz`.
+
+### Build from source
+
+For hacking/custom builds. Note: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror); use the official package for the full experience.
 
 ```bash
 git clone https://github.com/recallrw80-afk/LPCL.git
@@ -32,19 +42,7 @@ make install        # build Release → zero-dependency package → install to ~
 
 Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
 
-### Install a package built on another machine
-
-Run `make package-tar` on the build machine to produce the zero-dependency tarball `cli/dist/lpcl-linux-<arch>.tar.gz`, copy it over, then:
-
-```bash
-bash cli/install.sh lpcl-linux-x86_64.tar.gz
-```
-
-### One-liner
-
-```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
-```
+To install a package built on another machine: `bash cli/install.sh lpcl-linux-<arch>.tar.gz`.
 
 ### Update & uninstall
 
