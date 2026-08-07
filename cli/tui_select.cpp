@@ -59,8 +59,17 @@ int readKey() {
         if (poll(&pfd, 1, 40) <= 0) return -1;
         char seq[2] = {0, 0};
         if (::read(STDIN_FILENO, &seq[0], 1) != 1) return -1;
+        if (seq[0] == 'O') {
+            // SS3 序列（如 ESC O P）：吞掉最终字节，不算取消
+            (void)::read(STDIN_FILENO, &seq[1], 1);
+            return -2;
+        }
         if (seq[0] != '[') return -1;
-        if (::read(STDIN_FILENO, &seq[1], 1) != 1) return -1;
+        // CSI 序列：按规则读到最终字节 0x40-0x7E（如 ESC [ 3 ~ 是 Delete），上限防异常序列死循环
+        for (int i = 0; i < 16; ++i) {
+            if (::read(STDIN_FILENO, &seq[1], 1) != 1) return -1;
+            if (seq[1] >= 0x40 && seq[1] <= 0x7E) break;
+        }
         switch (seq[1]) {
         case 'A': return 0;  // ↑
         case 'B': return 1;  // ↓

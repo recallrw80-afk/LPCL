@@ -37,6 +37,15 @@ static int autoMaxMemoryMB() {
     return 4096;
 }
 
+// 安全读取字符串字段：仅当 j 为 object、键存在且值为字符串时返回，否则返回默认值。
+// version JSON 语法合法但结构畸形（类型不符）时 value()/get<>() 会抛 type_error，
+// 穿过 Qt 信号槽即 std::terminate，统一用本函数兜底。
+static std::string jsonStr(const json &j, const char *key, const std::string &def = "") {
+    if (j.is_object() && j.contains(key) && j[key].is_string())
+        return j[key].get<std::string>();
+    return def;
+}
+
 LaunchBuilder& LaunchBuilder::instance() {
     static LaunchBuilder b;
     return b;
@@ -65,45 +74,52 @@ bool LaunchBuilder::build(const McVersion &version,
         return false;
     }
 
-    // Get main class
-    if (m_versionJson.contains("mainClass")) {
-        m_mainClass = QString::fromStdString(m_versionJson["mainClass"].get<std::string>());
-    }
-
-    // Build args
-    m_jvmArgs = buildJvmArgs(version, java);
-    m_gameArgs = buildGameArgs(version, login);
-
-    // 外置登录（authlib-injector）：注入 javaagent（jar 由启动流程预下载到约定位置；
-    // 缺失时启动必然无法通过服务器验证，直接判失败）
-    if (login.type == "Auth" && !login.serverUrl.isEmpty()) {
-        QString jar = VersionManager::instance().mcFolder() + "authlib-injector.jar";
-        if (!QFile::exists(jar)) {
-            qCWarning(logBuild) << "authlib-injector.jar missing at" << jar;
-            return false;
+    // 兜底：version JSON 结构畸形（类型不符）时 nlohmann 抛 type_error，
+    // 穿过 Qt 信号槽会 std::terminate——统一捕获，按构建失败处理
+    try {
+        // Get main class
+        if (m_versionJson.contains("mainClass") && m_versionJson["mainClass"].is_string()) {
+            m_mainClass = QString::fromStdString(m_versionJson["mainClass"].get<std::string>());
         }
-        m_jvmArgs.prepend(QString("-javaagent:%1=%2").arg(jar, login.serverUrl));
+
+        // Build args
+        m_jvmArgs = buildJvmArgs(version, java);
+        m_gameArgs = buildGameArgs(version, login);
+
+        // 外置登录（authlib-injector）：注入 javaagent（jar 由启动流程预下载到约定位置；
+        // 缺失时启动必然无法通过服务器验证，直接判失败）
+        if (login.type == "Auth" && !login.serverUrl.isEmpty()) {
+            QString jar = VersionManager::instance().mcFolder() + "authlib-injector.jar";
+            if (!QFile::exists(jar)) {
+                qCWarning(logBuild) << "authlib-injector.jar missing at" << jar;
+                return false;
+            }
+            m_jvmArgs.prepend(QString("-javaagent:%1=%2").arg(jar, login.serverUrl));
+        }
+
+        // Build replacements and apply
+        QMap<QString, QString> repl = buildReplacements(version, java, login);
+
+        // Cache the fully substituted command line for display (commandLine()).
+        m_commandLine = applyReplacements(m_jvmArgs, repl);
+        m_commandLine.append(m_mainClass);
+        m_commandLine.append(applyReplacements(m_gameArgs, repl));
+
+        qCInfo(logBuild) << "=== Launch Arguments Begin ===";
+        for (const auto &arg : applyReplacements(m_jvmArgs, repl)) {
+            qCInfo(logBuild).noquote() << "[JVM]" << arg;
+        }
+        qCInfo(logBuild).noquote() << "[MAIN]" << m_mainClass;
+        for (const auto &arg : applyReplacements(m_gameArgs, repl)) {
+            qCInfo(logBuild).noquote() << "[GAME]" << arg;
+        }
+        qCInfo(logBuild) << "=== Launch Arguments End ===";
+
+        return true;
+    } catch (const std::exception &e) {
+        qCWarning(logBuild) << "Malformed version JSON, build failed:" << e.what();
+        return false;
     }
-
-    // Build replacements and apply
-    QMap<QString, QString> repl = buildReplacements(version, java, login);
-
-    // Cache the fully substituted command line for display (commandLine()).
-    m_commandLine = applyReplacements(m_jvmArgs, repl);
-    m_commandLine.append(m_mainClass);
-    m_commandLine.append(applyReplacements(m_gameArgs, repl));
-
-    qCInfo(logBuild) << "=== Launch Arguments Begin ===";
-    for (const auto &arg : applyReplacements(m_jvmArgs, repl)) {
-        qCInfo(logBuild).noquote() << "[JVM]" << arg;
-    }
-    qCInfo(logBuild).noquote() << "[MAIN]" << m_mainClass;
-    for (const auto &arg : applyReplacements(m_gameArgs, repl)) {
-        qCInfo(logBuild).noquote() << "[GAME]" << arg;
-    }
-    qCInfo(logBuild) << "=== Launch Arguments End ===";
-
-    return true;
 }
 
 QString LaunchBuilder::commandLine() const
@@ -133,7 +149,8 @@ QStringList LaunchBuilder::buildJvmArgs(const McVersion &version, const JavaEntr
                         args.append(QString::fromStdString(arg["value"].get<std::string>()));
                     } else if (arg["value"].is_array()) {
                         for (const auto &v : arg["value"]) {
-                            args.append(QString::fromStdString(v.get<std::string>()));
+                            if (v.is_string())
+                                args.append(QString::fromStdString(v.get<std::string>()));
                         }
                     }
                 }
@@ -243,13 +260,15 @@ QStringList LaunchBuilder::buildGameArgs(const McVersion &version, const LoginRe
                         args.append(QString::fromStdString(arg["value"].get<std::string>()));
                     } else if (arg["value"].is_array()) {
                         for (const auto &v : arg["value"]) {
-                            args.append(QString::fromStdString(v.get<std::string>()));
+                            if (v.is_string())
+                                args.append(QString::fromStdString(v.get<std::string>()));
                         }
                     }
                 }
             }
         }
-    } else if (m_versionJson.contains("minecraftArguments")) {
+    } else if (m_versionJson.contains("minecraftArguments")
+               && m_versionJson["minecraftArguments"].is_string()) {
         // Old format: minecraftArguments string
         QString oldArgs = QString::fromStdString(m_versionJson["minecraftArguments"].get<std::string>());
         args.append(ArgUtils::splitJavaArgs(oldArgs));
@@ -335,10 +354,11 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
 
     // Assets
     QString assetsIndex = "legacy";
-    if (m_versionJson.contains("assets")) {
+    if (m_versionJson.contains("assets") && m_versionJson["assets"].is_string()) {
         assetsIndex = QString::fromStdString(m_versionJson["assets"].get<std::string>());
     }
-    if (m_versionJson.contains("assetIndex") && m_versionJson["assetIndex"].contains("id")) {
+    if (m_versionJson.contains("assetIndex") && m_versionJson["assetIndex"].contains("id")
+            && m_versionJson["assetIndex"]["id"].is_string()) {
         assetsIndex = QString::fromStdString(m_versionJson["assetIndex"]["id"].get<std::string>());
     }
     r["assets_index_name"] = assetsIndex;
@@ -355,12 +375,13 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
     QList<LibEntry> libEntries;
     if (m_versionJson.contains("libraries")) {
         for (const auto &lib : m_versionJson["libraries"]) {
+            if (!lib.is_object()) continue; // 畸形条目跳过
             if (lib.contains("rules") && !checkRules(lib["rules"])) continue;
             QString path;
-            QString mavenName = QString::fromStdString(lib.value("name", ""));
+            QString mavenName = QString::fromStdString(jsonStr(lib, "name"));
             if (lib.contains("downloads") && lib["downloads"].contains("artifact")) {
-                // const json 上用 operator[] 取缺失键是 UB，用 value() 兜底
-                std::string libPath = lib["downloads"]["artifact"].value("path", "");
+                // const json 上用 operator[] 取缺失键是 UB，且字段类型可能畸形，用 jsonStr 兜底
+                std::string libPath = jsonStr(lib["downloads"]["artifact"], "path");
                 if (libPath.empty()) continue;
                 path = mcFolder + "libraries/" + QString::fromStdString(libPath);
             } else {
@@ -434,25 +455,28 @@ bool LaunchBuilder::checkRules(const json &rules) {
     bool allowed = false;
 
     for (const auto &rule : rules) {
-        bool ruleAllows = (rule.value("action", "allow") == "allow");
+        if (!rule.is_object()) continue; // 畸形规则跳过
+        bool ruleAllows = (jsonStr(rule, "action", "allow") == "allow");
 
         // If no conditions, the rule matches
         bool matches = true;
 
         if (rule.contains("os")) {
             matches = false;
-            auto &os = rule["os"];
-            std::string osName = os.value("name", "");
-            std::string osArch = os.value("arch", "");
+            const auto &os = rule["os"];
+            if (os.is_object()) {
+                std::string osName = jsonStr(os, "name");
+                std::string osArch = jsonStr(os, "arch");
 
-            bool osMatch = true;
-            if (!osName.empty()) {
-                osMatch = (osName == platformName().toStdString());
+                bool osMatch = true;
+                if (!osName.empty()) {
+                    osMatch = (osName == platformName().toStdString());
+                }
+                if (!osArch.empty()) {
+                    osMatch = osMatch && (osArch == (is64BitSystem() ? "x86_64" : "x86"));
+                }
+                matches = osMatch;
             }
-            if (!osArch.empty()) {
-                osMatch = osMatch && (osArch == (is64BitSystem() ? "x86_64" : "x86"));
-            }
-            matches = osMatch;
         }
 
         if (rule.contains("features")) {
@@ -475,7 +499,7 @@ bool LaunchBuilder::checkFeatures(const json &features) {
     // - "has_quick_plays_support": true for 1.20+
     if (!features.is_object()) return true;
 
-    if (features.contains("is_demo_user")) {
+    if (features.contains("is_demo_user") && features["is_demo_user"].is_boolean()) {
         if (features["is_demo_user"].get<bool>()) return false;
     }
 

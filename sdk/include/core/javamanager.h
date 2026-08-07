@@ -55,7 +55,8 @@ public:
 
     // ---- Accessors ----
 
-    const QList<JavaEntry>& javaList() const { return m_javaList; }
+    /// 锁内按值拷贝返回（扫描线程并发写 m_javaList，返回引用会 data race）
+    QList<JavaEntry> javaList() const { QMutexLocker lock(&m_mutex); return m_javaList; }
     QStringList javaNames() const;
     /// QML 用：锁内按值拷贝的 Java 列表
     /// [{pathJava, pathFolder, display, majorVersion, is64Bit, isUserImport}]
@@ -63,8 +64,6 @@ public:
     int javaCount() const;
     bool isScanning() const { return m_isScanning; }
     QString selectedJavaName() const;
-    JavaEntry* selectedJava() { return m_selectedJava; }
-    void setSelectedJava(JavaEntry *entry);
 
     // ---- Download ----
 

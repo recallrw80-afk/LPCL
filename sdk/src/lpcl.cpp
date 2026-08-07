@@ -259,7 +259,12 @@ static void maybeInstallGlfw34(const McVersion &version) {
 
     QString jarPath = mcFolder + "libraries/org/lwjgl/lwjgl-glfw/" + lwjglVer +
                       "/lwjgl-glfw-" + lwjglVer + "-natives-linux.jar";
-    if (!QFile::exists(jarPath)) return;
+    QString bak = jarPath + ".bak-vanilla";
+    if (!QFile::exists(jarPath)) {
+        // 上次替换中途失败可能留下 jar 缺失：有备份先恢复再重试，避免 jar 永久缺失
+        if (QFile::exists(bak)) QFile::copy(bak, jarPath);
+        if (!QFile::exists(jarPath)) return;
+    }
 
     QString tmpJar = mcFolder + "tmp/lwjgl-glfw-3.3.6-natives-linux.jar";
     bool ok = waitForAsync([&](std::function<void(bool, QString)> cb) {
@@ -267,16 +272,30 @@ static void maybeInstallGlfw34(const McVersion &version) {
             "https://repo1.maven.org/maven2/org/lwjgl/lwjgl-glfw/3.3.6/lwjgl-glfw-3.3.6-natives-linux.jar",
             tmpJar, nullptr, cb);
     });
+    // 替换前校验产物是合法 zip（防截断/错误页写进 libraries 后游戏起不来）
+    if (ok && FileUtils::listZipEntries(tmpJar).isEmpty()) {
+        qWarning() << "IME 修复: 下载的 lwjgl-glfw jar 不是合法 zip，放弃替换";
+        ok = false;
+    }
+    if (ok && !QFile::exists(bak)) {
+        // 原 jar 备份只做一次；备份失败则中止，否则替换失败无源可恢复
+        ok = QFile::copy(jarPath, bak);
+        if (!ok) qWarning() << "IME 修复: 备份原 jar 失败，放弃替换";
+    }
     if (ok) {
-        QString bak = jarPath + ".bak-vanilla";
-        if (!QFile::exists(bak))
-            QFile::copy(jarPath, bak);                         // 原 jar 备份只做一次
         QFile::remove(jarPath);
         ok = QFile::copy(tmpJar, jarPath);
         if (ok) {
             QFile m(marker);
             if (m.open(QIODevice::WriteOnly)) m.write("lwjgl-glfw 3.3.6 (GLFW 3.4)\n");
             qWarning() << "IME 修复: MC" << vanillaId << "将使用 GLFW 3.4（保留中文输入）";
+        } else {
+            // 替换失败：清掉可能的半成品（QFile::copy 遇已存在目标会失败），从备份恢复原 jar
+            QFile::remove(jarPath);
+            if (QFile::copy(bak, jarPath))
+                qWarning() << "IME 修复: 替换失败，已从备份恢复原 jar";
+            else
+                qWarning() << "IME 修复: 替换失败且备份恢复失败:" << jarPath;
         }
     }
     QFile::remove(tmpJar);
@@ -694,8 +713,11 @@ bool removePlayer(const QString &uuid) {
     if (uuid.isEmpty()) return false;
     if (!Settings::instance().playerProfiles().contains(uuid)) return false;
     Settings::instance().removeProfile(uuid);
-    if (Settings::instance().selectedPlayer() == uuid)
-        Settings::instance().selectPlayer(QString());
+    if (Settings::instance().selectedPlayer() == uuid) {
+        // 删掉的是选中玩家：回退选中剩余首个玩家，没有才置空
+        QStringList rest = Settings::instance().playerProfiles();
+        Settings::instance().selectPlayer(rest.isEmpty() ? QString() : rest.first());
+    }
     return true;
 }
 
@@ -710,7 +732,9 @@ bool selectPlayer(const QString &uuid) {
 // accessToken/clientToken 加密落盘（CryptoUtils DES），服务器/名称/UUID 明文仅用于展示
 static void persistAuthlibLogin(const LoginResult &r) {
     auto &s = Settings::instance();
-    s.setString("Authlib/Server", r.serverUrl);
+    QString server = r.serverUrl;
+    while (server.endsWith('/')) server.chop(1);  // 统一无尾斜杠落盘
+    s.setString("Authlib/Server", server);
     s.setEncrypted("Authlib/AccessToken", r.accessToken);
     s.setEncrypted("Authlib/ClientToken", r.clientToken);
     s.setString("Authlib/Name", r.name);
@@ -719,8 +743,12 @@ static void persistAuthlibLogin(const LoginResult &r) {
 
 void loginAuthlib(const QString &serverUrl, const QString &username, const QString &password,
                   AuthlibLoginCallback onComplete) {
+    // 尾斜杠归一化下沉到 SDK：AuthlibAuth 只补缺失的 / 不去多余的，
+    // 带尾斜杠会拼出 //authserver/...，且原样回显进 r.serverUrl
+    QString server = serverUrl;
+    while (server.endsWith('/')) server.chop(1);
     auto *auth = new AuthlibAuth();  // 流程结束即 deleteLater 自毁
-    auth->setServerUrl(serverUrl);
+    auth->setServerUrl(server);
     auth->setUsername(username);
     auth->setPassword(password);
     auth->login([auth, onComplete](bool ok, LoginResult r) {

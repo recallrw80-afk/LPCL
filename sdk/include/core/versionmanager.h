@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QList>
 #include <QMap>
+#include <QMutex>
 #include <QVariantList>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
@@ -97,6 +98,8 @@ signals:
 private:
     VersionManager() = default;
 
+    // m_mutex 保护 m_mcFolder：Java 扫描线程会经 mcFolder() 跨线程读取
+    mutable QMutex m_mutex;
     QString m_mcFolder;
     QList<McVersionInfo> m_versionList;
     QNetworkAccessManager *m_nam = nullptr;

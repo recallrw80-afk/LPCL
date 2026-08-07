@@ -31,11 +31,17 @@ bool extractZip(const QString &zipPath, const QString &destDir,
 QString findMcRoot(const QStringList &entries);
 bool validateInstanceName(const QString &name);
 
+// 导入临时目录（common.cpp）：本进程专属 {mcFolder}/tmp/<pid>/，
+// 多进程并发 inpack 各自隔离，只建/删自己的子目录，不再整目录清 tmp/
+QString packTmpRoot();
+// 清理本进程的 tmp/<pid>/（成功/失败路径都调；FileUtils::removeTree 不顺符号链接）
+void cleanupPackTmp();
+
 // ---- .incomplete 标记与回滚（common.cpp） ----
 
 void markIncomplete(const QString &finalDir);
 void markComplete(const QString &finalDir);
-void cleanupOnError(const QString &finalDir);  // 删实例目录 + INI 映射
+void cleanupOnError(const QString &finalDir);  // 删实例目录 + INI 映射 + 本进程 tmp/<pid>/
 bool checkNameConflict(const QString &targetDir, const QString &name,
                        bool explicitName, PackCompleteCallback onComplete);
 

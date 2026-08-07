@@ -19,93 +19,6 @@ DownloadManager::DownloadManager() {
     m_nam = new QNetworkAccessManager(this);
 }
 
-// ---- Concurrency control ----
-
-void DownloadManager::setMaxConcurrent(int max)
-{
-    m_maxConcurrent = qMax(1, max);
-    processQueue();
-}
-
-void DownloadManager::enqueue(const QueueEntry &entry)
-{
-    m_queue.enqueue(entry);
-    processQueue();
-}
-
-void DownloadManager::processQueue()
-{
-    while (m_activeCount < m_maxConcurrent && !m_queue.isEmpty()) {
-        QueueEntry entry = m_queue.dequeue();
-        m_activeCount++;
-        emit activeCountChanged(m_activeCount);
-
-        // Apply mirror URL rewriting
-        QString url = applyMirror(entry.url);
-
-        downloadInternal(url, entry.savePath, entry.onProgress,
-            [this, entry](bool success, QString msg) {
-                onDownloadFinished();
-                if (entry.onComplete) entry.onComplete(success, msg);
-            }, entry.retries);
-    }
-}
-
-void DownloadManager::onDownloadFinished()
-{
-    m_activeCount--;
-    emit activeCountChanged(m_activeCount);
-    // Process next item in queue
-    QTimer::singleShot(0, this, &DownloadManager::processQueue);
-}
-
-// ---- Mirror source ----
-
-void DownloadManager::setMirrorSource(MirrorSource source)
-{
-    m_mirror = source;
-}
-
-QString DownloadManager::applyMirror(const QString &url) const
-{
-    if (m_mirror == None) return url;
-
-    // BMCLAPI mirror: https://bmclapi2.bangbang93.com
-    // Rewrites Mojang URLs:
-    //   launchermeta.mojang.com → bmclapi2.bangbang93.com
-    //   launcher.mojang.com → bmclapi2.bangbang93.com
-    //   resources.download.minecraft.net → bmclapi2.bangbang93.com
-    //   libraries.minecraft.net → bmclapi2.bangbang93.com
-    //   piston-data.mojang.com → bmclapi2.bangbang93.com
-    //   piston-meta.mojang.com → bmclapi2.bangbang93.com
-
-    QString mirrored = url;
-    const QString bmclHost = "bmclapi2.bangbang93.com";
-
-    if (m_mirror == BMCLAPI) {
-        mirrored.replace("launchermeta.mojang.com", bmclHost);
-        mirrored.replace("launcher.mojang.com", bmclHost);
-        mirrored.replace("resources.download.minecraft.net", bmclHost);
-        mirrored.replace("libraries.minecraft.net", bmclHost);
-        mirrored.replace("piston-data.mojang.com", bmclHost);
-        mirrored.replace("piston-meta.mojang.com", bmclHost);
-    } else if (m_mirror == MCBBS) {
-        // MCBBS mirror (download.mcbbs.net) — similar URL rewriting
-        const QString mcbbsHost = "download.mcbbs.net";
-        mirrored.replace("launchermeta.mojang.com", mcbbsHost);
-        mirrored.replace("launcher.mojang.com", mcbbsHost);
-        mirrored.replace("resources.download.minecraft.net", mcbbsHost);
-        mirrored.replace("libraries.minecraft.net", mcbbsHost);
-        mirrored.replace("piston-data.mojang.com", mcbbsHost);
-        mirrored.replace("piston-meta.mojang.com", mcbbsHost);
-    }
-
-    if (mirrored != url) {
-        qCDebug(logDl) << "Mirror rewrite:" << url << "->" << mirrored;
-    }
-    return mirrored;
-}
-
 // ---- Simple download ----
 
 QNetworkReply* DownloadManager::download(const QString &url, const QString &savePath,
@@ -129,23 +42,35 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
 
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
-    // 传输超时：防止僵死的连接让下载链永久挂起（超时后走重试）
-    request.setTransferTimeout(30000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
 
     QNetworkReply *reply = m_nam->get(request);
 
+    // 停滞超时：首个字节到达才开始计时，之后每次传输活动重置，超时 abort 走重试。
+    // 不能用 setTransferTimeout——它从请求创建即计时，QNAM 内部排队未传输的请求会假超时
+    QTimer *stallTimer = new QTimer(reply);
+    stallTimer->setSingleShot(true);
+    stallTimer->setInterval(30000);
+    connect(stallTimer, &QTimer::timeout, reply, [reply, url]() {
+        qCWarning(logDl) << "Transfer stalled (no data for 30s), aborting:" << url;
+        reply->abort();
+    });
+    auto restartStallTimer = [stallTimer]() { stallTimer->start(); };
+    connect(reply, &QNetworkReply::readyRead, this, restartStallTimer);
+
     // Progress
     connect(reply, &QNetworkReply::downloadProgress, this,
-            [this, url, onProgress](qint64 received, qint64 total) {
+            [this, url, onProgress, restartStallTimer](qint64 received, qint64 total) {
+                restartStallTimer();
                 emit downloadProgress(url, received, total);
                 if (onProgress) onProgress(received, total);
             });
 
     // Completion
     connect(reply, &QNetworkReply::finished, this, [=, this]() {
+        stallTimer->stop();
         reply->deleteLater();
 
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
@@ -189,19 +114,28 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
         QDir().mkpath(QFileInfo(savePath).absolutePath());
 
         QFile file(savePath);
-        if (file.open(QIODevice::WriteOnly)) {
-            file.write(data);
-            file.close();
-            qCInfo(logDl) << "Downloaded:" << url << "->" << savePath
-                          << "(" << data.size() << "bytes)";
-            emit downloadFinished(url, true, savePath);
-            if (onComplete) onComplete(true, savePath);
-        } else {
+        if (!file.open(QIODevice::WriteOnly)) {
             QString err = "Cannot write to: " + savePath;
             qCWarning(logDl) << err;
             emit downloadFinished(url, false, err);
             if (onComplete) onComplete(false, err);
+            return;
         }
+        qint64 written = file.write(data);
+        file.close();
+        if (written != data.size()) {
+            // 写入不完整（如磁盘满）：删掉半成品文件，避免留下损坏产物被误用
+            file.remove();
+            QString err = "Write failed: " + savePath + " (" + file.errorString() + ")";
+            qCWarning(logDl) << "Download failed:" << url << err;
+            emit downloadFinished(url, false, err);
+            if (onComplete) onComplete(false, err);
+            return;
+        }
+        qCInfo(logDl) << "Downloaded:" << url << "->" << savePath
+                      << "(" << data.size() << "bytes)";
+        emit downloadFinished(url, true, savePath);
+        if (onComplete) onComplete(true, savePath);
     });
 
     return reply;
@@ -240,8 +174,6 @@ QNetworkReply* DownloadManager::downloadToStringWithStatus(const QString &url,
     emit downloadStarted(url);
     QNetworkRequest request(url);
     request.setRawHeader("User-Agent", "LPCL/0.1");
-    // 传输超时：防止僵死的连接让下载链永久挂起（超时后走重试）
-    request.setTransferTimeout(30000);
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
@@ -251,8 +183,19 @@ QNetworkReply* DownloadManager::downloadToStringWithStatus(const QString &url,
 
     QNetworkReply *reply = m_nam->get(request);
 
+    // 停滞超时（同 downloadInternal）：首个字节到达才计时，避免 QNAM 排队期假超时
+    QTimer *stallTimer = new QTimer(reply);
+    stallTimer->setSingleShot(true);
+    stallTimer->setInterval(30000);
+    connect(stallTimer, &QTimer::timeout, reply, [reply, url]() {
+        qCWarning(logDl) << "Transfer stalled (no data for 30s), aborting:" << url;
+        reply->abort();
+    });
+    connect(reply, &QNetworkReply::readyRead, this, [stallTimer]() { stallTimer->start(); });
+
     // Capture headers by value for retry recursion.
     connect(reply, &QNetworkReply::finished, this, [=, this]() {
+        stallTimer->stop();
         reply->deleteLater();
         int statusCode = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
         bool success = (reply->error() == QNetworkReply::NoError && statusCode < 400);

@@ -523,12 +523,7 @@ void JavaManager::getJavaCompatibilityRange(const McVersion &version,
     }
 }
 
-// Java selection (getter/setter)
-
-void JavaManager::setSelectedJava(JavaEntry *entry) {
-    m_selectedJava = entry;
-    emit selectedJavaChanged();
-}
+// Java selection (getter)
 
 QString JavaManager::selectedJavaName() const
 {

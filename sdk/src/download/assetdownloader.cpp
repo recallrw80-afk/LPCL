@@ -16,6 +16,15 @@
 
 static Q_LOGGING_CATEGORY(logAsset, "lpcl.asset")
 
+// 安全读取字符串成员：键缺失或类型不符时返回空串，避免 .value()/.get<>()
+// 类型不符抛 nlohmann 异常、穿过 Qt 信号槽导致 std::terminate（P0-3）
+static std::string jsonStrOr(const json &j, const char *key) {
+    if (!j.is_object()) return "";
+    auto it = j.find(key);
+    if (it == j.end() || !it->is_string()) return "";
+    return it->get<std::string>();
+}
+
 AssetDownloader& AssetDownloader::instance() {
     static AssetDownloader m;
     return m;
@@ -38,11 +47,19 @@ void AssetDownloader::downloadVersion(const QString &versionId,
                 return;
             }
 
+            // N3：manifest 必须是含 versions 数组的对象，否则按畸形数据报错
+            if (!manifest.is_object() ||
+                !manifest.contains("versions") || !manifest["versions"].is_array()) {
+                QString msg = "Malformed version manifest";
+                emit downloadLog(msg);
+                if (onComplete) onComplete(false, msg);
+                return;
+            }
+
             QString versionUrl;
-            auto &versions = manifest["versions"];
-            for (const auto &v : versions) {
-                if (v.value("id", "") == versionId.toStdString()) {
-                    versionUrl = QString::fromStdString(v.value("url", ""));
+            for (const auto &v : manifest["versions"]) {
+                if (jsonStrOr(v, "id") == versionId.toStdString()) {
+                    versionUrl = QString::fromStdString(jsonStrOr(v, "url"));
                     break;
                 }
             }
@@ -71,11 +88,17 @@ void AssetDownloader::downloadVersion(const QString &versionId,
                     QString jsonPath = mcRoot + "versions/" + versionId + "/" + versionId + ".json";
                     QDir().mkpath(QFileInfo(jsonPath).absolutePath());
                     QFile f(jsonPath);
-                    if (f.open(QIODevice::WriteOnly)) {
-                        f.write(QJsonDocument(QJsonDocument::fromJson(
-                            QString::fromStdString(verJson.dump()).toUtf8())).toJson());
-                        f.close();
+                    const QByteArray jsonBytes = QJsonDocument(QJsonDocument::fromJson(
+                        QString::fromStdString(verJson.dump()).toUtf8())).toJson();
+                    // N5/P1-9：落盘失败（含磁盘满写截断）必须立即报错，
+                    // 否则后续步骤会报误导性的 "Version JSON not found"
+                    if (!f.open(QIODevice::WriteOnly) || f.write(jsonBytes) != jsonBytes.size()) {
+                        QString msg = "Cannot write version JSON: " + jsonPath;
+                        emit downloadLog(msg);
+                        if (onComplete) onComplete(false, msg);
+                        return;
                     }
+                    f.close();
 
                     // Build a McVersion for path references
                     McVersion ver;
@@ -86,9 +109,9 @@ void AssetDownloader::downloadVersion(const QString &versionId,
 
                     // Parse asset index
                     QString assetIndex;
-                    if (verJson.contains("assetIndex")) {
-                        assetIndex = QString::fromStdString(verJson["assetIndex"].value("id", ""));
-                    } else if (verJson.contains("assets")) {
+                    if (verJson.contains("assetIndex") && verJson["assetIndex"].is_object()) {
+                        assetIndex = QString::fromStdString(jsonStrOr(verJson["assetIndex"], "id"));
+                    } else if (verJson.contains("assets") && verJson["assets"].is_string()) {
                         assetIndex = QString::fromStdString(verJson["assets"].get<std::string>());
                     }
 
@@ -163,10 +186,12 @@ void AssetDownloader::downloadClientJar(const McVersion &version,
     QString downloadUrl;
     QString expectedHash;
 
-    if (verJson.contains("downloads") && verJson["downloads"].contains("client")) {
-        auto &client = verJson["downloads"]["client"];
-        downloadUrl = QString::fromStdString(client.value("url", ""));
-        expectedHash = QString::fromStdString(client.value("sha1", ""));
+    if (verJson.contains("downloads") && verJson["downloads"].is_object()
+        && verJson["downloads"].contains("client")
+        && verJson["downloads"]["client"].is_object()) {
+        const auto &client = verJson["downloads"]["client"];
+        downloadUrl = QString::fromStdString(jsonStrOr(client, "url"));
+        expectedHash = QString::fromStdString(jsonStrOr(client, "sha1"));
     }
 
     if (downloadUrl.isEmpty()) {
@@ -215,14 +240,16 @@ void AssetDownloader::downloadClientJar(const McVersion &version,
 
 // 判断库的 rules 是否允许在当前平台使用（libraries 与 natives 共用）
 static bool rulesAllowOnThisPlatform(const json &lib) {
-    if (!lib.contains("rules")) return true;
+    if (!lib.contains("rules") || !lib["rules"].is_array()) return true;
     bool allowed = false;
     for (const auto &rule : lib["rules"]) {
-        bool ruleAllows = (rule.value("action", "allow") == "allow");
+        // 缺 action 按 "allow" 处理；类型不符时 jsonStrOr 返回空串同样放行
+        std::string action = jsonStrOr(rule, "action");
+        bool ruleAllows = (action.empty() || action == "allow");
         bool matches = true;
-        if (rule.contains("os")) {
-            std::string osName = rule["os"].value("name", "");
-            std::string osArch = rule["os"].value("arch", "");
+        if (rule.contains("os") && rule["os"].is_object()) {
+            std::string osName = jsonStrOr(rule["os"], "name");
+            std::string osArch = jsonStrOr(rule["os"], "arch");
             if (!osName.empty()) {
                 switch (currentPlatform()) {
                 case Platform::Windows: matches = (osName == "windows"); break;
@@ -253,6 +280,7 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
     QList<std::pair<QString, QString>> toDownload; // <url, savePath>
 
     for (const auto &lib : versionJson["libraries"]) {
+        if (!lib.is_object()) continue;
         if (!rulesAllowOnThisPlatform(lib)) continue;
 
         if (!lib.contains("downloads") || !lib["downloads"].contains("artifact")) {
@@ -261,10 +289,10 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
             if (lib.contains("natives")) continue;
             // 旧格式（≤1.13 的 JSON）：只有 maven name，按标准仓库推导 URL
             QString rel = FileUtils::mavenNameToPath(
-                QString::fromStdString(lib.value("name", "")));
+                QString::fromStdString(jsonStrOr(lib, "name")));
             if (rel.isEmpty()) continue;
             // 部分旧库自带仓库地址，默认 libraries.minecraft.net
-            QString base = QString::fromStdString(lib.value("url", ""));
+            QString base = QString::fromStdString(jsonStrOr(lib, "url"));
             if (base.isEmpty()) base = "https://libraries.minecraft.net/";
             if (!base.endsWith('/')) base += '/';
             QString savePath = version.pathIndie + "libraries/" + rel;
@@ -275,9 +303,9 @@ void AssetDownloader::downloadLibraries(const McVersion &version,
         }
 
         auto &artifact = lib["downloads"]["artifact"];
-        std::string url = artifact.value("url", "");
-        std::string path = artifact.value("path", "");
-        std::string sha1 = artifact.value("sha1", "");
+        std::string url = jsonStrOr(artifact, "url");
+        std::string path = jsonStrOr(artifact, "path");
+        std::string sha1 = jsonStrOr(artifact, "sha1");
 
         if (url.empty() || path.empty()) continue;
 
@@ -345,20 +373,24 @@ void AssetDownloader::downloadAssets(const McVersion &version,
     json verJson = json::parse(f.readAll().toStdString(), nullptr, false);
     f.close();
 
-    QString assetIndexId;
-    if (verJson.contains("assetIndex")) {
-        assetIndexId = QString::fromStdString(verJson["assetIndex"].value("id", ""));
-        if (assetIndexId.isEmpty() && verJson["assetIndex"].contains("id")) {
-            // Already extracted above, but check the inner id
-            assetIndexId = QString::fromStdString(verJson["assetIndex"]["id"].get<std::string>());
-        }
+    // P1-10：解析失败（语法错误）必须报错，不能当成功继续
+    if (verJson.is_discarded()) {
+        if (onComplete) onComplete(false, "Invalid version JSON");
+        return;
     }
-    if (assetIndexId.isEmpty() && verJson.contains("assets")) {
+
+    QString assetIndexId;
+    if (verJson.contains("assetIndex") && verJson["assetIndex"].is_object()) {
+        assetIndexId = QString::fromStdString(jsonStrOr(verJson["assetIndex"], "id"));
+    }
+    if (assetIndexId.isEmpty() && verJson.contains("assets") && verJson["assets"].is_string()) {
         assetIndexId = QString::fromStdString(verJson["assets"].get<std::string>());
     }
 
     QString assetIndexUrl;
-    if (verJson.contains("assetIndex") && verJson["assetIndex"].contains("url")) {
+    if (verJson.contains("assetIndex") && verJson["assetIndex"].is_object()
+        && verJson["assetIndex"].contains("url")
+        && verJson["assetIndex"]["url"].is_string()) {
         assetIndexUrl = QString::fromStdString(verJson["assetIndex"]["url"].get<std::string>());
     }
 
@@ -375,14 +407,17 @@ void AssetDownloader::downloadAssets(const McVersion &version,
         QString idxPath = version.pathIndie + "assets/indexes/" + assetIndexId + ".json";
         QDir().mkpath(QFileInfo(idxPath).absolutePath());
         QFile idxFile(idxPath);
-        if (idxFile.open(QIODevice::WriteOnly)) {
-            idxFile.write(QString::fromStdString(assetIndexJson.dump()).toUtf8());
-            idxFile.close();
-        } else {
-            emit downloadLog("Cannot write asset index: " + idxPath);
+        const QByteArray idxBytes = QString::fromStdString(assetIndexJson.dump()).toUtf8();
+        // P1-9：写失败/磁盘满截断必须报错走失败回调，不能静默继续
+        if (!idxFile.open(QIODevice::WriteOnly) || idxFile.write(idxBytes) != idxBytes.size()) {
+            QString msg = "Cannot write asset index: " + idxPath;
+            emit downloadLog(msg);
+            if (onComplete) onComplete(false, msg);
+            return;
         }
+        idxFile.close();
 
-        if (!assetIndexJson.contains("objects")) {
+        if (!assetIndexJson.contains("objects") || !assetIndexJson["objects"].is_object()) {
             if (onComplete) onComplete(true, QString());
             return;
         }
@@ -391,7 +426,7 @@ void AssetDownloader::downloadAssets(const McVersion &version,
         QList<std::pair<QString, QString>> toDownload; // <url, savePath>
 
         for (auto it = objects.begin(); it != objects.end(); ++it) {
-            std::string hash = it.value().value("hash", "");
+            std::string hash = jsonStrOr(it.value(), "hash");
             if (hash.empty()) continue;
 
             QString hashStr = QString::fromStdString(hash);
@@ -478,7 +513,13 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     json verJson = json::parse(f.readAll().toStdString(), nullptr, false);
     f.close();
 
-    if (!verJson.contains("libraries")) {
+    // P1-10：解析失败（语法错误）必须报错，不能当成功继续
+    if (verJson.is_discarded()) {
+        if (onComplete) onComplete(false, "Invalid version JSON");
+        return;
+    }
+
+    if (!verJson.contains("libraries") || !verJson["libraries"].is_array()) {
         if (onComplete) onComplete(true, QString());
         return;
     }
@@ -499,14 +540,15 @@ void AssetDownloader::downloadNatives(const McVersion &version,
     const std::string nativesSuffix = ":natives-" + osName.toStdString();
 
     for (const auto &lib : verJson["libraries"]) {
+        if (!lib.is_object()) continue;
         if (!rulesAllowOnThisPlatform(lib)) continue;
 
-        std::string libName = lib.value("name", "");
+        std::string libName = jsonStrOr(lib, "name");
 
         // 新格式：jar 已由 downloadLibraries 按普通 artifact 下载，此处只收集路径待解压
         if (libName.size() > nativesSuffix.size() && libName.ends_with(nativesSuffix)) {
             if (lib.contains("downloads") && lib["downloads"].contains("artifact")) {
-                std::string p = lib["downloads"]["artifact"].value("path", "");
+                std::string p = jsonStrOr(lib["downloads"]["artifact"], "path");
                 if (!p.empty())
                     allNativeJars.append(version.pathIndie + "libraries/" + QString::fromStdString(p));
             }
@@ -514,7 +556,8 @@ void AssetDownloader::downloadNatives(const McVersion &version,
         }
 
         // 旧格式（≤1.18）：downloads.classifiers 里的 natives-<os> 条目
-        if (!lib.contains("natives") && !lib.contains("downloads")) continue;
+        // downloads 键缺失时 const operator[] 是 UB，必须先 contains 判定
+        if (!lib.contains("downloads")) continue;
 
         auto &downloads = lib["downloads"];
         if (!downloads.contains("classifiers")) continue;
@@ -533,10 +576,10 @@ void AssetDownloader::downloadNatives(const McVersion &version,
         }
 
         auto &native = classifiers[classifierKey];
-        std::string url = native.value("url", "");
+        std::string url = jsonStrOr(native, "url");
         // 必须用 classifier 产物的 maven 路径（形如 org/lwjgl/.../x-natives-linux.jar），
         // 不能用 lib["name"]（maven 坐标，不是文件路径）
-        std::string path = native.value("path", "");
+        std::string path = jsonStrOr(native, "path");
 
         if (url.empty() || path.empty()) continue;
 
@@ -547,7 +590,7 @@ void AssetDownloader::downloadNatives(const McVersion &version,
         // Check if the native JAR already exists
         if (QFileInfo::exists(savePath)) {
             // Check SHA1 if available
-            std::string sha1 = native.value("sha1", "");
+            std::string sha1 = jsonStrOr(native, "sha1");
             if (!sha1.empty() && FileUtils::verifySha1(savePath, QString::fromStdString(sha1)))
                 continue;
         }

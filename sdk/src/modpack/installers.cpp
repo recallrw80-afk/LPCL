@@ -384,7 +384,7 @@ void installLauncherPack(const QString &filePath, const QString &packDir,
                          PackProgressCallback onProgress,
                          PackCompleteCallback onComplete) {
     QString mcFolder = VersionManager::instance().mcFolder();
-    QString tmpRoot = mcFolder + "tmp/";
+    QString tmpRoot = packTmpRoot();
 
     // 1. 找到内层 zip/mrpack
     QStringList candidates;
@@ -416,7 +416,7 @@ void installLauncherPack(const QString &filePath, const QString &packDir,
 
     // 2. 解压内层 zip 到临时目录
     QString mergeDir = tmpRoot + "launcher_merge/";
-    QDir(mergeDir).removeRecursively();
+    FileUtils::removeTree(mergeDir);
     QDir().mkpath(mergeDir);
     if (onProgress) onProgress("Extracting inner modpack...", 10);
     if (!extractZip(innerPack, mergeDir, onProgress, 10)) {
@@ -455,7 +455,7 @@ void installLauncherPack(const QString &filePath, const QString &packDir,
         QString src = finalDir + shared;
         if (QDir(src).exists()) {
             if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
-            QDir(src).removeRecursively();
+            FileUtils::removeTree(src);
         }
     }
 
@@ -517,7 +517,7 @@ static void processCompressedRoot(const QString &rootDir, bool isPclPack,
         QString src = finalDir + shared;
         if (QDir(src).exists()) {
             if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
-            QDir(src).removeRecursively();
+            FileUtils::removeTree(src);
         }
     }
 
@@ -549,7 +549,7 @@ void installCompressed(const QString &filePath, const QString &packDir,
     }
 
     // Step 2: 递归解压内层 zip（最多二级），查找 .minecraft
-    QString tmpRoot = mcFolder + "tmp/";
+    QString tmpRoot = packTmpRoot();
     QList<QPair<QString, int>> zipQueue;
     int innerSeq = 0;
 
@@ -619,13 +619,13 @@ void installCompressed(const QString &filePath, const QString &packDir,
 
     // Compressed 已含全部文件，直接在 tmp 解压后移入
     QString instanceDir = QDir(finalDir).dirName();
-    QString workDir = mcFolder + "tmp/extract_" + instanceDir + "/";
-    QDir(workDir).removeRecursively();
+    QString workDir = packTmpRoot() + "extract_" + instanceDir + "/";
+    FileUtils::removeTree(workDir);
     QDir().mkpath(workDir);
 
     if (onProgress) onProgress("Extracting...", 20);
     if (!extractZip(filePath, workDir, onProgress, 25)) {
-        QDir(workDir).removeRecursively();
+        FileUtils::removeTree(workDir);
         cleanupOnError(finalDir);
         if (onComplete) onComplete(false, "Extraction failed");
         return;
@@ -637,30 +637,30 @@ void installCompressed(const QString &filePath, const QString &packDir,
         if (QDir(innerDir).exists() && innerDir != workDir) {
             // 复制失败不能删原件继续——按失败回滚
             if (!copyDir(innerDir, workDir)) {
-                QDir(workDir).removeRecursively();
+                FileUtils::removeTree(workDir);
                 cleanupOnError(finalDir);
                 if (onComplete) onComplete(false, "Copy inner content failed");
                 return;
             }
-            QDir(innerDir).removeRecursively();
+            FileUtils::removeTree(innerDir);
         }
     }
 
     QDir().mkpath(QFileInfo(finalDir).absolutePath());
     if (!copyDir(workDir, finalDir)) {
-        QDir(workDir).removeRecursively();
+        FileUtils::removeTree(workDir);
         cleanupOnError(finalDir);
         if (onComplete) onComplete(false, "Copy to instance directory failed");
         return;
     }
-    QDir(workDir).removeRecursively();
+    FileUtils::removeTree(workDir);
 
     // 包内 assets/libraries 合并进全局共享目录——资源不能丢
     for (const auto &shared : {"assets", "libraries"}) {
         QString src = finalDir + shared;
         if (QDir(src).exists()) {
             if (!copyOrFail(src, mcFolder + shared + "/", onComplete)) return;
-            QDir(src).removeRecursively();
+            FileUtils::removeTree(src);
         }
     }
 
@@ -673,7 +673,7 @@ void installCompressed(const QString &filePath, const QString &packDir,
     ini.endGroup();
     ini.sync();
     writeInstanceMapping(instanceDir, name);
-    QDir(mcFolder + "tmp/").removeRecursively();
+    cleanupPackTmp();
     markComplete(finalDir);
     if (onComplete) onComplete(true, name);
 }
@@ -708,5 +708,7 @@ void installMod(const QString &packDir, const QString &targetInstance,
             copied++;
     }
     if (onProgress) onProgress("Complete", 100);
+    // mod 包不走下载管线（无 finalizeNow），成功时自行清理本进程 tmp/<pid>/
+    cleanupPackTmp();
     if (onComplete) onComplete(true, QString("%1 mod(s) added to %2").arg(copied).arg(targetInstance));
 }

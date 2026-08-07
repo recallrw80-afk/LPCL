@@ -105,6 +105,18 @@ static QString makeSyntheticModPack(const QString &workDir) {
     return zip.exitCode() == 0 ? zipPath : QString();
 }
 
+// 探测 zip 命令是否可用（合成包冒烟的前置条件，不可用时相关用例标 SKIP 而非 FAIL）
+static bool zipAvailable() {
+    QProcess zip;
+    zip.start("zip", {"-v"});
+    if (!zip.waitForFinished(5000)) {
+        zip.kill();
+        zip.waitForFinished(1000);
+        return false;
+    }
+    return zip.exitCode() == 0;
+}
+
 struct TestItem {
     QString cmd;
     QString status;  // OK / WARN / FAIL / SKIP
@@ -311,11 +323,35 @@ static QList<TestItem> runCommandTests() {
             fail("deduplicateArgs", "输出异常: " + out.join(" "));
     }
 
+    // deduplicateArgs 配对场景：-cp / --server / --port 带值参数同去同留，值不得成孤儿
+    {
+        QStringList in = {"-cp", "libs/a.jar", "-Xmx2G",
+                          "-cp", "libs/b.jar",
+                          "--server", "a.com", "--port", "25566",
+                          "--server", "b.com", "--port", "25565"};
+        auto out = ArgUtils::deduplicateArgs(in);
+        QStringList expect = {"-Xmx2G", "-cp", "libs/b.jar",
+                              "--server", "b.com", "--port", "25565"};
+        if (out == expect)
+            ok("deduplicateArgs-pair", "带值参数配对去重 正常");
+        else
+            fail("deduplicateArgs-pair", "输出异常: " + out.join(" "));
+    }
+
     // ---- 合成包冒烟（inpack 端到端，需要网络与游戏目录） ----
     {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (folder.isEmpty()) {
             warn("inpack-smoke", "游戏目录未设置，跳过合成包冒烟");
+        } else if (!zipAvailable()) {
+            // 无 zip 命令无法合成测试包：相关用例标 SKIP 而非 FAIL（环境缺失，不算失败）
+            // mc-install 依赖 inpack-112 留下的 1.12.2 缓存，一并跳过
+            skip("detectPackType", "zip 命令不可用，跳过");
+            skip("inpack-cf", "zip 命令不可用，跳过");
+            skip("inpack-rollback", "zip 命令不可用，跳过");
+            skip("inpack-loader-rollback", "zip 命令不可用，跳过");
+            skip("inpack-112", "zip 命令不可用，跳过");
+            skip("mc-install", "zip 命令不可用，跳过");
         } else {
             VersionManager::instance().setMcFolder(folder);
             QString base = QDir::temp().filePath("_lpcl_smoke_"
@@ -332,7 +368,7 @@ static QList<TestItem> runCommandTests() {
                 if (typeOk) ok("detectPackType", "CF/HMCL 合成包识别正确");
                 else fail("detectPackType", "类型识别错误");
             } else {
-                fail("detectPackType", "合成测试包失败（zip 命令不可用？）");
+                fail("detectPackType", "合成测试包失败（zip 可用但打包失败）");
             }
 
             // CF 成功路：1 个真实 mod（JEI）→ 导入成功 + 实例可见
@@ -477,6 +513,7 @@ int handleTest() {
     std::cout << _("=== LPCL 全系统自检 ===\n", "=== LPCL System Self-Test ===\n") << std::endl;
 
     auto results = runCommandTests();
+    bool hasFail = false;
     for (const auto &r : results) {
         QString tag;
         if (r.status == "OK")      tag = "\033[32m[ OK ]\033[0m";
@@ -485,9 +522,11 @@ int handleTest() {
         else if (r.status == "SKIP")   tag = "\033[90m[SKIP]\033[0m";
         else                      tag = "[INFO]";
 
+        if (r.status == "FAIL") hasFail = true;
         std::cout << "  " << tag.toStdString() << " "
                   << QString("%1").arg(r.cmd, -22).toStdString()
                   << r.detail.toStdString() << std::endl;
     }
-    return 0;
+    // 存在 FAIL 项时以非零退出码返回，便于脚本/CI 判定
+    return hasFail ? 1 : 0;
 }

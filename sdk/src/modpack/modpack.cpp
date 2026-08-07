@@ -1,4 +1,4 @@
-// 整合包导入入口：类型检测 → 解压到 tmp/pack/ → 派发到类型安装器
+// 整合包导入入口：类型检测 → 解压到 tmp/<pid>/pack/ → 派发到类型安装器
 #include "modpack_common.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
@@ -77,32 +77,38 @@ void installModpack(const QString &filePath,
         return;
     }
 
+    // 包装完成回调：所有失败路径（含异步链深处）统一兜底清理本进程 tmp/<pid>/
+    PackCompleteCallback guardedComplete = [onComplete](bool ok, const QString &msg) {
+        if (!ok) cleanupPackTmp();
+        if (onComplete) onComplete(ok, msg);
+    };
+
     if (onProgress) onProgress("Detecting modpack type...", 5);
 
     PackType type = detectPackType(filePath);
     if (onProgress) onProgress("Type: " + packTypeName(type), 8);
 
-    // 在游戏目录下创建 tmp 目录，解压到 tmp/pack/
+    // 在游戏目录下创建本进程专属 tmp/<pid>/，解压到其下 pack/
     QString mcFolder = VersionManager::instance().mcFolder();
     // 设置 mcFolder 供 AssetDownloader 兜底使用
     DownloadManager::instance().setProperty("mcFolder", mcFolder);
-    QString tmpRoot = mcFolder + "tmp/";
+    QString tmpRoot = packTmpRoot();
 
-    // 清理旧 tmp，确保干净环境
-    QDir(tmpRoot).removeRecursively();
+    // 只清本进程子目录（上次崩溃残留），不动其他进程的 tmp/<pid>/
+    cleanupPackTmp();
     QDir().mkpath(tmpRoot);
 
     QString packDir = tmpRoot + "pack/";
     QDir().mkpath(packDir);
 
     if (!extractZip(filePath, packDir, onProgress, 10)) {
-        if (onComplete) onComplete(false, "Extraction failed");
-        QDir(tmpRoot).removeRecursively();
+        cleanupPackTmp();
+        guardedComplete(false, "Extraction failed");
         return;
     }
 
-    installModpackFromDir(filePath, packDir, type, instanceName, targetInstance, onProgress, onComplete);
+    installModpackFromDir(filePath, packDir, type, instanceName, targetInstance, onProgress, guardedComplete);
 
-    // 注意：tmp/ 不在此清理——异步下载链末尾的 finalizeNow() 会统一清理；
-    // 同步路径（Compressed Step 3）已自行清理。
+    // 注意：tmp/<pid>/ 不在此清理——异步下载链末尾的 finalizeNow() 会统一清理；
+    // 同步路径（Compressed Step 3 / Mod 包）已自行清理，失败路径由 guardedComplete 兜底。
 }

@@ -54,9 +54,20 @@ int readByte() {
     if (c != 27) return (unsigned char)c;
     pollfd pfd{STDIN_FILENO, POLLIN, 0};
     if (poll(&pfd, 1, 40) <= 0) return 27;   // 单独 ESC
-    char seq[2];
-    if (::read(STDIN_FILENO, &seq[0], 1) != 1) return 27;
-    if (seq[0] == '[') (void)::read(STDIN_FILENO, &seq[1], 1);  // 吞掉序列尾
+    char c1;
+    if (::read(STDIN_FILENO, &c1, 1) != 1) return 27;
+    if (c1 == 'O') {
+        // SS3 序列（如 ESC O P）：吞掉最终字节
+        (void)::read(STDIN_FILENO, &c1, 1);
+        return 0;
+    }
+    if (c1 == '[') {
+        // CSI 序列：持续吞到最终字节 0x40-0x7E（如 ESC [ 3 ~ 是 Delete），上限防异常序列死循环
+        for (int i = 0; i < 16; ++i) {
+            if (::read(STDIN_FILENO, &c1, 1) != 1) break;
+            if (c1 >= 0x40 && c1 <= 0x7E) break;
+        }
+    }
     return 0;
 }
 

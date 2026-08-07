@@ -31,8 +31,8 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
         ini.sync();
         // 写入 INI 实例映射（随机目录名 → 显示名）
         writeInstanceMapping(QDir(finalDir).dirName(), name);
-        // 清理 tmp 目录 + 移除 .incomplete 标记
-        QDir(VersionManager::instance().mcFolder() + "tmp/").removeRecursively();
+        // 清理本进程 tmp/<pid>/ + 移除 .incomplete 标记
+        cleanupPackTmp();
         markComplete(finalDir);
         if (onProgress) onProgress("Complete", 100);
         if (onComplete) onComplete(true, name);
@@ -48,7 +48,7 @@ void downloadModsAsync(const QList<ModDownloadEntry> &mods, int index,
     if (onProgress) onProgress(QString("Downloading mod (%1/%2)...").arg(index + 1).arg(mods.size()),
                                 70 + (30 * index / mods.size()));
 
-    // 任一 mod 下载失败 = 整合包导入失败：回滚删除实例，不再继续
+    // 任一 mod 下载失败 = 整合包导入失败：回滚删除实例 + 清本进程 tmp（cleanupOnError），不再继续
     auto failNow = [=](const QString &what) {
         qWarning() << "Mod download failed, rolling back:" << what;
         cleanupOnError(finalDir);

@@ -106,7 +106,7 @@ static int handleSetMem(const QStringList &args) {
 
 // 最近一份启动日志的末尾，脱敏：accessToken 打码、家目录缩略为 ~
 static QString latestLaunchLogTail(int maxLines, int maxChars) {
-    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
+    QString mcFolder = VersionManager::instance().mcFolder();  // 尊重 --folder 一次性覆盖
     if (mcFolder.isEmpty()) return QString();
     QDir logDir(mcFolder + "/logs");
     const auto files = logDir.entryInfoList({"lpcl-launch-*.log"}, QDir::Files, QDir::Time);

@@ -3,6 +3,7 @@
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "util/file_utils.h"
+#include <QCoreApplication>
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
@@ -69,7 +70,17 @@ bool validateInstanceName(const QString &name) {
     return true;
 }
 
-// 获取导入临时工作目录
+// 本进程专属的导入临时目录 {mcFolder}/tmp/<pid>/（多进程并发 inpack 互不互删）
+QString packTmpRoot() {
+    return VersionManager::instance().mcFolder() + "tmp/" +
+           QString::number(QCoreApplication::applicationPid()) + "/";
+}
+
+// 清理本进程的导入临时目录（不顺符号链接；路径不存在视为成功）
+void cleanupPackTmp() {
+    FileUtils::removeTree(packTmpRoot());
+}
+
 // 标记实例目录为"导入中"（.incomplete 文件），完成后删除
 void markIncomplete(const QString &finalDir) {
     QDir().mkpath(finalDir);
@@ -81,12 +92,13 @@ void markComplete(const QString &finalDir) {
     QFile::remove(finalDir + ".incomplete");
 }
 
-// 导入失败时回滚：删实例目录 + 清理 INI 映射
+// 导入失败时回滚：删实例目录 + 清理 INI 映射 + 清本进程 tmp/<pid>/
 void cleanupOnError(const QString &finalDir) {
     QString dirName = QDir(finalDir).dirName();
-    QDir(finalDir).removeRecursively();
+    FileUtils::removeTree(finalDir);  // 不顺符号链接（包内容不可控）
     if (!dirName.isEmpty())
         Settings::instance().removeInstanceDir(dirName);
+    cleanupPackTmp();
 }
 
 bool checkNameConflict(const QString &targetDir, const QString &name,

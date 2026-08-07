@@ -28,6 +28,7 @@ VersionManager& VersionManager::instance() {
 // Minecraft folder
 
 QString VersionManager::mcFolder() {
+    QMutexLocker lock(&m_mutex);
     if (m_mcFolder.isEmpty()) {
         // 惰性解析：Settings 的 LaunchFolderSelect → 默认可执行文件旁 ./mc/
         // （组 A 命令（如 list-javas）不走 setMcFolder，也依赖此默认值）
@@ -41,14 +42,17 @@ QString VersionManager::mcFolder() {
 
 void VersionManager::setMcFolder(const QString &path, bool persist) {
     QString normalized = QDir(path).absolutePath() + "/";
-    if (m_mcFolder == normalized) return;
-
-    m_mcFolder = normalized;
+    {
+        QMutexLocker lock(&m_mutex);
+        if (m_mcFolder == normalized) return;
+        m_mcFolder = normalized;
+    }
     // persist=false 用于一次性覆盖（如 CLI --folder），不写回配置
     if (persist)
         Settings::instance().setString("LaunchFolderSelect", path);
-    qCInfo(logVer) << "Minecraft folder set to:" << m_mcFolder;
-    emit mcFolderChanged(m_mcFolder);
+    // 用局部副本记日志/发信号：锁外重读成员可能与并发写入错开
+    qCInfo(logVer) << "Minecraft folder set to:" << normalized;
+    emit mcFolderChanged(normalized);
 
     // Reload versions
     loadLocalVersions();
@@ -263,7 +267,9 @@ void VersionManager::fetchVersionManifest() {
 
         QByteArray data = reply->readAll();
         json manifest = json::parse(data.toStdString(), nullptr, false);
-        if (manifest.is_discarded() || !manifest.contains("versions")) {
+        // versions 必须是数组：语法合法但结构畸形（对象/字符串等）同样按无效处理
+        if (manifest.is_discarded() || !manifest.contains("versions") ||
+            !manifest["versions"].is_array()) {
             qCWarning(logVer) << "Invalid version manifest JSON";
             m_isLoading = false;
             emit loadingChanged();
@@ -282,15 +288,20 @@ void VersionManager::fetchVersionManifest() {
         // Parse remote versions
         QList<McVersionInfo> remoteVersions;
         for (const auto &v : manifest["versions"]) {
-            McVersionInfo info;
-            info.id = QString::fromStdString(v.value("id", ""));
-            info.type = QString::fromStdString(v.value("type", ""));
-            info.url = QString::fromStdString(v.value("url", ""));
-            QString timeStr = QString::fromStdString(v.value("releaseTime", ""));
-            if (!timeStr.isEmpty())
-                info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
-            info.isLocal = false;
-            remoteVersions.append(info);
+            // 单条目字段类型畸形时 .value() 抛 type_error：跳过该条，不影响其余条目
+            try {
+                McVersionInfo info;
+                info.id = QString::fromStdString(v.value("id", ""));
+                info.type = QString::fromStdString(v.value("type", ""));
+                info.url = QString::fromStdString(v.value("url", ""));
+                QString timeStr = QString::fromStdString(v.value("releaseTime", ""));
+                if (!timeStr.isEmpty())
+                    info.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+                info.isLocal = false;
+                remoteVersions.append(info);
+            } catch (const std::exception &e) {
+                qCWarning(logVer) << "Skipping malformed manifest entry:" << e.what();
+            }
         }
 
         // Merge: add remote versions not already in local list
@@ -437,22 +448,37 @@ McVersion VersionManager::parseVersionJson(const json &j, const QString &version
     ver.id = versionId;
     ver.isValid = true;
 
-    // Basic fields
-    ver.type = QString::fromStdString(j.value("type", "unknown"));
-    QString timeStr = QString::fromStdString(j.value("releaseTime", ""));
-    if (!timeStr.isEmpty()) {
-        ver.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+    // 根节点不是对象（语法合法但结构畸形）→ 版本无效
+    if (!j.is_object()) {
+        ver.isValid = false;
+        ver.info = "version json 根节点不是对象: " + versionId;
+        return ver;
     }
 
-    // Inheritance
-    ver.inheritName = QString::fromStdString(j.value("inheritsFrom", ""));
+    // 字段类型畸形时 .value()/.get() 抛 type_error，兜底为版本无效
+    // （同时覆盖 detectModLoaders/detectVanillaVersion 内的 .get<std::string>()）
+    try {
+        // Basic fields
+        ver.type = QString::fromStdString(j.value("type", "unknown"));
+        QString timeStr = QString::fromStdString(j.value("releaseTime", ""));
+        if (!timeStr.isEmpty()) {
+            ver.releaseTime = QDateTime::fromString(timeStr, Qt::ISODate);
+        }
 
-    // Detect mod loaders
-    ver.modLoader = detectModLoaders(j);
+        // Inheritance
+        ver.inheritName = QString::fromStdString(j.value("inheritsFrom", ""));
 
-    // Detect vanilla version
-    QString vanillaStr = detectVanillaVersion(j, versionId);
-    ver.vanillaVersion = QVersionNumber::fromString(vanillaStr);
+        // Detect mod loaders
+        ver.modLoader = detectModLoaders(j);
+
+        // Detect vanilla version
+        QString vanillaStr = detectVanillaVersion(j, versionId);
+        ver.vanillaVersion = QVersionNumber::fromString(vanillaStr);
+    } catch (const std::exception &e) {
+        qCWarning(logVer) << "Malformed version JSON:" << versionId << e.what();
+        ver.isValid = false;
+        ver.info = "version json 字段类型畸形: " + versionId;
+    }
 
     return ver;
 }
@@ -564,6 +590,9 @@ static json resolveChainWithVisited(const QString &jsonPath, QSet<QString> &visi
     // If no inheritance, return as-is
     if (!result.contains("inheritsFrom")) return result;
 
+    // inheritsFrom 非字符串（结构畸形）：无法定位父版本，按无继承处理
+    if (!result["inheritsFrom"].is_string()) return result;
+
     std::string inheritId = result["inheritsFrom"].get<std::string>();
     QDir versionDir = QFileInfo(jsonPath).absoluteDir();
     versionDir.cdUp(); // Go to versions dir
@@ -637,5 +666,12 @@ static json resolveChainWithVisited(const QString &jsonPath, QSet<QString> &visi
 
 json VersionManager::resolveInheritanceChain(const QString &jsonPath) {
     QSet<QString> visited;
-    return resolveChainWithVisited(jsonPath, visited);
+    // 兜底：合并过程字段类型畸形（libraries 元素非对象、arguments 非对象/非数组等）
+    // 抛 type_error，不能让它穿过 Qt 信号槽，按解析失败返回空 json
+    try {
+        return resolveChainWithVisited(jsonPath, visited);
+    } catch (const std::exception &e) {
+        qWarning() << "Failed to resolve version inheritance:" << jsonPath << e.what();
+        return json();
+    }
 }

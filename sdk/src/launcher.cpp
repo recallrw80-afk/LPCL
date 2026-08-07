@@ -8,6 +8,7 @@
 #include <QDir>
 #include <QFileInfo>
 #include <QLoggingCategory>
+#include <QRegularExpression>
 #include <QStandardPaths>
 
 static Q_LOGGING_CATEGORY(logLaunch, "lpcl.launcher")
@@ -42,6 +43,19 @@ bool Launcher::launch(const McVersion &version,
     if (m_state == LaunchState::Running || m_state == LaunchState::Launching) {
         qCWarning(logLaunch) << "Game already running or launching";
         return false;
+    }
+
+    // interrupt() 的 kill 是异步的：旧进程未退出就复用 QProcess，start() 会被
+    // 静默吞掉（不发 errorOccurred）——先等它真正退出。此刻 m_state 尚未切换，
+    // 旧进程的 finished() 由 onGameFinished 按 Interrupted 等当前状态正常消化
+    if (m_gameProcess->state() != QProcess::NotRunning) {
+        m_gameProcess->kill();
+        if (!m_gameProcess->waitForFinished(3000)) {
+            // 旧进程杀不掉时 start() 必然被吞，必须主动报失败
+            setState(LaunchState::Failed);
+            emit launchFailed("Previous game process did not exit, cannot relaunch");
+            return false;
+        }
     }
 
     // Validate
@@ -186,6 +200,10 @@ void Launcher::doLaunch() {
         // 仅显示用：含空格的参数加引号（exec 参数本身保持原样）
         cmdLog += " " + (arg.contains(' ') ? "\"" + arg + "\"" : arg);
     }
+    // 凭据打码：authlib 外置登录后 --accessToken 是真 token，进 Qt 日志/落盘前必须掩掉
+    // （只处理这行命令行回显；游戏自身输出不经过这里，保持原样）
+    static const QRegularExpression tokenRe("(--accessToken\\s+)\\S+");
+    cmdLog.replace(tokenRe, "\\1***");
     qCInfo(logLaunch) << "Launch command:" << cmdLog.toUtf8().constData();
     appendLog("> " + cmdLog);
     appendLog("");
@@ -436,9 +454,11 @@ void Launcher::appendLog(const QString &line) {
 
 void Launcher::openLaunchLog() {
     if (m_logFile.isOpen()) m_logFile.close();
-    QString mcFolder = Settings::instance().getString("LaunchFolderSelect");
-    if (mcFolder.isEmpty()) return;
-    QDir logDir(mcFolder + "/logs");
+    // 跟随本次启动实际生效的游戏目录：mcFolder() 含 CLI --folder 的一次性覆盖
+    // （直接读 Settings 的 LaunchFolderSelect 会在覆盖时把日志写进旧目录）；
+    // mcFolder() 自带默认值兜底、永不为空且带尾斜杠
+    QString mcFolder = VersionManager::instance().mcFolder();
+    QDir logDir(mcFolder + "logs");
     if (!logDir.mkpath(".")) return;
 
     // 滚动清理：只留最近 9 份，加上本次共 10 份
