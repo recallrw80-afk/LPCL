@@ -249,6 +249,7 @@ lpcl uninstall -r                             # uninstall but keep game contents
 | `set-folder <path>` | Set the default game folder |
 | `set-lang <en\|zh>` | Set the UI language (English by default) |
 | `set-mem <MB\|auto>` | Set max game memory; `auto` (default) allocates 50% of available RAM (capped at 16G) |
+| `set-cf-key <key\|--clear>` | Set/clear a custom CurseForge API key (no arg shows the current source; overrides the embedded one) |
 | `login [server] [email]` | External authlib-injector login (e.g. LittleSkin; token encrypted & persisted, auto-refreshed at launch) |
 | `logout` | Log out the external account, falling back to the offline player |
 | `update` | Check GitHub Releases and update in place (install.sh-installed copies only; override repo with `LPCL_REPO`) |

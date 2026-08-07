@@ -693,6 +693,10 @@ static void printHelp() {
          "set-mem <MB|auto>",
          "设置游戏最大内存（auto=自动分配）",
          "Set max game memory (auto = automatic)"},
+        {"set-cf-key <key|--clear>",
+         "set-cf-key <key|--clear>",
+         "设置/清除自定义 CurseForge key（无参查看来源）",
+         "Set/clear custom CurseForge key (no arg = show source)"},
         {"inpack <文件> [--r <名称>]", "inpack <file> [--r <name>]", "导入整合包", "Import modpack"},
         {"mc-install [版本]",
          "mc-install [version]",
@@ -806,6 +810,35 @@ static int handleConfig() {
         std::cout << al.name.toStdString() << " @ " << al.server.toStdString() << std::endl;
     else
         std::cout << _("（未登录）\n", "(not logged in)\n");
+    return 0;
+}
+
+// ---- CF API key（指令设置 > 编译内嵌 > 镜像） ----
+
+static int handleSetCfKey(const QStringList &args) {
+    // 无参 = 状态查询（不回显 key 本体——内嵌 key 禁止透露）
+    if (args.size() < 2) {
+        QString src = lpcl::cfApiKeySource();
+        if (src == "user")
+            std::cout << _("CurseForge key: 指令设置的自定义 key（加密保存中）\n",
+                           "CurseForge key: custom key set via command (stored encrypted)\n");
+        else if (src == "embedded")
+            std::cout << _("CurseForge key: 编译期内嵌（发布版完整体验）\n",
+                           "CurseForge key: embedded at build time (full experience)\n");
+        else
+            std::cout << _("CurseForge key: 未设置，走 MCIM 镜像\n",
+                           "CurseForge key: not set, using MCIM mirror\n");
+        return 0;
+    }
+    if (args[1] == "--clear" || args[1] == "-") {
+        lpcl::setCfApiKey("");
+        std::cout << _("已清除自定义 key，回退编译期内嵌/镜像\n",
+                       "Custom key cleared, falling back to embedded/mirror\n");
+        return 0;
+    }
+    lpcl::setCfApiKey(args[1]);
+    std::cout << _("已保存自定义 CurseForge key（加密存储，立即生效）\n",
+                   "Custom CurseForge key saved (encrypted, effective immediately)\n");
     return 0;
 }
 
@@ -1301,6 +1334,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
     if (cmd == "set-folder")     return handleSetFolder(args);
     if (cmd == "set-lang")       return handleSetLang(args);
     if (cmd == "set-mem")        return handleSetMem(args);
+    if (cmd == "set-cf-key")     return handleSetCfKey(args);
     if (cmd == "list-javas")     return handleListJavas();
     if (cmd == "player-add")     return handlePlayerAdd(args);
     if (cmd == "player-edit")    return handlePlayerEdit(args);

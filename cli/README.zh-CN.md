@@ -250,6 +250,7 @@ lpcl uninstall -r                             # 卸载但保留游戏内容
 | `set-folder <路径>` | 设置默认游戏目录 |
 | `set-lang <en\|zh>` | 设置界面语言（默认英文） |
 | `set-mem <MB\|auto>` | 设置游戏最大内存；`auto`（默认）按可用内存 50% 自动分配（上限 16G） |
+| `set-cf-key <key\|--clear>` | 设置/清除自定义 CurseForge key（无参查看当前来源；优先于编译期内嵌） |
 | `login [服务器] [邮箱]` | 外置登录（authlib-injector，如 LittleSkin；token 加密持久保存，启动自动在线刷新） |
 | `logout` | 退出外置登录，回退离线玩家 |
 | `update` | 检查 GitHub Releases 是否有新版本并自动更新（仅 install.sh 安装的副本；`LPCL_REPO` 可换源） |

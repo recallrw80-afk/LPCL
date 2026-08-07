@@ -103,3 +103,4 @@ CMakeUserPresets.json
 dist
 /docs
 .env
+release.sh

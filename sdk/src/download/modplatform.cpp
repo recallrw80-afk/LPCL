@@ -1,5 +1,6 @@
 #include "download/modplatform.h"
 #include "download/downloadmanager.h"
+#include "core/settings.h"
 #include "cf_key_embedded.h"  // CMake 生成：编译期嵌入的 CF key（发布构建为空串）
 
 #include <QJsonDocument>
@@ -23,12 +24,14 @@ const QString ModPlatform::MR_API = "https://api.modrinth.com/v2";
 
 ModPlatform& ModPlatform::instance() {
     static ModPlatform m;
-    // CurseForge API key 只有两条路径：编译期嵌入（发布版，走官方 API）；
-    // 无 key（本地开发构建）则留空——CF 请求自动改走 MCIM 镜像（无需鉴权，同 PCL-CE 方案）
+    // CF key 解析链（2026-08-07 起）：指令设置（Settings 加密存储）→ 编译期嵌入 → 空走 MCIM 镜像。
+    // 注意：任何展示路径都不得回显内嵌 key
     static bool keyResolved = false;
     if (!keyResolved) {
         keyResolved = true;
-        m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
+        m.m_cfApiKey = Settings::instance().getEncrypted("CfApiKey");
+        if (m.m_cfApiKey.isEmpty())
+            m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
         if (m.m_cfApiKey.isEmpty())
             qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
     }

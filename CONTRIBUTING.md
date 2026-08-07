@@ -43,6 +43,26 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 - 游戏自己的日志 `<实例>/logs/latest.log`（游戏内问题）
 - 系统信息：发行版、桌面环境、显卡型号（驱动本身不接受修改建议，见红线）
 
+## 发版（发布维护者）
+
+一条命令：
+
+```bash
+./release.sh v0.1.0            # 常规发版
+./release.sh v0.1.0 --test     # 先发全量自检再发版
+```
+
+**为什么 x86_64 包是本地构建的**：CI 没有 CF key Secret，产物不含内嵌 key（走 MCIM 镜像）；
+本地 `.env` 有 key，`release.sh` 用 `LPCL_EMBED_CF_KEY=ON` 构建的 x86_64 包才是「完整体验」。
+脚本会校验 key 确实嵌进了二进制（strings 抽查），没嵌进去会中止发版。
+
+流程：检查（gh 已登录/工作区干净/tag 格式 vX.Y.Z）→ 可选自检 → 本地嵌 key 构建 →
+打 tag 推送 → `gh release create` + 上传本地包和 install.sh。
+CI 只补 `lpcl-linux-aarch64.tar.gz`（x86_64 无 key 包不出——避免与本地完整包混淆）。
+
+前置：安装并登录 [gh CLI](https://cli.github.com/)（`gh auth login`）。
+重发已推送的 tag 需先删远端 tag 和对应 Release。
+
 ## CF API key 轮换（发布维护者）
 
 发布版内嵌的 CurseForge API key 来自 GitHub Secret `LPCL_CURSEFORGE_API_KEY`（CI 在编译期嵌入，fork PR 读不到）。key 泄露或被吊销时按以下流程轮换：

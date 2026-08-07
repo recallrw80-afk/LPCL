@@ -1,5 +1,6 @@
 #include "lpcl.h"
 #include "modpack.h"
+#include "cf_key_embedded.h"  // CMake 生成：LPCL_CF_API_KEY_EMBEDDED（key 来源判定/回退用）
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "core/javamanager.h"
@@ -10,6 +11,7 @@
 #include "auth/authlibauth.h"
 #include "download/assetdownloader.h"
 #include "download/downloadmanager.h"
+#include "download/modplatform.h"
 #include "util/file_utils.h"
 #include "util/platform_utils.h"
 #include <QCoreApplication>
@@ -789,6 +791,19 @@ AuthlibLoginInfo currentAuthlibLogin() {
         info.uuid = s.getString("Authlib/Uuid");
     }
     return info;
+}
+
+void setCfApiKey(const QString &key) {
+    Settings::instance().setEncrypted("CfApiKey", key);  // 空串 = 清除
+    // 同步单例（本进程后续 CF 请求立即生效）；空串时回退编译期内嵌
+    ModPlatform::instance().setCurseForgeApiKey(
+        key.isEmpty() ? QStringLiteral(LPCL_CF_API_KEY_EMBEDDED) : key);
+}
+
+QString cfApiKeySource() {
+    if (!Settings::instance().getEncrypted("CfApiKey").isEmpty()) return "user";
+    if (!QStringLiteral(LPCL_CF_API_KEY_EMBEDDED).isEmpty()) return "embedded";
+    return "none";
 }
 
 // ---- 服务端（本地开服） ----

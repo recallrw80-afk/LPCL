@@ -157,6 +157,14 @@ LPCLCORE_EXPORT void logoutAuthlib();
 /// 当前持久化的外置登录信息（纯本地读取，无网络）
 LPCLCORE_EXPORT AuthlibLoginInfo currentAuthlibLogin();
 
+/// 设置用户级 CurseForge API key（加密持久化；空串 = 清除，回退编译期内嵌）。
+/// 解析优先级：指令设置 > 编译期内嵌 > 空（走 MCIM 镜像）。
+LPCLCORE_EXPORT void setCfApiKey(const QString &key);
+
+/// CF key 当前来源："user"（指令设置）/ "embedded"（编译期内嵌）/ "none"（无，走镜像）。
+/// 注意：内嵌 key 禁止回显——任何状态展示只能用本函数的来源标识，不得输出 key 本体
+LPCLCORE_EXPORT QString cfApiKeySource();
+
 // ---- 服务端（本地开服） ----
 
 /// 下载/安装服务端到 {mcFolder}/servers/<标识>/（标识 = 版本 或 版本-加载器-加载器版本）。
