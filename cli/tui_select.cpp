@@ -77,7 +77,7 @@ QString fitCols(const QString &text, int maxCols) {
         int w = charCols(cps[i]);
         if (cols + w > maxCols - 1) break;
         cols += w;
-        out.append(QString::fromUcs4(&cps[i], 1));
+        out.append(QString::fromUcs4(reinterpret_cast<const char32_t *>(&cps[i]), 1));
     }
     return out + QChar(0x2026);  // …
 }
