@@ -48,7 +48,8 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 一条命令：
 
 ```bash
-./release.sh v0.1.0            # 常规发版
+./release.sh v0.1.0            # 正式版
+./release.sh v0.1.0-Beta       # 预发布（自动标 pre-release，releases/latest 跳过，update 用户不被打扰）
 ./release.sh v0.1.0 --test     # 先发全量自检再发版
 ```
 
