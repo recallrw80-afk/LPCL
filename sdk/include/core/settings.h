@@ -58,6 +58,9 @@ public:
     QString getString(const QString &key, const QString &defaultValue = QString()) const;
     void setString(const QString &key, const QString &value);
 
+    /// 删除键（整个条目从 ini 移除，区别于 setString(key,"") 留空行）
+    void removeKey(const QString &key);
+
     // Direct QVariant access（QML 可调用：Settings.value(key, default) 读、Settings.setValue(key, value) 写并触发 settingChanged）
     Q_INVOKABLE QVariant value(const QString &key, const QVariant &defaultValue = QVariant()) const;
     Q_INVOKABLE void setValue(const QString &key, const QVariant &value);

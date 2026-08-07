@@ -118,6 +118,13 @@ void Settings::setString(const QString &key, const QString &value) {
     set<QString>(key, value);
 }
 
+void Settings::removeKey(const QString &key) {
+    QMutexLocker locker(&m_mutex);
+    if (!m_settings) return;
+    m_settings->remove(key);
+    m_settings->sync();
+}
+
 QVariant Settings::value(const QString &key, const QVariant &defaultValue) const
 {
     QMutexLocker locker(&m_mutex);

@@ -234,6 +234,29 @@ static QList<TestItem> runCommandTests() {
             fail("login-persist", QString("readOk=%1 cleared=%2").arg(readOk).arg(cleared));
     }
 
+    // CF key 保密：用户 key 只以密文存在；清除后 ini 无 CfApiKey 行；内嵌 key 永不落盘
+    {
+        QString iniPath = QCoreApplication::applicationDirPath() + "/LPCL.ini";
+        lpcl::setCfApiKey("_lpcl_test_cfkey_");
+        bool plainLeak = false;
+        QFile f(iniPath);
+        if (f.open(QIODevice::ReadOnly)) {
+            plainLeak = QString::fromUtf8(f.readAll()).contains("_lpcl_test_cfkey_");
+            f.close();
+        }
+        lpcl::setCfApiKey("");  // 清除
+        bool leftover = false;
+        QFile f2(iniPath);
+        if (f2.open(QIODevice::ReadOnly)) {
+            leftover = QString::fromUtf8(f2.readAll()).contains("CfApiKey");
+            f2.close();
+        }
+        if (!plainLeak && !leftover)
+            ok("cf-key-privacy", "用户 key 密文存储、清除无残留、内嵌 key 不落盘");
+        else
+            fail("cf-key-privacy", QString("plainLeak=%1 leftover=%2").arg(plainLeak).arg(leftover));
+    }
+
     // list-javas
     {
         auto names = lpcl::listJavas();

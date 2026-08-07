@@ -794,8 +794,12 @@ AuthlibLoginInfo currentAuthlibLogin() {
 }
 
 void setCfApiKey(const QString &key) {
-    Settings::instance().setEncrypted("CfApiKey", key);  // 空串 = 清除
-    // 同步单例（本进程后续 CF 请求立即生效）；空串时回退编译期内嵌
+    // 空串 = 清除：整行从 ini 移除（内嵌 key 永不得以任何形式落盘，ini 里只许有用户指令设置的密文）
+    if (key.isEmpty())
+        Settings::instance().removeKey("CfApiKey");
+    else
+        Settings::instance().setEncrypted("CfApiKey", key);
+    // 同步单例（本进程后续 CF 请求立即生效）；清除后回退编译期内嵌
     ModPlatform::instance().setCurseForgeApiKey(
         key.isEmpty() ? QStringLiteral(LPCL_CF_API_KEY_EMBEDDED) : key);
 }
