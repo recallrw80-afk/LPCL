@@ -49,13 +49,11 @@ bash install.sh lpcl-linux-x86_64.tar.gz
 
 (`install.sh` lives in `cli/` in the repo; it's also available from the release page.)
 
-### One-liner (available once the repo goes public)
+### One-liner
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
-
-> The repo is currently private and release downloads are unavailable — use build-from-source above.
 
 ### Update & uninstall
 

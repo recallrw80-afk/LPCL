@@ -39,7 +39,7 @@ make install        # 编译 Release → 零依赖打包 → 安装到本机
 bash cli/install.sh lpcl-linux-x86_64.tar.gz
 ```
 
-### 一键安装（仓库公开后可用）
+### 一键安装
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash

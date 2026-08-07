@@ -39,7 +39,7 @@ Run `make package-tar` on the build machine to produce the zero-dependency tarba
 bash cli/install.sh lpcl-linux-x86_64.tar.gz
 ```
 
-### One-liner (available once the repo goes public)
+### One-liner
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash

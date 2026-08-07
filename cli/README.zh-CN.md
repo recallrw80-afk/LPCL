@@ -49,13 +49,11 @@ bash install.sh lpcl-linux-x86_64.tar.gz
 
 （`install.sh` 就在仓库 `cli/` 下；没有仓库也可以从发布页获取。）
 
-### 一键安装（仓库公开后可用）
+### 一键安装
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
-
-> 仓库当前未公开，Release 下载暂不可用，请用上面的源码编译安装。
 
 ### 更新与卸载
 
