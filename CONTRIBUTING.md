@@ -43,30 +43,6 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 - 游戏自己的日志 `<实例>/logs/latest.log`（游戏内问题）
 - 系统信息：发行版、桌面环境、显卡型号（驱动本身不接受修改建议，见红线）
 
-## 发版（发布维护者）
-
-一条命令：
-
-```bash
-./release.sh v0.1.0            # 正式版
-./release.sh v0.1.0-Beta       # 预发布（自动标 pre-release，releases/latest 跳过，update 用户不被打扰）
-./release.sh v0.1.0 --test     # 先发全量自检再发版
-```
-
-**为什么 x86_64 包是本地构建的**：CI 没有 CF key Secret，产物不含内嵌 key（走 MCIM 镜像）；
-本地 `.env` 有 key，`release.sh` 用 `LPCL_EMBED_CF_KEY=ON` 构建的 x86_64 包才是「完整体验」。
-脚本会校验 key 确实嵌进了二进制（strings 抽查），没嵌进去会中止发版。
-
-流程：检查（gh 已登录/工作区干净/tag 格式 vX.Y.Z）→ 可选自检 → **先打本地 tag**（版本串在编译期由
-git describe 注入，必须先有 tag 构建出的二进制才自报 vX.Y.Z；构建失败自动回滚本地 tag）→
-本地嵌 key 构建 → 推送 → `gh release create` + 上传本地包和 install.sh。
-
-**aarch64 没有预编译包**：Qt 官方在线仓库没有 6.11.x 的 Linux ARM64 桌面安装包（发行版源最高 6.4，
-不满足工程 6.11 要求），CI 无法构建。ARM 用户请走源码编译安装（`git clone` 后 `make install`）。
-
-前置：安装并登录 [gh CLI](https://cli.github.com/)（`gh auth login`）。
-重发已推送的 tag 需先删远端 tag 和对应 Release。
-
 ## CF API key 轮换（发布维护者）
 
 发布版内嵌的 CurseForge API key 来自 GitHub Secret `LPCL_CURSEFORGE_API_KEY`（CI 在编译期嵌入，fork PR 读不到）。key 泄露或被吊销时按以下流程轮换：
