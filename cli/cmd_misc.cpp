@@ -349,12 +349,25 @@ int handleUpdate(QStringList &args) {
         }
 
         QString remoteTag = QString::fromStdString(rel.value("tag_name", ""));
-        // 版本比较：提取 vX.Y.Z 数字段
+        // 版本比较：先比数字段；数字段相同按 SemVer 规则——正式版 > 预发布
+        // （v0.1.4-beta → v0.1.4 应提示更新），双预发布按后缀字母序（beta < rc）
         QRegularExpression re(R"(v?(\d+\.\d+(?:\.\d+)?))");
         auto rm = re.match(remoteTag), lm = re.match(QString(GIT_DESCRIBE));
         QVersionNumber remoteVer = rm.hasMatch() ? QVersionNumber::fromString(rm.captured(1)) : QVersionNumber();
         QVersionNumber localVer = lm.hasMatch() ? QVersionNumber::fromString(lm.captured(1)) : QVersionNumber(0, 0, 0);
-        if (remoteVer.isNull() || remoteVer <= localVer) {
+        bool hasUpdate = false;
+        if (remoteVer > localVer) {
+            hasUpdate = true;
+        } else if (!remoteVer.isNull() && remoteVer == localVer) {
+            auto suffixOf = [](const QString &tag) {
+                int i = tag.indexOf('-');
+                return i < 0 ? QString() : tag.mid(i + 1);
+            };
+            QString rs = suffixOf(remoteTag), ls = suffixOf(QString(GIT_DESCRIBE));
+            hasUpdate = (rs.isEmpty() && !ls.isEmpty())          // 本地预发布 → 远端正式版
+                        || (!rs.isEmpty() && !ls.isEmpty() && rs > ls);  // beta → rc 等
+        }
+        if (!hasUpdate) {
             std::cout << _("已是最新版本: ", "Already up to date: ")
                       << QString(GIT_DESCRIBE).toStdString() << std::endl;
             finish(0); return;
