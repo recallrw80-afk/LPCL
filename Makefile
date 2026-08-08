@@ -57,8 +57,9 @@ endif
 package-tar: package-cli
 	bash $(CLI_SRC)/$(BUNDLE_SCRIPT) $(CLI_PKG_DIR) $(QT_PREFIX)
 	cp THIRD-PARTY-NOTICES.md $(CLI_PKG_DIR)/
-	tar -czf $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.gz -C $(CLI_PKG_DIR) lpcl lib plugins THIRD-PARTY-NOTICES.md
-	@echo "发布包: $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.gz"
+	strip -s $(CLI_PKG_DIR)/lpcl 2>/dev/null || true
+	tar -cJf $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.xz -C $(CLI_PKG_DIR) lpcl lib plugins THIRD-PARTY-NOTICES.md
+	@echo "发布包: $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.xz"
 
 # ---- 编译并安装到本机（~/.local/lib/lpcl + ~/.local/bin/lpcl） ----
 # 其他电脑编译的场景：在那台机器 make package-tar，把 tar.gz 拷过来后

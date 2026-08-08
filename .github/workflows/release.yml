@@ -64,7 +64,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: lpcl-${{ matrix.pkg_os }}
-          path: cli/dist/lpcl-macos-*.tar.gz
+          path: cli/dist/lpcl-macos-*.tar.xz
           retention-days: 14
 
   release:
@@ -79,4 +79,4 @@ jobs:
         # release.sh 已建好 Release（含 x86_64 嵌 key 包 + install.sh），此处追加 macOS 包
         uses: softprops/action-gh-release@v2
         with:
-          files: '**/lpcl-macos-*.tar.gz'
+          files: '**/lpcl-macos-*.tar.xz'

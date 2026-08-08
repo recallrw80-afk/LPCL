@@ -36,7 +36,7 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-Beta/
 
 (Replace `v0.1.3-Beta` with the latest pre-release tag.)
 
-Or grab the tarball from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, and run `bash install.sh lpcl-linux-<arch>.tar.gz`.
+Or grab the tarball from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, and run `bash install.sh lpcl-linux-<arch>.tar.xz`.
 
 ### Build from source
 
@@ -50,7 +50,7 @@ make install        # build Release → zero-dependency package → install to ~
 
 Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
 
-To install a package built on another machine: `bash cli/install.sh lpcl-linux-<arch>.tar.gz`.
+To install a package built on another machine: `bash cli/install.sh lpcl-linux-<arch>.tar.xz`.
 
 ### Update & uninstall
 
@@ -64,7 +64,7 @@ lpcl uninstall -r   # uninstall but keep game folder contents
 
 ```bash
 make cli            # build lpcl + liblpclcore.so (Debug)
-make package-tar    # zero-dependency tarball at cli/dist/lpcl-linux-<arch>.tar.gz
+make package-tar    # zero-dependency tarball at cli/dist/lpcl-linux-<arch>.tar.xz
 make run            # build & launch the QML GUI (test version, binary name lpcl-gui)
 ```
 

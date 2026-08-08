@@ -3,7 +3,7 @@
 # 用法:
 #   bash install.sh                                  # 【默认】下载官方预编译包（CI 构建，内嵌 CF key，完整体验）
 #   bash install.sh --beta                           # 安装最新预发布版（pre-release，releases/latest 看不到的）
-#   bash install.sh ./lpcl-linux-x86_64.tar.gz       # 安装本地包（自己 make package-tar 的产物——不含内嵌 key）
+#   bash install.sh ./lpcl-linux-x86_64.tar.xz       # 安装本地包（自己 make package-tar 的产物——不含内嵌 key）
 #   curl -fsSL <发布地址>/install.sh | bash           # 一键安装
 #
 # 安装内容:
@@ -23,14 +23,14 @@ INSTALL_BIN="${LPCL_INSTALL_BIN:-$HOME/.local/bin}"
 OS_NAME="$(uname -s)"
 if [ "$OS_NAME" = "Darwin" ]; then
     # macOS：预编译包是 universal（x86_64+arm64 合一），无需区分架构
-    PKG_NAME="lpcl-macos-universal.tar.gz"
+    PKG_NAME="lpcl-macos-universal.tar.xz"
 else
     case "$(uname -m)" in
         x86_64|amd64)    ARCH="x86_64" ;;
         aarch64|arm64)   ARCH="aarch64" ;;
         *) echo "不支持的架构: $(uname -m)" >&2; exit 1 ;;
     esac
-    PKG_NAME="lpcl-linux-${ARCH}.tar.gz"
+    PKG_NAME="lpcl-linux-${ARCH}.tar.xz"
 fi
 
 # ---- 获取安装包：本地文件优先，否则下载 ----
@@ -77,7 +77,8 @@ mkdir -p "$INSTALL_LIB" "$INSTALL_BIN"
 # 清掉旧版库目录与改名前遗留，防止残留过期文件（保留 LPCL.ini 等配置）
 rm -rf "${INSTALL_LIB}/lib" "${INSTALL_LIB}/plugins"
 rm -f "${INSTALL_LIB}/lpcl" "${INSTALL_LIB}/lpcl-cli" "${INSTALL_LIB}/lpcl-gui" "${INSTALL_LIB}/liblpclcore.so"
-tar -xzf "$PKG_PATH" -C "$INSTALL_LIB"
+# GNU/bsd tar 均自动识别 gz/xz，无需 -z/-J 参数（兼容旧 .tar.gz 本地包）
+tar -xf "$PKG_PATH" -C "$INSTALL_LIB"
 chmod +x "${INSTALL_LIB}/lpcl"
 
 # macOS：清掉下载带来的 quarantine 属性，否则 Gatekeeper 会拦首次运行

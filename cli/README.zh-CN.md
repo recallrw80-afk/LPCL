@@ -45,10 +45,10 @@ lpcl help
 
 ### 预编译包手动安装
 
-从 [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest) 下载对应架构的 `lpcl-linux-<arch>.tar.gz`，与 `install.sh` 放同一目录：
+从 [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest) 下载对应架构的 `lpcl-linux-<arch>.tar.xz`，与 `install.sh` 放同一目录：
 
 ```bash
-bash install.sh lpcl-linux-x86_64.tar.gz
+bash install.sh lpcl-linux-x86_64.tar.xz
 ```
 
 ### 源码编译安装
@@ -63,7 +63,7 @@ make install        # 编译 Release → 零依赖打包 → 安装到本机
 
 依赖：Qt 6.11+（Core/Network）、CMake 3.16+、Ninja、C++20 编译器、nlohmann-json 3.11+、ZLIB。Qt 路径默认 `$HOME/Qt/6.11.1/gcc_64`，可用 `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64` 覆盖。
 
-其他电脑编译的包拷到本机安装：编译机 `make package-tar` 生成 `cli/dist/lpcl-linux-<arch>.tar.gz`，拷贝后 `bash cli/install.sh lpcl-linux-<arch>.tar.gz`。
+其他电脑编译的包拷到本机安装：编译机 `make package-tar` 生成 `cli/dist/lpcl-linux-<arch>.tar.xz`，拷贝后 `bash cli/install.sh lpcl-linux-<arch>.tar.xz`。
 
 ### 更新与卸载
 
@@ -77,7 +77,7 @@ lpcl uninstall -r   # 卸载但保留游戏目录内容
 
 ```bash
 make cli            # 构建 lpcl + liblpclcore.so（Debug）
-make package-tar    # 生成零依赖发布包 cli/dist/lpcl-linux-<arch>.tar.gz
+make package-tar    # 生成零依赖发布包 cli/dist/lpcl-linux-<arch>.tar.xz
 make run            # 构建并启动 QML GUI（测试版，二进制名 lpcl-gui）
 ```
 

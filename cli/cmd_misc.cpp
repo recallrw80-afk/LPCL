@@ -375,7 +375,7 @@ int handleUpdate(QStringList &args) {
 
         // 找对应架构的包
         QString arch = QSysInfo::currentCpuArchitecture() == "aarch64" ? "aarch64" : "x86_64";
-        QString pkg = "lpcl-linux-" + arch + ".tar.gz";
+        QString pkg = "lpcl-linux-" + arch + ".tar.xz";
         QString dlUrl;
         auto assetsIt = rel.find("assets");
         if (assetsIt != rel.end() && assetsIt->is_array()) {
