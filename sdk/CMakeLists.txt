@@ -137,6 +137,12 @@ target_link_libraries(lpclcore PUBLIC
     nlohmann_json::nlohmann_json
 )
 
+# file_utils.cpp 的 iconv（zip 中文文件名解码）：Linux 在 glibc 内，
+# macOS 需显式链接系统 libiconv；Windows 走另一实现（Q_OS_WIN 不用 iconv）
+if(APPLE)
+    target_link_libraries(lpclcore PUBLIC iconv)
+endif()
+
 # C++20
 target_compile_features(lpclcore PUBLIC cxx_std_20)
 
