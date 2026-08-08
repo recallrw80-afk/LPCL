@@ -61,10 +61,17 @@ target_compile_definitions(lpcl PRIVATE
 target_compile_features(lpcl PRIVATE cxx_std_20)
 
 # rpath: 优先在同目录及 lib/ 子目录找依赖库（打包后依赖放 lib/，开发时 .so 放旁边）
-# 必须用老式 DT_RPATH（--disable-new-dtags）：RUNPATH 不可传递，间接依赖
+# Linux 必须用老式 DT_RPATH（--disable-new-dtags）：RUNPATH 不可传递，间接依赖
 # （如 libgssapi_krb5 依赖 libkrb5）会漏到系统路径；RPATH 对整个进程传递生效
-set_target_properties(lpcl PROPERTIES
-    BUILD_RPATH "$ORIGIN;$ORIGIN/lib"
-    INSTALL_RPATH "$ORIGIN;$ORIGIN/lib"
-)
-target_link_options(lpcl PRIVATE "-Wl,--disable-new-dtags")
+if(APPLE)
+    set_target_properties(lpcl PROPERTIES
+        BUILD_RPATH "@loader_path;@loader_path/lib"
+        INSTALL_RPATH "@loader_path;@loader_path/lib"
+    )
+else()
+    set_target_properties(lpcl PROPERTIES
+        BUILD_RPATH "$ORIGIN;$ORIGIN/lib"
+        INSTALL_RPATH "$ORIGIN;$ORIGIN/lib"
+    )
+    target_link_options(lpcl PRIVATE "-Wl,--disable-new-dtags")
+endif()

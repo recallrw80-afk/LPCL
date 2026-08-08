@@ -31,7 +31,7 @@ Downloads the official prebuilt package — **the full experience** (CI-built, w
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-Supports x86_64 (amd64) prebuilt; aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
+Prebuilt packages for x86_64 (amd64) and macOS (universal — Intel & Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
 
 ```bash
 lpcl help

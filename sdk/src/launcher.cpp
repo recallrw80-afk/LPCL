@@ -252,6 +252,7 @@ void Launcher::doLaunch() {
     if (!env.contains("__GL_THREADED_OPTIMIZATIONS"))
         env.insert("__GL_THREADED_OPTIMIZATIONS", "0");
 
+#if defined(Q_OS_LINUX)
     // fcitx/ibus 的 XIM 模块会让 GLFW 3.3 在 glfwWaitEventsTimeout 里 SIGSEGV
     // （原版 MC 也会在窗口出现后几秒内崩，pc=0xc906 固定坏地址，已实测）。
     // 首选 GLFW 3.4 修复（上面 glfw34Fixed 为真时 XIM 无害，可打中文，跳过禁用）；
@@ -263,6 +264,7 @@ void Launcher::doLaunch() {
                       "规避 fcitx/ibus 导致的 GLFW 崩溃");
         }
     }
+#endif
 
     // 无显示环境（无 GUI）：用 xvfb-run 虚拟显示包装启动
     QString program = javaExe;

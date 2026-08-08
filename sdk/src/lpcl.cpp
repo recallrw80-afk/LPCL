@@ -230,6 +230,11 @@ static bool ensureLaunchReady(const McVersion &version) {
 // 3.3.6 版（文件名不变），LWJGL 提取出来的就是 GLFW 3.4。
 // 任何失败都静默返回：doLaunch 会回退到 XMODIFIERS=@im=none（禁输入法式修复）。
 static void maybeInstallGlfw34(const McVersion &version) {
+#if !defined(Q_OS_LINUX)
+    // XIM 崩溃是 Linux/X11 特有问题（fcitx/ibus 的 XIM 钩子），macOS/Windows 无需处理
+    Q_UNUSED(version);
+    return;
+#else
     QString xim = qEnvironmentVariable("XMODIFIERS");
     if (!xim.contains("@im=") || xim == "@im=none") return;  // 无 IME 钩子，无需处理
 
@@ -304,6 +309,7 @@ static void maybeInstallGlfw34(const McVersion &version) {
     }
     QFile::remove(tmpJar);
     if (!ok) qWarning() << "IME 修复: GLFW 3.4 准备失败，将回退到禁用 XIM 方案";
+#endif
 }
 
 } // namespace

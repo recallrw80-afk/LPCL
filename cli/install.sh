@@ -19,12 +19,19 @@ LPCL_REPO="${LPCL_REPO:-recallrw80-afk/LPCL}"
 INSTALL_LIB="${LPCL_INSTALL_LIB:-$HOME/.local/lib/lpcl}"
 INSTALL_BIN="${LPCL_INSTALL_BIN:-$HOME/.local/bin}"
 
-# ---- 架构检测 ----
-case "$(uname -m)" in
-    x86_64|amd64)    ARCH="x86_64" ;;
-    aarch64|arm64)   ARCH="aarch64" ;;
-    *) echo "不支持的架构: $(uname -m)" >&2; exit 1 ;;
-esac
+# ---- 平台检测 ----
+OS_NAME="$(uname -s)"
+if [ "$OS_NAME" = "Darwin" ]; then
+    # macOS：预编译包是 universal（x86_64+arm64 合一），无需区分架构
+    PKG_NAME="lpcl-macos-universal.tar.gz"
+else
+    case "$(uname -m)" in
+        x86_64|amd64)    ARCH="x86_64" ;;
+        aarch64|arm64)   ARCH="aarch64" ;;
+        *) echo "不支持的架构: $(uname -m)" >&2; exit 1 ;;
+    esac
+    PKG_NAME="lpcl-linux-${ARCH}.tar.gz"
+fi
 
 # ---- 获取安装包：本地文件优先，否则下载 ----
 TMP="$(mktemp -d)"
@@ -32,7 +39,7 @@ trap 'rm -rf "$TMP"' EXIT
 
 if [ "${1:-}" = "--beta" ] || [ "${1:-}" = "--pre" ]; then
     # 预发布通道：releases/latest 会跳过 pre-release，必须走列表接口取最新一条（含预发布）
-    PKG="lpcl-linux-${ARCH}.tar.gz"
+    PKG="$PKG_NAME"
     API="https://api.github.com/repos/${LPCL_REPO}/releases?per_page=1"
     echo "==> 查询最新预发布版本"
     URL="$(curl -fsSL "$API" | grep -oE '"browser_download_url": *"[^"]*/'"${PKG}"'"' | head -1 | cut -d'"' -f4 || true)"
@@ -54,7 +61,7 @@ elif [ $# -ge 1 ]; then
     fi
     echo "==> 使用本地安装包 $PKG_PATH"
 else
-    PKG="lpcl-linux-${ARCH}.tar.gz"
+    PKG="$PKG_NAME"
     URL="${LPCL_RELEASE_URL%/}/${PKG}"
     PKG_PATH="${TMP}/${PKG}"
     echo "==> 下载 ${URL}"
@@ -72,6 +79,11 @@ rm -rf "${INSTALL_LIB}/lib" "${INSTALL_LIB}/plugins"
 rm -f "${INSTALL_LIB}/lpcl" "${INSTALL_LIB}/lpcl-cli" "${INSTALL_LIB}/lpcl-gui" "${INSTALL_LIB}/liblpclcore.so"
 tar -xzf "$PKG_PATH" -C "$INSTALL_LIB"
 chmod +x "${INSTALL_LIB}/lpcl"
+
+# macOS：清掉下载带来的 quarantine 属性，否则 Gatekeeper 会拦首次运行
+if [ "$OS_NAME" = "Darwin" ]; then
+    xattr -dr com.apple.quarantine "$INSTALL_LIB" 2>/dev/null || true
+fi
 
 echo "==> 注册命令 lpcl → ${INSTALL_BIN}/lpcl"
 ln -sf "${INSTALL_LIB}/lpcl" "${INSTALL_BIN}/lpcl"

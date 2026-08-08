@@ -46,14 +46,22 @@ package-cli:
 
 # ---- 发布压缩包（零依赖：二进制 + 收编的 Qt/第三方库 + TLS 插件） ----
 ARCH := $(shell uname -m | sed 's/arm64/aarch64/')
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Darwin)
+PKG_OS := macos-universal
+BUNDLE_SCRIPT := bundle-dist-macos.sh
+else
+PKG_OS := linux-$(ARCH)
+BUNDLE_SCRIPT := bundle-dist.sh
+endif
 package-tar: package-cli
-	bash $(CLI_SRC)/bundle-dist.sh $(CLI_PKG_DIR) $(QT_PREFIX)
+	bash $(CLI_SRC)/$(BUNDLE_SCRIPT) $(CLI_PKG_DIR) $(QT_PREFIX)
 	cp THIRD-PARTY-NOTICES.md $(CLI_PKG_DIR)/
-	tar -czf $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz -C $(CLI_PKG_DIR) lpcl lib plugins THIRD-PARTY-NOTICES.md
-	@echo "发布包: $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz"
+	tar -czf $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.gz -C $(CLI_PKG_DIR) lpcl lib plugins THIRD-PARTY-NOTICES.md
+	@echo "发布包: $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.gz"
 
 # ---- 编译并安装到本机（~/.local/lib/lpcl + ~/.local/bin/lpcl） ----
 # 其他电脑编译的场景：在那台机器 make package-tar，把 tar.gz 拷过来后
-# 执行 bash cli/install.sh lpcl-linux-<arch>.tar.gz 即可，无需克隆仓库
+# 执行 bash cli/install.sh lpcl-<os>.tar.gz 即可，无需克隆仓库
 install: package-tar
-	bash $(CLI_SRC)/install.sh $(CLI_PKG_DIR)/lpcl-linux-$(ARCH).tar.gz
+	bash $(CLI_SRC)/install.sh $(CLI_PKG_DIR)/lpcl-$(PKG_OS).tar.gz

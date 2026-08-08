@@ -11,11 +11,23 @@
 
 static Q_LOGGING_CATEGORY(logBuild, "lpcl.launchbuilder")
 
-// 自动内存：取系统可用内存（/proc/meminfo MemAvailable）的 50%，
-// 按 512MB 对齐，限制在 [2048, 16384] MB。读取失败时回退 4096MB。
-// 注意：/proc 文件 st_size 恒为 0，不能用 atEnd() 判断（会立即为真），
-// 必须以 readLine() 返回空作为结束条件。
+// 自动内存：取系统可用内存的 50%，按 512MB 对齐，限制在 [2048, 16384] MB。
+// 读取失败时回退 4096MB。Linux 读 /proc/meminfo（注意其 st_size 恒为 0，
+// 不能用 atEnd() 判断，必须以 readLine() 返回空作为结束条件）；macOS 走 sysctl hw.memsize。
+#if defined(Q_OS_MACOS)
+#include <sys/sysctl.h>
+#endif
 static int autoMaxMemoryMB() {
+#if defined(Q_OS_MACOS)
+    int64_t mem = 0;
+    size_t len = sizeof(mem);
+    if (sysctlbyname("hw.memsize", &mem, &len, nullptr, 0) == 0 && mem > 0) {
+        long mb = long(mem / 1024 / 1024) / 2;
+        mb = (mb / 512) * 512;
+        return int(qBound(2048L, mb, 16384L));
+    }
+    return 4096;
+#else
     QFile f("/proc/meminfo");
     if (f.open(QIODevice::ReadOnly | QIODevice::Text)) {
         for (QByteArray line = f.readLine(); !line.isEmpty(); line = f.readLine()) {
@@ -35,6 +47,7 @@ static int autoMaxMemoryMB() {
         }
     }
     return 4096;
+#endif
 }
 
 // 安全读取字符串字段：仅当 j 为 object、键存在且值为字符串时返回，否则返回默认值。

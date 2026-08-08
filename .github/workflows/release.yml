@@ -1,18 +1,12 @@
 name: Release
 
-# ⚠️ 当前状态（2026-08-07）：本 workflow 仅手动触发备用，发版请用 ./release.sh。
-#
-# 原因：
-# - x86_64 完整体验包（嵌 CF key）由 release.sh 本地构建上传——CI 未配 LPCL_CURSEFORGE_API_KEY Secret
-# - aarch64 无法构建：Qt 官方在线仓库没有 6.11.x 的 Linux ARM64 桌面安装包
-#   （aqt linux_arm64/desktop/qt6_6111 404，install-qt-action 报 "qt_base not found"）；
-#   发行版源 Qt 最高 6.4，低于工程要求的 6.11。aarch64 用户请走源码编译（make install）
-#
-# 恢复 CI 自动发版的条件：
-#   1. 仓库 Secret 配 LPCL_CURSEFORGE_API_KEY（x86_64 即可由 CI 出完整包）
-#   2. Qt 官方发布 Linux ARM64 桌面包（届时恢复 ubuntu-24.04-arm + gcc_arm64 条目）
-#   3. 或自托管带 Qt 6.11+ 的 ARM runner
+# 分工（2026-08-07 定稿）：
+# - x86_64 Linux 完整体验包（嵌 CF key）由 ./release.sh 本地构建上传——CI 未配 key Secret
+# - macOS 包由本 workflow 在 tag 推送时构建（macos runner + Qt clang_64 universal）
+# - aarch64 Linux 无预编译包（Qt 官方无 6.11 Linux ARM64 安装包），用户走源码编译
 on:
+  push:
+    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -24,18 +18,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - runner: ubuntu-latest
-            qt_arch: gcc_64
-            pkg_arch: x86_64
+          # Qt 6 macOS 官方包是 universal2（x86_64+arm64），一个产物两种 Mac 通用
+          - runner: macos-latest
+            qt_arch: clang_64
+            pkg_os: macos-universal
     runs-on: ${{ matrix.runner }}
 
     steps:
       - uses: actions/checkout@v4
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y ninja-build zlib1g-dev libgl1-mesa-dev
+        run: brew install ninja
 
       - name: Install Qt
         uses: jurplel/install-qt-action@v4
@@ -45,9 +38,8 @@ jobs:
           cache: true
 
       - name: Prepare embedded CF key (optional)
-        # 仓库 Settings → Secrets 配了 LPCL_CURSEFORGE_API_KEY 时嵌入发布产物
-        # （用户开箱即走官方 API）；未配置则产物无 key，自动走 MCIM 镜像。
-        # fork PR 读不到 secrets，天然不会泄露到 PR 构建。
+        # 仓库 Secret 配了 LPCL_CURSEFORGE_API_KEY 时嵌入（macOS 包也走官方 API）；
+        # 未配置则产物无 key 走 MCIM 镜像。fork PR 读不到 secrets。
         env:
           CF_KEY: ${{ secrets.LPCL_CURSEFORGE_API_KEY }}
         run: |
@@ -57,13 +49,29 @@ jobs:
             echo "EMBED_CF=ON" >> "$GITHUB_ENV"
           fi
 
-      - name: Build zero-dependency package
-        # .env 由上一步按需生成（无 Secret 则不存在）；LPCL_EMBED_CF_KEY 控制是否嵌入
+      - name: Build zero-dependency package (universal)
+        # Qt 是 universal2，编译也出 x86_64+arm64 双架构二进制
+        env:
+          CMAKE_OSX_ARCHITECTURES: 'x86_64;arm64'
         run: make package-tar QT_PREFIX="$Qt6_DIR/../../.." LPCL_EMBED_CF_KEY="${{ env.EMBED_CF }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lpcl-linux-${{ matrix.pkg_arch }}
-          path: cli/dist/lpcl-linux-*.tar.gz
+          name: lpcl-${{ matrix.pkg_os }}
+          path: cli/dist/lpcl-macos-*.tar.gz
           retention-days: 14
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Attach macOS package to Release
+        # release.sh 已建好 Release（含 x86_64 嵌 key 包 + install.sh），此处追加 macOS 包
+        uses: softprops/action-gh-release@v2
+        with:
+          files: '**/lpcl-macos-*.tar.gz'
