@@ -208,10 +208,14 @@ const Command COMMANDS[] = {
      "用法: lpcl report [描述]\n生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏）。",
      "Usage: lpcl report [description]\nGenerate a prefilled GitHub issue link (env + recent launch log attached, sanitized).",
      handleReport, false},
-    {"update", "update", "update",
-     "检查并更新到最新版本", "Check for and apply updates",
-     "用法: lpcl update\n检查 GitHub Releases 正式版并原地更新（仅 install.sh 安装的副本；预发布不参与）。",
-     "Usage: lpcl update\nCheck GitHub Releases (stable only) and update in place (install.sh-installed copies only).",
+    {"update", "update [-beta]", "update [-beta]",
+     "检查并更新到最新版本（-beta 含预发布）", "Check for and apply updates (-beta includes pre-releases)",
+     "用法: lpcl update [-beta]\n"
+     "检查 GitHub Releases 并原地更新（仅 install.sh 安装的副本）。\n"
+     "  -beta   允许更新到预发布版（默认只跟正式版；版本比较只看数字段，同数字段的 beta→rc 不感知）",
+     "Usage: lpcl update [-beta]\n"
+     "Check GitHub Releases and update in place (install.sh-installed copies only).\n"
+     "  -beta   allow pre-release versions (default tracks stable only; comparison is numeric-only, beta→rc of the same version is not noticed)",
      handleUpdate, false},
     {"uninstall", "uninstall [-r]", "uninstall [-r]",
      "卸载 lpcl（-r 保留游戏目录）", "Uninstall lpcl (-r keeps game folder)",

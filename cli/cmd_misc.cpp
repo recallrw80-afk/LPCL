@@ -310,7 +310,7 @@ int handleUninstall(QStringList &args) {
 }
 
 int handleUpdate(QStringList &args) {
-    Q_UNUSED(args);
+    bool beta = args.contains("-beta") || args.contains("--beta");
     // 只允许更新 install.sh 安装副本（开发/分发路径下跑 update 会误替换副本二进制）
     QString root = installedRoot();
     if (root.isEmpty()) {
@@ -320,7 +320,10 @@ int handleUpdate(QStringList &args) {
     }
     // 发布仓库（与 install.sh 同一来源，可用环境变量覆盖）
     QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
-    QString apiUrl = QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
+    // 默认查正式版（releases/latest 不含预发布）；-beta 走列表接口取最新一条（含预发布）
+    QString apiUrl = beta
+        ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
+        : QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
 
     std::cout << _("正在检查更新...\n", "Checking for updates...\n");
     bool done = false;
@@ -331,6 +334,12 @@ int handleUpdate(QStringList &args) {
     DownloadManager::instance().downloadJson(apiUrl,
         [&](bool ok, QString err, nlohmann::json rel) {
         auto finish = [&](int code) { result = code; done = true; if (guard) guard->quit(); };
+
+        // -beta 的列表接口返回数组：取最新一条
+        if (ok && rel.is_array()) {
+            if (!rel.empty() && rel[0].is_object()) rel = rel[0];
+            else { rel = nlohmann::json::object(); }
+        }
 
         if (!ok || !rel.contains("tag_name") || !rel["tag_name"].is_string()) {
             std::cerr << T("error:  检查更新失败（%1）。如仓库未公开，请先用 LPCL_REPO 配置\n",
