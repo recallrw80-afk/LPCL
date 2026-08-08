@@ -50,10 +50,15 @@ jobs:
           fi
 
       - name: Build zero-dependency package (universal)
-        # Qt 是 universal2，编译也出 x86_64+arm64 双架构二进制
+        # Qt 是 universal2，编译也出 x86_64+arm64 双架构二进制。
+        # Qt 根目录以 qmake6 查询为准（install-qt-action 的 Qt6_DIR 在部分 runner 上为空）
         env:
           CMAKE_OSX_ARCHITECTURES: 'x86_64;arm64'
-        run: make package-tar QT_PREFIX="$Qt6_DIR/../../.." LPCL_EMBED_CF_KEY="${{ env.EMBED_CF }}"
+        run: |
+          QT_ROOT="$(qmake6 -query QT_INSTALL_PREFIX 2>/dev/null || true)"
+          if [ -z "$QT_ROOT" ]; then QT_ROOT="$(cd "$Qt6_DIR/../../.." && pwd)"; fi
+          echo "Qt root: $QT_ROOT"
+          make package-tar QT_PREFIX="$QT_ROOT" LPCL_EMBED_CF_KEY="${{ env.EMBED_CF }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4

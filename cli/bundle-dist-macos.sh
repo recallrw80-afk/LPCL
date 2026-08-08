@@ -41,8 +41,11 @@ collect() {
 
 collect "$BIN"
 
-# 收编进来的库自身：改 install id，并递归收它们自己的依赖（如 ICU 互相引用）
-for lib in "$LIBDIR"/*.dylib; do
+# 收编进来的库自身：改 install id，并递归收它们自己的依赖（如 ICU 互相引用）。
+# 注意遍历所有文件而非 *.dylib：macOS 的 Qt 以 framework 形态链接，
+# 收到的是无扩展名的 Mach-O（如 lib/QtCore）
+for lib in "$LIBDIR"/*; do
+    [ -f "$lib" ] || continue
     install_name_tool -id "@loader_path/lib/$(basename "$lib")" "$lib" 2>/dev/null || true
     collect "$lib"
 done
