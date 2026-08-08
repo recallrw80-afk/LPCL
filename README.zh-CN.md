@@ -28,6 +28,14 @@
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
+装最新**预发布版**（Beta）：注意 `latest` 地址不含预发布，install.sh 需从 tag 地址下载：
+
+```bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-Beta/install.sh | bash -s -- --beta
+```
+
+（把 `v0.1.3-Beta` 换成最新预发布 tag；`--beta` 让脚本走列表接口找到预发布包。）
+
 也可到 [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest) 手动下载压缩包，与 `install.sh` 放一起后 `bash install.sh lpcl-linux-<arch>.tar.gz`。
 
 ### 源码编译安装
