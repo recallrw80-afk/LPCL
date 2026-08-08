@@ -1,9 +1,18 @@
 name: Release
 
-# tag 推送（v*）触发构建并自动创建 GitHub Release；也可手动触发
+# ⚠️ 当前状态（2026-08-07）：本 workflow 仅手动触发备用，发版请用 ./release.sh。
+#
+# 原因：
+# - x86_64 完整体验包（嵌 CF key）由 release.sh 本地构建上传——CI 未配 LPCL_CURSEFORGE_API_KEY Secret
+# - aarch64 无法构建：Qt 官方在线仓库没有 6.11.x 的 Linux ARM64 桌面安装包
+#   （aqt linux_arm64/desktop/qt6_6111 404，install-qt-action 报 "qt_base not found"）；
+#   发行版源 Qt 最高 6.4，低于工程要求的 6.11。aarch64 用户请走源码编译（make install）
+#
+# 恢复 CI 自动发版的条件：
+#   1. 仓库 Secret 配 LPCL_CURSEFORGE_API_KEY（x86_64 即可由 CI 出完整包）
+#   2. Qt 官方发布 Linux ARM64 桌面包（届时恢复 ubuntu-24.04-arm + gcc_arm64 条目）
+#   3. 或自托管带 Qt 6.11+ 的 ARM runner
 on:
-  push:
-    tags: ['v*']
   workflow_dispatch:
 
 permissions:
@@ -15,12 +24,9 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # x86_64 不在 CI 构建：嵌 CF key 的完整体验包由 release.sh 本地构建上传
-          # （CI 无 key Secret，本地 .env 有）。若将来给仓库配上 LPCL_CURSEFORGE_API_KEY
-          # Secret，可加回 x86_64 条目（runner: ubuntu-latest, qt_arch: gcc_64, pkg_arch: x86_64）
-          - runner: ubuntu-24.04-arm # GitHub 官方 ARM runner（公开仓库免费）
-            qt_arch: gcc_arm64       # aqt 的 aarch64 Qt（需 Qt >= 6.7；若该版本无此 arch，改用发行版源 Qt）
-            pkg_arch: aarch64
+          - runner: ubuntu-latest
+            qt_arch: gcc_64
+            pkg_arch: x86_64
     runs-on: ${{ matrix.runner }}
 
     steps:
@@ -61,20 +67,3 @@ jobs:
           name: lpcl-linux-${{ matrix.pkg_arch }}
           path: cli/dist/lpcl-linux-*.tar.gz
           retention-days: 14
-
-  release:
-    if: startsWith(github.ref, 'refs/tags/')
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - name: Download artifacts
-        uses: actions/download-artifact@v4
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          # install.sh 一并发布：curl -fsSL .../releases/latest/download/install.sh | bash
-          files: |
-            **/lpcl-linux-*.tar.gz
-            cli/install.sh
-          generate_release_notes: true

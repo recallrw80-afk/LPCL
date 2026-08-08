@@ -31,7 +31,7 @@
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-支持 x86_64 / aarch64（x86_64 即 amd64）。完成后任意目录直接：
+预编译包支持 x86_64（即 amd64）；aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：
 
 ```bash
 lpcl help

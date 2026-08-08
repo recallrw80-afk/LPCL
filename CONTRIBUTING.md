@@ -59,7 +59,9 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 
 流程：检查（gh 已登录/工作区干净/tag 格式 vX.Y.Z）→ 可选自检 → 本地嵌 key 构建 →
 打 tag 推送 → `gh release create` + 上传本地包和 install.sh。
-CI 只补 `lpcl-linux-aarch64.tar.gz`（x86_64 无 key 包不出——避免与本地完整包混淆）。
+
+**aarch64 没有预编译包**：Qt 官方在线仓库没有 6.11.x 的 Linux ARM64 桌面安装包（发行版源最高 6.4，
+不满足工程 6.11 要求），CI 无法构建。ARM 用户请走源码编译安装（`git clone` 后 `make install`）。
 
 前置：安装并登录 [gh CLI](https://cli.github.com/)（`gh auth login`）。
 重发已推送的 tag 需先删远端 tag 和对应 Release。
