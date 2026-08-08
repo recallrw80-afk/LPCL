@@ -90,6 +90,7 @@ CMakeLists.txt.user*
 !README.zh-CN.md
 !CONTRIBUTING.md
 !THIRD-PARTY-NOTICES.md
+.gitee-token
 cmake-build-debug/
 cmake-build-release/
 /.idea
