@@ -22,7 +22,7 @@ if(NOT nlohmann_json_FOUND)
 endif()
 
 # Git version
-execute_process(COMMAND git describe --tags --always --dirty
+execute_process(COMMAND git describe --tags --always
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     OUTPUT_VARIABLE GIT_DESCRIBE OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_QUIET)
 execute_process(COMMAND git rev-parse --short=7 HEAD

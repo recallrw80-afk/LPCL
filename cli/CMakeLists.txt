@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Git version injection
 execute_process(
-    COMMAND git describe --tags --always --dirty
+    COMMAND git describe --tags --always
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..
     OUTPUT_VARIABLE GIT_DESCRIBE
     OUTPUT_STRIP_TRAILING_WHITESPACE
