@@ -1379,7 +1379,7 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
     app.setApplicationName("lpcl");
-    app.setApplicationVersion("0.1");
+    app.setApplicationVersion(GIT_DESCRIBE);
 
     // 默认静默，关闭 SDK 调试日志
     QLoggingCategory::setFilterRules("lpcl.*.info=false\nlpcl.*.debug=false");
