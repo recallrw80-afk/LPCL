@@ -46,19 +46,20 @@ endif()
 find_package(Qt6 REQUIRED COMPONENTS Core)
 
 add_executable(lpcl
-    main.cpp
-    commands.cpp
-    help.cpp
-    cmd_instance.cpp
-    cmd_player.cpp
-    cmd_server.cpp
-    cmd_misc.cpp
-    test.cpp
-    tui_select.cpp
-    tui_prompt.cpp
+    src/main.cpp
+    src/commands.cpp
+    src/help.cpp
+    src/cmd_instance.cpp
+    src/cmd_player.cpp
+    src/cmd_server.cpp
+    src/cmd_misc.cpp
+    src/test.cpp
+    src/tui_select.cpp
+    src/tui_prompt.cpp
 )
 
 target_include_directories(lpcl PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/include
     ${CMAKE_CURRENT_SOURCE_DIR}/../sdk/include
 )
 
