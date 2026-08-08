@@ -31,10 +31,10 @@ Downloads the official prebuilt package — **the full experience** (CI-built, w
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-To install the latest **pre-release** (Beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
+To install the latest **pre-release** (beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-Beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
 ```
 
 Prebuilt packages for x86_64 (amd64) and macOS (universal — Intel & Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
@@ -212,6 +212,9 @@ lpcl uninstall -r                             # uninstall but keep game contents
 ```
 
 ## Command reference
+
+Every command accepts `-h` (or `--help`) to print detailed parameter help, e.g. `lpcl inpack -h`.
+
 ### Instances
 
 | Command | Description |

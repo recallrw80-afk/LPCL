@@ -28,7 +28,7 @@
 下载并安装官方预编译包——**完整体验**（CI 构建，内嵌 CurseForge key，Mod 下载走官方 API）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
 ```
 
 装最新**预发布版**（Beta）：`latest` 地址不含预发布，install.sh 需从 tag 地址下载并加 `--beta`：
@@ -212,6 +212,8 @@ lpcl uninstall -r                             # 卸载但保留游戏内容
 ```
 
 ## 命令参考
+
+任何命令都可以加 `-h`（或 `--help`）打印该命令的参数详解，如 `lpcl inpack -h`。
 
 ### 实例
 

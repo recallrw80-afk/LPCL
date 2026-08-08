@@ -2,10 +2,11 @@
 // Links only liblpclcore (QtCore + QtNetwork, no GUI/QML)
 //
 // 维护指南：
-//   新增命令只需三步：
+//   新增命令只需四步：
 //     1. 在 printHelp() 的 items[] 数组加一行
 //     2. 写一个 static int handleXxx(const QStringList &args) 函数
 //     3. 在 dispatchCommand() 中按是否需要 mcFolder 归类加入
+//     4. 在 printCommandHelp() 的 helps[] 加该命令的参数详解（中英双语）——硬性约定，禁止遗漏
 
 #include <QCoreApplication>
 #include <cstdlib>
@@ -668,6 +669,149 @@ static int handleRm(const QStringList &args) {
 }
 
 // ---- 帮助与配置 ----
+
+static void printHelp();
+
+// 命令级详细帮助（lpcl <命令> -h）：用法 + 参数逐项说明
+static void printCommandHelp(const QString &cmd) {
+    struct H { const char *cmd; const char *cn; const char *en; };
+    static const H helps[] = {
+        {"list",
+         "用法: lpcl list\n列出所有已导入的整合包实例（INI 映射中的）。",
+         "Usage: lpcl list\nList all imported modpack instances (from the INI mapping)."},
+        {"mods",
+         "用法: lpcl mods <名称>\n  <名称>  实例显示名（lpcl list 里看到的）。",
+         "Usage: lpcl mods <name>\n  <name>  instance display name (as shown by lpcl list)."},
+        {"mc-list",
+         "用法: lpcl mc-list\n列出已下载的原版 MC 版本与加载器版本。",
+         "Usage: lpcl mc-list\nList downloaded vanilla MC and loader versions."},
+        {"launch",
+         "用法: lpcl launch [名称]\n"
+         "  [名称]  实例显示名或原版版本号；省略则上下键选择（非 TTY 退回输序号）。\n"
+         "有外置登录态时自动用该账号启动（在线刷新），失败回退离线玩家。",
+         "Usage: lpcl launch [name]\n"
+         "  [name]  instance display name or vanilla version; omit for the picker.\n"
+         "With a persisted external login, launches with that account (auto-refresh); falls back to offline on failure."},
+        {"inpack",
+         "用法: lpcl inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n"
+         "  <文件>       整合包路径（CF/Modrinth/MultiMC/HMCL/外壳包/压缩 .minecraft/纯 Mod 包）\n"
+         "  --r <名称>   重命名实例（默认用包内名称）\n"
+         "  --to <实例>  纯 Mod 包必填：目标实例（Mod 装进它的 mods/）\n"
+         "  --folder <路径>  临时改用别的游戏目录（一次性，不写回配置）",
+         "Usage: lpcl inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n"
+         "  <file>       modpack file (CF/Modrinth/MultiMC/HMCL/launcher-shell/compressed .minecraft/plain mods)\n"
+         "  --r <name>   rename the instance\n"
+         "  --to <inst>  required for plain-mod zips: target instance to receive the mods\n"
+         "  --folder <path>  one-off game folder override (not persisted)"},
+        {"mc-install",
+         "用法: lpcl mc-install [版本]\n  [版本]  如 1.20.1；省略 = 最新正式版。重复执行 = 校验补齐缺失文件。",
+         "Usage: lpcl mc-install [version]\n  [version]  e.g. 1.20.1; omit for latest release. Re-running verifies/repairs files."},
+        {"java-install",
+         "用法: lpcl java-install <大版本>\n  <大版本>  如 8 / 17 / 21（从 Adoptium 下载 JRE 并注册）。",
+         "Usage: lpcl java-install <major>\n  <major>  e.g. 8 / 17 / 21 (downloads a JRE from Adoptium and registers it)."},
+        {"server-install",
+         "用法: lpcl server-install [版本] [--forge|--fabric|--neoforge [加载器版本]] [--from <实例>]\n"
+         "  [版本]                MC 版本，如 1.20.1；省略 = 最新正式版\n"
+         "  --forge / --fabric / --neoforge   装加载器服务端；裸写 = 自动最新加载器版本，带值 = 指定版本\n"
+         "  --from <实例>         把该实例的 mods/config/defaultconfigs 复制进服务端目录\n"
+         "产物在 {游戏目录}/servers/<标识>/，标识如 1.20.1 或 1.20.1-forge-47.3.0。\n"
+         "注意：客户端专属 mod（Sodium 等渲染/界面类）会让服务端启动崩溃。",
+         "Usage: lpcl server-install [version] [--forge|--fabric|--neoforge [loader-ver]] [--from <instance>]\n"
+         "  [version]             MC version, e.g. 1.20.1; omit for latest release\n"
+         "  --forge/--fabric/--neoforge   loader server; bare flag = latest loader version, value = pinned\n"
+         "  --from <instance>     copy the instance's mods/config/defaultconfigs into the server dir\n"
+         "Output goes to {game folder}/servers/<id>/, e.g. 1.20.1 or 1.20.1-forge-47.3.0.\n"
+         "Note: client-only mods (rendering/UI like Sodium) crash dedicated servers."},
+        {"server-start",
+         "用法: lpcl server-start <标识> [--eula]\n"
+         "  <标识>   servers/ 下的目录名（原版=版本号，加载器=版本-加载器-版本）\n"
+         "  --eula   书面同意 Minecraft EULA（首次启动必须；TTY 下也可交互确认）\n"
+         "前台运行，控制台直通（/stop 关服）。首启自动写 online-mode=false。",
+         "Usage: lpcl server-start <id> [--eula]\n"
+         "  <id>     directory name under servers/ (vanilla = version, loader = version-loader-ver)\n"
+         "  --eula   accept the Minecraft EULA in writing (required on first start; TTY can confirm interactively)\n"
+         "Runs in the foreground with an attached console (/stop to halt). First start writes online-mode=false."},
+        {"list-rm",
+         "用法: lpcl list-rm [名称|*]\n"
+         "  [名称]  实例显示名；* = 删除全部（注意加引号防 shell 展开）；省略则上下键选择 + 二次确认。",
+         "Usage: lpcl list-rm [name|*]\n"
+         "  [name]  instance display name; * = remove all (quote it); omit for picker + confirmation."},
+        {"player-add",
+         "用法: lpcl player-add [名称] [--avatar <路径>] [--skin <slim|wide|default>]\n"
+         "  无参进入交互向导（名字→皮肤→头像→高级自定义 UUID）。首个玩家自动选中。",
+         "Usage: lpcl player-add [name] [--avatar <path>] [--skin <slim|wide|default>]\n"
+         "  No args = interactive wizard (name → skin → avatar → advanced custom UUID). First player auto-selected."},
+        {"player-edit",
+         "用法: lpcl player-edit [uuid|序号]\n交互向导修改，回车保留原值；无参上下键选择玩家。",
+         "Usage: lpcl player-edit [uuid|index]\nInteractive wizard; Enter keeps current value. No args = picker."},
+        {"player-rm",
+         "用法: lpcl player-rm [uuid|序号]\n无参上下键选择 + 二次确认。删除选中玩家后自动选中剩余首个。",
+         "Usage: lpcl player-rm [uuid|index]\nNo args = picker + confirmation. Removing the selected player selects the first remaining."},
+        {"player-list",
+         "用法: lpcl player-list\n列出玩家（带序号，* 为当前选中）。",
+         "Usage: lpcl player-list\nList players (numbered, * marks the selected one)."},
+        {"player-select",
+         "用法: lpcl player-select [uuid|序号]\n选择当前玩家（离线模式启动用）；无参上下键选择。",
+         "Usage: lpcl player-select [uuid|index]\nSelect the active player (used for offline launches); no args = picker."},
+        {"login",
+         "用法: lpcl login [服务器] [邮箱]\n"
+         "外置登录（authlib-injector，如 LittleSkin）。无参向导：服务器→邮箱→密码（掩码输入）。\n"
+         "登录态加密持久化，launch 自动在线刷新。需交互终端。",
+         "Usage: lpcl login [server] [email]\n"
+         "External authlib-injector login (e.g. LittleSkin). No args = wizard: server → email → password (masked).\n"
+         "Session encrypted & persisted; launch auto-refreshes. Requires a TTY."},
+        {"logout",
+         "用法: lpcl logout\n清除外置登录态，launch 回退离线玩家。",
+         "Usage: lpcl logout\nClear the external login; launches fall back to the offline player."},
+        {"set-folder",
+         "用法: lpcl set-folder <路径>\n设置默认游戏目录（持久保存）。",
+         "Usage: lpcl set-folder <path>\nSet the default game folder (persisted)."},
+        {"set-lang",
+         "用法: lpcl set-lang <en|zh>\n设置界面语言（持久保存）。",
+         "Usage: lpcl set-lang <en|zh>\nSet the UI language (persisted)."},
+        {"set-mem",
+         "用法: lpcl set-mem <MB|auto>\n设置游戏最大内存；auto（默认）按可用内存 50% 分配（上限 16G）。",
+         "Usage: lpcl set-mem <MB|auto>\nSet max game memory; auto (default) = 50% of available RAM (cap 16G)."},
+        {"set-cf-key",
+         "用法: lpcl set-cf-key <key|--clear>\n"
+         "  <key>     设置自定义 CurseForge API key（加密存储，优先于编译期内嵌）\n"
+         "  --clear   清除自定义 key，回退编译期内嵌/镜像\n"
+         "  无参      显示当前 key 来源（不回显 key 本体）",
+         "Usage: lpcl set-cf-key <key|--clear>\n"
+         "  <key>     set a custom CurseForge API key (encrypted, overrides the embedded one)\n"
+         "  --clear   remove the custom key, fall back to embedded/mirror\n"
+         "  no args   show the current key source (never prints the key itself)"},
+        {"config",
+         "用法: lpcl config\n查看当前配置（版本/目录/内存/玩家/外置登录态等）。",
+         "Usage: lpcl config\nShow current config (version/folder/memory/players/login state)."},
+        {"report",
+         "用法: lpcl report [描述]\n生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏）。",
+         "Usage: lpcl report [description]\nGenerate a prefilled GitHub issue link (env + recent launch log attached, sanitized)."},
+        {"update",
+         "用法: lpcl update\n检查 GitHub Releases 正式版并原地更新（仅 install.sh 安装的副本；预发布不参与）。",
+         "Usage: lpcl update\nCheck GitHub Releases (stable only) and update in place (install.sh-installed copies only)."},
+        {"uninstall",
+         "用法: lpcl uninstall [-r]\n  -r  保留游戏目录内容（默认连游戏目录一起清空）。仅 install.sh 安装的副本可用。",
+         "Usage: lpcl uninstall [-r]\n  -r  keep game folder contents (default clears them). install.sh-installed copies only."},
+        {"test",
+         "用法: lpcl test\n全系统自检（含真实下载冒烟）；存在 FAIL 时退出码为 1。",
+         "Usage: lpcl test\nFull system self-check (incl. real downloads); exit code 1 on any FAIL."},
+        {"help",
+         "用法: lpcl help\n显示命令总表。lpcl <命令> -h 显示该命令的参数详解。",
+         "Usage: lpcl help\nShow the command list. lpcl <command> -h shows detailed parameter help."},
+        {"version",
+         "用法: lpcl version\n显示版本号（git describe 注入，如 v0.1.3 / v0.1.4-beta）。",
+         "Usage: lpcl version\nShow the version (injected via git describe, e.g. v0.1.3 / v0.1.4-beta)."},
+    };
+    for (const auto &h : helps) {
+        if (cmd == QLatin1String(h.cmd)) {
+            std::cout << (g_lang == CN ? h.cn : h.en) << std::endl;
+            return;
+        }
+    }
+    std::cerr << T("error:  未知命令: %1\n", "error:  unknown command: %1\n").arg(cmd).toStdString();
+    printHelp();
+}
 
 static void printHelp() {
     auto out = [](const QString &s) { std::cout << s.toStdString(); };
@@ -1401,6 +1545,14 @@ int main(int argc, char *argv[]) {
     // ---- 命令派发 ----
     QStringList args = parser.positionalArguments();
     if (args.isEmpty()) { printHelp(); return 1; }
+
+    // 任何命令带 -h/-help/--help 都只打印帮助（防"想看帮助却执行了真实操作"，如 update -help）
+    for (int i = 1; i < args.size(); ++i) {
+        if (args[i] == "-h" || args[i] == "-help" || args[i] == "--help") {
+            printCommandHelp(args.at(0));
+            return 0;
+        }
+    }
 
     Settings::initialize();
     int ret = dispatchCommand(args.at(0), args);

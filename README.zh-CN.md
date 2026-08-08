@@ -82,7 +82,7 @@ lpcl mc-install        # 最新正式版
 lpcl launch 1.20.1
 ```
 
-完整命令参考见 [cli/README.md](cli/README.md)，或直接 `lpcl help`。
+完整命令参考见 [cli/README.md](cli/README.md)。任何命令加 `-h` 可打印该命令的参数详解（如 `lpcl inpack -h`）；`lpcl help` 查看命令总表。
 
 ## 文档
 

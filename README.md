@@ -82,7 +82,7 @@ lpcl mc-install        # latest release
 lpcl launch 1.20.1
 ```
 
-See [cli/README.md](cli/README.md) for the full command reference, or run `lpcl help`.
+See [cli/README.md](cli/README.md) for the full command reference. Every command accepts `-h` for detailed parameter help (e.g. `lpcl inpack -h`); `lpcl help` lists all commands.
 
 ## Docs
 
