@@ -31,6 +31,14 @@ Downloads the official prebuilt package — **the full experience** (CI-built, w
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
+**In China**, use the Gitee mirror (`--cn` makes the script download from Gitee; replace the tag with the latest version):
+
+```bash
+curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+```
+
+> The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.
+
 To install the latest **pre-release** (beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
@@ -261,7 +269,7 @@ Every command accepts `-h` (or `--help`) to print detailed parameter help, e.g. 
 | `set-cf-key <key\|--clear>` | Set/clear a custom CurseForge API key (no arg shows the current source; overrides the embedded one) |
 | `login [server] [email]` | External authlib-injector login (e.g. LittleSkin; token encrypted & persisted, auto-refreshed at launch) |
 | `logout` | Log out the external account, falling back to the offline player |
-| `update` | Check GitHub Releases and update in place (install.sh-installed copies only; override repo with `LPCL_REPO`) |
+| `update [-beta] [-cn]` | Check for updates and update in place (install.sh-installed copies only; `-beta` includes pre-releases, `-cn` uses the Gitee mirror) |
 | `uninstall [-r]` | Uninstall the launcher; `-r` keeps game folder contents |
 | `config` | Show current config |
 | `report [description]` | Generate a prefilled GitHub Issue link (environment info + recent launch log attached, sanitized) |

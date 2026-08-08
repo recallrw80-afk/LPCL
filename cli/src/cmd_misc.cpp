@@ -311,6 +311,7 @@ int handleUninstall(QStringList &args) {
 
 int handleUpdate(QStringList &args) {
     bool beta = args.contains("-beta") || args.contains("--beta");
+    bool cn = args.contains("-cn") || args.contains("--cn");
     // 只允许更新 install.sh 安装副本（开发/分发路径下跑 update 会误替换副本二进制）
     QString root = installedRoot();
     if (root.isEmpty()) {
@@ -318,12 +319,20 @@ int handleUpdate(QStringList &args) {
                        "error:  not an install.sh-installed copy (dev/dist path), refusing to update\n");
         return 1;
     }
-    // 发布仓库（与 install.sh 同一来源，可用环境变量覆盖）
+    // 发布源：GitHub（默认）或 Gitee（-cn，国内网络）
     QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
+    QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "Recall_m_wxd/lpcl");
     // 默认查正式版（releases/latest 不含预发布）；-beta 走列表接口取最新一条（含预发布）
-    QString apiUrl = beta
-        ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
-        : QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
+    QString apiUrl;
+    if (cn) {
+        apiUrl = beta
+            ? QString("https://gitee.com/api/v5/repos/%1/releases?per_page=1").arg(giteeRepo)
+            : QString("https://gitee.com/api/v5/repos/%1/releases/latest").arg(giteeRepo);
+    } else {
+        apiUrl = beta
+            ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
+            : QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
+    }
 
     std::cout << _("正在检查更新...\n", "Checking for updates...\n");
     bool done = false;
@@ -377,12 +386,18 @@ int handleUpdate(QStringList &args) {
         QString arch = QSysInfo::currentCpuArchitecture() == "aarch64" ? "aarch64" : "x86_64";
         QString pkg = "lpcl-linux-" + arch + ".tar.xz";
         QString dlUrl;
-        auto assetsIt = rel.find("assets");
-        if (assetsIt != rel.end() && assetsIt->is_array()) {
-            for (const auto &a : *assetsIt) {
-                if (!a.is_object()) continue;
-                QString name = QString::fromStdString(a.value("name", ""));
-                if (name == pkg) { dlUrl = QString::fromStdString(a.value("browser_download_url", "")); break; }
+        if (cn) {
+            // Gitee 的 release JSON 不带资产直链，按固定路径规则拼接
+            dlUrl = QString("https://gitee.com/%1/releases/download/%2/%3")
+                        .arg(giteeRepo, remoteTag, pkg);
+        } else {
+            auto assetsIt = rel.find("assets");
+            if (assetsIt != rel.end() && assetsIt->is_array()) {
+                for (const auto &a : *assetsIt) {
+                    if (!a.is_object()) continue;
+                    QString name = QString::fromStdString(a.value("name", ""));
+                    if (name == pkg) { dlUrl = QString::fromStdString(a.value("browser_download_url", "")); break; }
+                }
             }
         }
         if (dlUrl.isEmpty()) {

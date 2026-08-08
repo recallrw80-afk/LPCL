@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # lpcl 安装脚本
 # 用法:
-#   bash install.sh                                  # 【默认】下载官方预编译包（CI 构建，内嵌 CF key，完整体验）
+#   bash install.sh                                  # 【默认】下载官方预编译包（GitHub Releases，内嵌 CF key，完整体验）
+#   bash install.sh --cn                             # 国内源：Gitee 镜像（--cn --beta 取预发布）
 #   bash install.sh --beta                           # 安装最新预发布版（pre-release，releases/latest 看不到的）
 #   bash install.sh ./lpcl-linux-x86_64.tar.xz       # 安装本地包（自己 make package-tar 的产物——不含内嵌 key）
 #   curl -fsSL <发布地址>/install.sh | bash           # 一键安装
@@ -37,7 +38,48 @@ fi
 TMP="$(mktemp -d)"
 trap 'rm -rf "$TMP"' EXIT
 
-if [ "${1:-}" = "--beta" ] || [ "${1:-}" = "--pre" ]; then
+# 参数解析：--cn（Gitee 国内源）/ --beta（预发布）可组合，其余第一个参数视为本地包
+CN=0
+BETA=0
+LOCAL_FILE=""
+for a in "$@"; do
+    case "$a" in
+        --cn) CN=1 ;;
+        --beta|--pre) BETA=1 ;;
+        *) [ -z "$LOCAL_FILE" ] && LOCAL_FILE="$a" ;;
+    esac
+done
+
+if [ -n "$LOCAL_FILE" ]; then
+    PKG_PATH="$LOCAL_FILE"
+    if [ ! -f "$PKG_PATH" ]; then
+        echo "安装包不存在: $PKG_PATH" >&2
+        exit 1
+    fi
+    echo "==> 使用本地安装包 $PKG_PATH"
+elif [ "$CN" = 1 ]; then
+    # 国内源（Gitee）：latest 接口/列表接口 → tag，再拼下载地址
+    PKG="$PKG_NAME"
+    GITEE_REPO="${LPCL_GITEE_REPO:-Recall_m_wxd/lpcl}"
+    if [ "$BETA" = 1 ]; then
+        API="https://gitee.com/api/v5/repos/${GITEE_REPO}/releases?per_page=1"
+    else
+        API="https://gitee.com/api/v5/repos/${GITEE_REPO}/releases/latest"
+    fi
+    echo "==> 查询 Gitee 最新版本"
+    TAG="$(curl -fsSL "$API" | grep -oE '"tag_name": *"[^"]+"' | head -1 | cut -d'"' -f4 || true)"
+    if [ -z "$TAG" ]; then
+        echo "查询失败（Gitee 还没有 Release？）" >&2
+        exit 1
+    fi
+    URL="https://gitee.com/${GITEE_REPO}/releases/download/${TAG}/${PKG}"
+    PKG_PATH="${TMP}/${PKG}"
+    echo "==> 下载 ${URL}"
+    if ! curl -fSL --retry 3 -o "$PKG_PATH" "$URL"; then
+        echo "下载失败（请检查网络）" >&2
+        exit 1
+    fi
+elif [ "$BETA" = 1 ]; then
     # 预发布通道：releases/latest 会跳过 pre-release，必须走列表接口取最新一条（含预发布）
     PKG="$PKG_NAME"
     API="https://api.github.com/repos/${LPCL_REPO}/releases?per_page=1"
@@ -53,13 +95,6 @@ if [ "${1:-}" = "--beta" ] || [ "${1:-}" = "--pre" ]; then
         echo "下载失败（请检查网络；或到 Releases 页面手动下载后用本地包模式安装）" >&2
         exit 1
     fi
-elif [ $# -ge 1 ]; then
-    PKG_PATH="$1"
-    if [ ! -f "$PKG_PATH" ]; then
-        echo "安装包不存在: $PKG_PATH" >&2
-        exit 1
-    fi
-    echo "==> 使用本地安装包 $PKG_PATH"
 else
     PKG="$PKG_NAME"
     URL="${LPCL_RELEASE_URL%/}/${PKG}"
@@ -67,7 +102,7 @@ else
     echo "==> 下载 ${URL}"
     if ! curl -fSL --retry 3 -o "$PKG_PATH" "$URL"; then
         echo "下载失败（请检查网络；或到 Releases 页面手动下载后用本地包模式安装）" >&2
-        echo "提示：如果目前只有预发布版本，请用 --beta 安装" >&2
+        echo "提示：如果目前只有预发布版本，请用 --beta 安装；国内网络可用 --cn 走 Gitee" >&2
         exit 1
     fi
 fi

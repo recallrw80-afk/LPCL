@@ -28,6 +28,10 @@
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
+国内网络可用 Gitee 镜像：`curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn`（tag 换成最新版本）。
+
+> Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub：`git clone https://github.com/recallrw80-afk/LPCL.git`
+
 装最新**预发布版**（Beta）：注意 `latest` 地址不含预发布，install.sh 需从 tag 地址下载：
 
 ```bash

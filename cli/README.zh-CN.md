@@ -25,11 +25,19 @@
 
 ### 一键安装（推荐）
 
-下载并安装官方预编译包——**完整体验**（CI 构建，内嵌 CurseForge key，Mod 下载走官方 API）：
+下载并安装官方预编译包——**完整体验**（内嵌 CurseForge key，Mod 下载走官方 API）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
+
+**国内网络**用 Gitee 镜像源（`--cn` 让脚本从 Gitee 下载；tag 换成最新版本）：
+
+```bash
+curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+```
+
+> Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
 
 装最新**预发布版**（Beta）：`latest` 地址不含预发布，install.sh 需从 tag 地址下载并加 `--beta`：
 
@@ -261,7 +269,7 @@ lpcl uninstall -r                             # 卸载但保留游戏内容
 | `set-cf-key <key\|--clear>` | 设置/清除自定义 CurseForge key（无参查看当前来源；优先于编译期内嵌） |
 | `login [服务器] [邮箱]` | 外置登录（authlib-injector，如 LittleSkin；token 加密持久保存，启动自动在线刷新） |
 | `logout` | 退出外置登录，回退离线玩家 |
-| `update` | 检查 GitHub Releases 是否有新版本并自动更新（仅 install.sh 安装的副本；`LPCL_REPO` 可换源） |
+| `update [-beta] [-cn]` | 检查并原地更新（仅 install.sh 安装的副本；`-beta` 含预发布，`-cn` 走 Gitee 国内镜像） |
 | `uninstall [-r]` | 卸载启动器；`-r` 保留游戏目录内容 |
 | `config` | 查看当前配置 |
 | `report [描述]` | 生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏） |

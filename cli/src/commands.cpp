@@ -208,14 +208,17 @@ const Command COMMANDS[] = {
      "用法: lpcl report [描述]\n生成 GitHub Issue 预填链接（自动附环境信息+最近启动日志，已脱敏）。",
      "Usage: lpcl report [description]\nGenerate a prefilled GitHub issue link (env + recent launch log attached, sanitized).",
      handleReport, false},
-    {"update", "update [-beta]", "update [-beta]",
-     "检查并更新到最新版本（-beta 含预发布）", "Check for and apply updates (-beta includes pre-releases)",
-     "用法: lpcl update [-beta]\n"
-     "检查 GitHub Releases 并原地更新（仅 install.sh 安装的副本）。\n"
-     "  -beta   允许更新到预发布版（默认只跟正式版；版本比较只看数字段，同数字段的 beta→rc 不感知）",
-     "Usage: lpcl update [-beta]\n"
-     "Check GitHub Releases and update in place (install.sh-installed copies only).\n"
-     "  -beta   allow pre-release versions (default tracks stable only; comparison is numeric-only, beta→rc of the same version is not noticed)",
+    {"update", "update [-beta] [-cn]", "update [-beta] [-cn]",
+     "检查并更新到最新版本（-beta 含预发布，-cn 走 Gitee 国内源）",
+     "Check for and apply updates (-beta includes pre-releases, -cn uses the Gitee mirror)",
+     "用法: lpcl update [-beta] [-cn]\n"
+     "检查新版本并原地更新（仅 install.sh 安装的副本）。\n"
+     "  -beta   允许更新到预发布版（默认只跟正式版；SemVer 比较：同数字段 正式版>预发布、beta<rc）\n"
+     "  -cn     走 Gitee 国内镜像源（下载快；环境变量 LPCL_GITEE_REPO 可换源）",
+     "Usage: lpcl update [-beta] [-cn]\n"
+     "Check for updates and update in place (install.sh-installed copies only).\n"
+     "  -beta   allow pre-releases (default tracks stable; SemVer: same version stable>pre, beta<rc)\n"
+     "  -cn     use the Gitee mirror (faster in China; override via LPCL_GITEE_REPO)",
      handleUpdate, false},
     {"uninstall", "uninstall [-r]", "uninstall [-r]",
      "卸载 lpcl（-r 保留游戏目录）", "Uninstall lpcl (-r keeps game folder)",
