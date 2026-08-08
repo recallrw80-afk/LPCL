@@ -138,7 +138,7 @@ static QList<TestItem> runCommandTests() {
     {
         auto cfg = lpcl::getConfig();
         if (!cfg.version.isEmpty() && !cfg.commit.isEmpty())
-            ok("config", QString("v%1 (%2)").arg(cfg.version, cfg.commit));
+            ok("config", QString("%1 (%2)").arg(cfg.version, cfg.commit));
         else
             fail("config", "版本信息缺失");
     }
