@@ -57,8 +57,9 @@ cd cmake-build-debug/cli && ./lpcl test          # 全系统自检（必须全�
 本地 `.env` 有 key，`release.sh` 用 `LPCL_EMBED_CF_KEY=ON` 构建的 x86_64 包才是「完整体验」。
 脚本会校验 key 确实嵌进了二进制（strings 抽查），没嵌进去会中止发版。
 
-流程：检查（gh 已登录/工作区干净/tag 格式 vX.Y.Z）→ 可选自检 → 本地嵌 key 构建 →
-打 tag 推送 → `gh release create` + 上传本地包和 install.sh。
+流程：检查（gh 已登录/工作区干净/tag 格式 vX.Y.Z）→ 可选自检 → **先打本地 tag**（版本串在编译期由
+git describe 注入，必须先有 tag 构建出的二进制才自报 vX.Y.Z；构建失败自动回滚本地 tag）→
+本地嵌 key 构建 → 推送 → `gh release create` + 上传本地包和 install.sh。
 
 **aarch64 没有预编译包**：Qt 官方在线仓库没有 6.11.x 的 Linux ARM64 桌面安装包（发行版源最高 6.4，
 不满足工程 6.11 要求），CI 无法构建。ARM 用户请走源码编译安装（`git clone` 后 `make install`）。
