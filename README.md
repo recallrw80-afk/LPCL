@@ -28,7 +28,7 @@ Official prebuilt package (embedded CurseForge key — the full experience), for
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-In China, use the Gitee mirror: `curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn` (replace the tag with the latest version).
+In China, use the Gitee mirror: `curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn` (replace the tag with the latest version; for betas, use a pre-release tag and pass `--cn --beta`).
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub: `git clone https://github.com/recallrw80-afk/LPCL.git`
 
