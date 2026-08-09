@@ -1,5 +1,5 @@
-#ifndef LPCL_PLAYER_BRIDGE_H
-#define LPCL_PLAYER_BRIDGE_H
+#ifndef MLC_PLAYER_BRIDGE_H
+#define MLC_PLAYER_BRIDGE_H
 
 #include <QObject>
 #include <QString>
@@ -8,8 +8,8 @@
 
 #include "core/types.h"
 
-// 玩家管理的 QML 桥接层：包装 lpcl:: 玩家 API（SDK 自由函数 QML 不可直接调用）
-// 数据真源在 LPCL.ini（经 lpcl:: 读写），本类只做转发 + 变更通知
+// 玩家管理的 QML 桥接层：包装 mlc:: 玩家 API（SDK 自由函数 QML 不可直接调用）
+// 数据真源在 MLC.ini（经 mlc:: 读写），本类只做转发 + 变更通知
 class PlayerBridge : public QObject
 {
     Q_OBJECT
@@ -47,4 +47,4 @@ private:
     PlayerBridge() = default;
 };
 
-#endif // LPCL_PLAYER_BRIDGE_H
+#endif // MLC_PLAYER_BRIDGE_H

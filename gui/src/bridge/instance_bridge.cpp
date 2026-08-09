@@ -1,6 +1,6 @@
 #include "bridge/instance_bridge.h"
 
-#include "lpcl.h"
+#include "mlc.h"
 
 InstanceBridge& InstanceBridge::instance() {
     static InstanceBridge b;
@@ -8,7 +8,7 @@ InstanceBridge& InstanceBridge::instance() {
 }
 
 QVariantMap InstanceBridge::instanceInfo(const QString &displayName) const {
-    auto info = lpcl::instanceInfo(displayName);
+    auto info = mlc::instanceInfo(displayName);
     return {
         {"dirName", info.dirName},
         {"path", info.path},
@@ -20,7 +20,7 @@ QVariantMap InstanceBridge::instanceInfo(const QString &displayName) const {
 
 QVariantList InstanceBridge::modList(const QString &displayName) const {
     QVariantList out;
-    for (const auto &m : lpcl::listMods(displayName)) {
+    for (const auto &m : mlc::listMods(displayName)) {
         QVariantMap v;
         v.insert("fileName", m.fileName);
         v.insert("size", m.size);
@@ -31,19 +31,19 @@ QVariantList InstanceBridge::modList(const QString &displayName) const {
 }
 
 bool InstanceBridge::setModEnabled(const QString &displayName, const QString &fileName, bool enabled) {
-    bool ok = lpcl::setModEnabled(displayName, fileName, enabled);
+    bool ok = mlc::setModEnabled(displayName, fileName, enabled);
     if (ok) emit modsChanged(displayName);
     return ok;
 }
 
 bool InstanceBridge::deleteMod(const QString &displayName, const QString &fileName) {
-    bool ok = lpcl::deleteMod(displayName, fileName);
+    bool ok = mlc::deleteMod(displayName, fileName);
     if (ok) emit modsChanged(displayName);
     return ok;
 }
 
 bool InstanceBridge::removeInstance(const QString &displayName) {
-    bool ok = lpcl::removeInstance(displayName);
+    bool ok = mlc::removeInstance(displayName);
     if (ok) emit instancesChanged();
     return ok;
 }

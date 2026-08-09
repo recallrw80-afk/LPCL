@@ -14,7 +14,7 @@
 #include <QNetworkReply>
 #include <QSharedPointer>
 
-static Q_LOGGING_CATEGORY(logAsset, "lpcl.asset")
+static Q_LOGGING_CATEGORY(logAsset, "mlc.asset")
 
 // 安全读取字符串成员：键缺失或类型不符时返回空串，避免 .value()/.get<>()
 // 类型不符抛 nlohmann 异常、穿过 Qt 信号槽导致 std::terminate（P0-3）

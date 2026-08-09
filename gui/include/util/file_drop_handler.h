@@ -1,5 +1,5 @@
-#ifndef LPCL_FILE_DROP_HANDLER_H
-#define LPCL_FILE_DROP_HANDLER_H
+#ifndef MLC_FILE_DROP_HANDLER_H
+#define MLC_FILE_DROP_HANDLER_H
 
 #include <QObject>
 #include <QStringList>
@@ -42,4 +42,4 @@ private:
     QStringList m_droppedFiles;
 };
 
-#endif // LPCL_FILE_DROP_HANDLER_H
+#endif // MLC_FILE_DROP_HANDLER_H

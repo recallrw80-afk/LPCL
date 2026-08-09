@@ -2,7 +2,7 @@ import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
-import LPCL
+import MLC
 
 ApplicationWindow {
     id: window
@@ -30,7 +30,7 @@ ApplicationWindow {
     }
 
     visible: true
-    title: "Linux Plain Craft Launcher"
+    title: "MinecraftLauncherCLI"
 
     // Opacity driven by custom property for reliable animation (entrance fade-in)
     property real winOpacity: 0
@@ -238,16 +238,16 @@ ApplicationWindow {
                         anchors.rightMargin: 8
                         spacing: 0
 
-                        // LPCL text + version label (baseline-aligned)
+                        // MLC text + version label (baseline-aligned)
                         Item {
                             Layout.alignment: Qt.AlignVCenter
                             Layout.leftMargin: 6
-                            implicitWidth: lpclText.implicitWidth + (versionText.visible ? versionText.implicitWidth + 3 : 0)
-                            implicitHeight: lpclText.implicitHeight
+                            implicitWidth: mlcText.implicitWidth + (versionText.visible ? versionText.implicitWidth + 3 : 0)
+                            implicitHeight: mlcText.implicitHeight
 
                             Text {
-                                id: lpclText
-                                text: "LPCL"
+                                id: mlcText
+                                text: "MLC"
                                 color: Theme.pureWhite
                                 font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeLogo
@@ -256,9 +256,9 @@ ApplicationWindow {
 
                             Text {
                                 id: versionText
-                                anchors.left: lpclText.right
+                                anchors.left: mlcText.right
                                 anchors.leftMargin: 3
-                                anchors.baseline: lpclText.baseline
+                                anchors.baseline: mlcText.baseline
                                 text: window.appVersion ? window.appVersion : ""
                                 color: Theme.pureWhite
                                 font.family: Theme.fontFamily
@@ -326,7 +326,7 @@ ApplicationWindow {
                                             spacing: Theme.tightSpacing
 
                                             // SVG icon from assets (external file, no inline code)
-                                            LPCLIcon {
+                                            MLCIcon {
                                                 size: 16
                                                 anchors.verticalCenter: parent.verticalCenter
                                             // qmllint disable unqualified
@@ -383,7 +383,7 @@ ApplicationWindow {
                                 radius: 3
                                 color: btnTitleMin.hovered ? "#33ffffff" : "transparent"
                             }
-                            LPCLIcon {
+                            MLCIcon {
                                 size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "minus"
@@ -414,7 +414,7 @@ ApplicationWindow {
                                 radius: 3
                                 color: btnTitleClose.hovered ? "#33ffffff" : "transparent"
                             }
-                            LPCLIcon {
+                            MLCIcon {
                                 size: 24
                                 anchors.centerIn: parent
                                 lucideIcon: "x"
@@ -454,7 +454,7 @@ ApplicationWindow {
                                 radius: Theme.buttonRadius
                                 color: btnExtraBack.hovered ? Theme.color7 : "transparent"
                             }
-                            LPCLIcon {
+                            MLCIcon {
                                 size: 16
                                 anchors.centerIn: parent
                                 lucideIcon: "arrow-down-to-line"
@@ -483,7 +483,7 @@ ApplicationWindow {
                                 radius: Theme.buttonRadius
                                 color: btnExtraDownload.hovered ? Theme.color7 : "transparent"
                             }
-                            LPCLIcon {
+                            MLCIcon {
                                 size: 16
                                 anchors.centerIn: parent
                                 lucideIcon: "arrow-down-to-line"
@@ -540,7 +540,7 @@ ApplicationWindow {
                 }
 
                 // PanDownload — 下载任务面板（对应原版 PageSpeedLeft 精简版：左下角悬浮按钮 + 可展开任务列表）
-                LPCLDownloadPanel {
+                MLCDownloadPanel {
                     id: panDownload
                     anchors.fill: parent
                     z: 80  // 低于 PanHint(90) 与 PanMsg(100)，避免遮挡提示和弹窗
@@ -558,14 +558,14 @@ ApplicationWindow {
                 // qmllint enable unqualified
 
                 // PanHint — 轻提示层（对应原版 PanHint：左下角滑入提示，覆盖于页面之上）
-                LPCLHint {
+                MLCHint {
                     id: panHint
                     anchors.fill: parent
                     z: 90
                 }
 
                 // PanMsg — 消息弹窗层（对应原版 PanMsg：模态遮罩覆盖整个窗口含标题栏，默认隐藏）
-                LPCLMsg {
+                MLCMsg {
                     id: panMsg
                     anchors.fill: parent
                     z: 100

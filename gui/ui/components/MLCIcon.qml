@@ -1,6 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
-import LPCL
+import MLC
 
 // Minimal icon display: SVG source + ColorOverlay tinting
 Item {

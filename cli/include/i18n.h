@@ -1,5 +1,5 @@
-#ifndef LPCL_CLI_I18N_H
-#define LPCL_CLI_I18N_H
+#ifndef MLC_CLI_I18N_H
+#define MLC_CLI_I18N_H
 
 // CLI 中英文切换（main.cpp / test.cpp 共用）
 
@@ -15,4 +15,4 @@ inline Lang g_lang = EN;
 inline void setLang(bool en) { g_lang = en ? EN : CN; }
 inline QString T(const char *cn, const char *en) { return QString::fromUtf8(g_lang == CN ? cn : en); }
 
-#endif // LPCL_CLI_I18N_H
+#endif // MLC_CLI_I18N_H

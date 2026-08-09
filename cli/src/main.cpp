@@ -1,5 +1,5 @@
-// lpcl — Minecraft launcher CLI frontend
-// Links only liblpclcore (QtCore + QtNetwork, no GUI/QML)
+// mlc — Minecraft launcher CLI frontend
+// Links only libmlccore (QtCore + QtNetwork, no GUI/QML)
 //
 // 维护指南：新增命令只需两步（行为由注册表驱动）：
 //   1. 写一个 int handleXxx(QStringList &args)（放进对应 cmd_*.cpp 组，commands.h 声明）
@@ -50,11 +50,11 @@ static int dispatchCommand(const QString &cmd, QStringList &args) {
 
 int main(int argc, char *argv[]) {
     QCoreApplication app(argc, argv);
-    app.setApplicationName("lpcl");
+    app.setApplicationName("mlc");
     app.setApplicationVersion(GIT_DESCRIBE);
 
     // 默认静默，关闭 SDK 调试日志
-    QLoggingCategory::setFilterRules("lpcl.*.info=false\nlpcl.*.debug=false");
+    QLoggingCategory::setFilterRules("mlc.*.info=false\nmlc.*.debug=false");
     // 语言只由 set-lang 持久设置控制（无命令行 flag）
     Settings::initialize();
     if (Settings::instance().getString("UiLanguage") == "zh")
@@ -63,7 +63,7 @@ int main(int argc, char *argv[]) {
     // ---- 选项解析 ----
     QCommandLineParser parser;
     parser.setApplicationDescription(
-        _("LPCL 命令行启动器", "LPCL Command-Line Launcher"));
+        _("MLC 命令行启动器", "MLC Command-Line Launcher"));
 
     parser.addPositionalArgument("command", "placeholder");
     parser.setOptionsAfterPositionalArgumentsMode(

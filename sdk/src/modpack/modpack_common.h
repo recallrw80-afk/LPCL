@@ -1,5 +1,5 @@
-#ifndef LPCL_MODPACK_COMMON_H
-#define LPCL_MODPACK_COMMON_H
+#ifndef MLC_MODPACK_COMMON_H
+#define MLC_MODPACK_COMMON_H
 
 // 整合包安装内部共享：各安装器与下载管线共用的工具和流程
 // 不属于公开 API（公开接口见 sdk/include/modpack.h）
@@ -82,4 +82,4 @@ void installLauncherPack(const QString &filePath, const QString &packDir, const 
 void installCompressed(const QString &filePath, const QString &packDir, const QString &instanceName, PackProgressCallback, PackCompleteCallback);
 void installMod(const QString &packDir, const QString &targetInstance, PackProgressCallback, PackCompleteCallback);
 
-#endif // LPCL_MODPACK_COMMON_H
+#endif // MLC_MODPACK_COMMON_H

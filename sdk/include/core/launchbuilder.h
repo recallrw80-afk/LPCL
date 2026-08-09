@@ -1,12 +1,12 @@
-#ifndef LPCL_LAUNCHBUILDER_H
-#define LPCL_LAUNCHBUILDER_H
+#ifndef MLC_LAUNCHBUILDER_H
+#define MLC_LAUNCHBUILDER_H
 
 #include <QObject>
 #include <QMap>
 #include <QStringList>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 using json = nlohmann::json;
 
@@ -15,7 +15,7 @@ using json = nlohmann::json;
  * Mirrors the argument construction in ModLaunch.McLaunchArgumentMain,
  * McLaunchArgumentsJVM, McLaunchArgumentsGame, and McLaunchArgumentsReplace.
  */
-class LPCLCORE_EXPORT LaunchBuilder : public QObject
+class MLCCORE_EXPORT LaunchBuilder : public QObject
 {
     Q_OBJECT
 
@@ -78,4 +78,4 @@ private:
     QStringList m_commandLine; ///< Fully substituted JVM+main+game args, cached by build()
 };
 
-#endif // LPCL_LAUNCHBUILDER_H
+#endif // MLC_LAUNCHBUILDER_H

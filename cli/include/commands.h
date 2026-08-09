@@ -1,7 +1,7 @@
 // 命令注册表：一个命令的全部元信息收在一条 Command 里，
 // 帮助总表（help.cpp）、参数详解（help.cpp）、派发（main.cpp）都从 COMMANDS[] 生成
-#ifndef LPCL_CLI_COMMANDS_H
-#define LPCL_CLI_COMMANDS_H
+#ifndef MLC_CLI_COMMANDS_H
+#define MLC_CLI_COMMANDS_H
 
 #include <QStringList>
 
@@ -56,4 +56,4 @@ QString extractFlag(QStringList &args, const QString &flag);
 QString extractFolder(QStringList &args);
 QString extractRename(QStringList &args);
 
-#endif // LPCL_CLI_COMMANDS_H
+#endif // MLC_CLI_COMMANDS_H

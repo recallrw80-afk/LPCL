@@ -9,7 +9,7 @@
 #include <QLoggingCategory>
 #include <QRegularExpression>
 
-static Q_LOGGING_CATEGORY(logBuild, "lpcl.launchbuilder")
+static Q_LOGGING_CATEGORY(logBuild, "mlc.launchbuilder")
 
 // 自动内存：取系统可用内存的 50%，按 512MB 对齐，限制在 [2048, 16384] MB。
 // 读取失败时回退 4096MB。Linux 读 /proc/meminfo（注意其 st_size 恒为 0，
@@ -355,7 +355,7 @@ QMap<QString, QString> LaunchBuilder::buildReplacements(const McVersion &version
     r["version_type"] = version.type;
 
     // Launcher
-    r["launcher_name"] = "LPCL";
+    r["launcher_name"] = "MLC";
     r["launcher_version"] = "0.1";
     r["clientid"] = login.clientToken.isEmpty() ? "0" : login.clientToken;
 

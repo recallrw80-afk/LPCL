@@ -9,7 +9,7 @@
 #include <QUuid>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logAl, "lpcl.auth.authlib")
+static Q_LOGGING_CATEGORY(logAl, "mlc.auth.authlib")
 
 AuthlibAuth::AuthlibAuth(ServerType type)
     : m_type(type) {

@@ -18,7 +18,7 @@
 #include <QUrl>
 #include <QSet>
 
-static Q_LOGGING_CATEGORY(logVer, "lpcl.version")
+static Q_LOGGING_CATEGORY(logVer, "mlc.version")
 
 VersionManager& VersionManager::instance() {
     static VersionManager m;
@@ -245,7 +245,7 @@ void VersionManager::fetchVersionManifest() {
     emit versionLoadProgress("Fetching remote version list...");
 
     QNetworkRequest request(QUrl("https://launchermeta.mojang.com/mc/game/version_manifest.json"));
-    request.setRawHeader("User-Agent", "LPCL/0.1");
+    request.setRawHeader("User-Agent", "MLC/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
 

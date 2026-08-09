@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import LPCL
+import MLC
 
 // Exact replica of PageLaunchLeft.xaml + PageLaunchRight.xaml layout + interaction logic
 // Single file: left sidebar (300px) + right content
@@ -31,7 +31,7 @@ Item {
     // 待重试的 Mod 包路径（纯 Mod 包缺目标实例时二次导入用）
     property string pendingImportPath: ""
 
-    // ---- Player profiles (source of truth: PlayerBridge 单例，持久化于 LPCL.ini) ----
+    // ---- Player profiles (source of truth: PlayerBridge 单例，持久化于 MLC.ini) ----
     property var playerListData: []
 
     // 当前选中玩家头像：skinType slim→Alex / wide→Steve（同 createLogin 语义）；
@@ -725,7 +725,7 @@ Item {
                             Layout.alignment: Qt.AlignHCenter
                             spacing: 8
 
-                            LPCLButton {
+                            MLCButton {
                                 id: msBtn
                                 Layout.preferredWidth: 80
                                 padding: 5
@@ -734,7 +734,7 @@ Item {
                                 hasBorder: false
                                 contentItem: Row {
                                     spacing: 6
-                                    LPCLIcon {
+                                    MLCIcon {
                                         size: 16
                                         lucideIcon: "shield-check"
                                         anchors.verticalCenter: parent.verticalCenter
@@ -752,7 +752,7 @@ Item {
                                     page.loginType = 5;
                                 }
                             }
-                            LPCLButton {
+                            MLCButton {
                                 id: offlineBtn
                                 Layout.preferredWidth: 80
                                 padding: 5
@@ -761,7 +761,7 @@ Item {
                                 hasBorder: false
                                 contentItem: Row {
                                     spacing: 6
-                                    LPCLIcon {
+                                    MLCIcon {
                                         size: 16
                                         lucideIcon: "unlink"
                                         anchors.verticalCenter: parent.verticalCenter
@@ -797,14 +797,14 @@ Item {
                                 spacing: Theme.itemSpacing
                                 visible: !page.loginResult && !page.msPolling
 
-                                LPCLIcon {
+                                MLCIcon {
                                     Layout.alignment: Qt.AlignHCenter
                                     size: 48
                                     lucideIcon: "shield-check"
                                     iconColor: Theme.gray3
                                     opacity: Theme.textOpacityDim
                                 }
-                                LPCLButton {
+                                MLCButton {
                                     Layout.alignment: Qt.AlignHCenter
                                     Layout.preferredWidth: 150
                                     text: "登录 Microsoft 账户"
@@ -840,7 +840,7 @@ Item {
                                     font.pixelSize: Theme.fontSize
                                     color: Theme.color1
                                 }
-                                LPCLButton {
+                                MLCButton {
                                     Layout.alignment: Qt.AlignHCenter
                                     Layout.preferredWidth: 60
                                     text: "取消"
@@ -858,7 +858,7 @@ Item {
                                 spacing: 12
                                 visible: page.loginResult !== null && !page.msPolling
 
-                                LPCLIcon {
+                                MLCIcon {
                                     Layout.alignment: Qt.AlignHCenter
                                     size: 48
                                     assetsIcon: page.currentAvatar
@@ -876,7 +876,7 @@ Item {
                                     font.bold: true
                                     color: Theme.color1
                                 }
-                                LPCLButton {
+                                MLCButton {
                                     Layout.alignment: Qt.AlignHCenter
                                     Layout.preferredWidth: 100
                                     text: "切换账户"
@@ -907,7 +907,7 @@ Item {
                                 width: parent.width - 40
                                 height: 50
 
-                                LPCLIcon {
+                                MLCIcon {
                                     id: pageIcoTwo
                                     anchors {
                                         left: parent.left
@@ -948,7 +948,7 @@ Item {
                             }
 
                             // Username input
-                            LPCLTextBox {
+                            MLCTextBox {
                                 anchors {
                                     horizontalCenter: parent.horizontalCenter
                                     top: playerChip.bottom
@@ -973,7 +973,7 @@ Item {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 75
 
-                            LPCLButton {
+                            MLCButton {
                                 id: btnLaunch
                                 anchors {
                                     left: parent.left
@@ -998,7 +998,7 @@ Item {
                             Layout.leftMargin: 20
                             Layout.rightMargin: 20
 
-                            LPCLButton {
+                            MLCButton {
                                 id: btnVersion
                                 Layout.fillWidth: true
                                 Layout.preferredHeight: Theme.versionBtnHeight
@@ -1007,7 +1007,7 @@ Item {
                                 enabled: page.btnLaunchState !== 0
                                 onClicked: page.pushSubPage("版本选择")
                             }
-                            LPCLButton {
+                            MLCButton {
                                 id: btnMore
                                 Layout.preferredWidth: 80
                                 Layout.preferredHeight: Theme.versionBtnHeight
@@ -1044,7 +1044,7 @@ Item {
                             Layout.preferredWidth: 50
                             Layout.preferredHeight: 50
                             Layout.topMargin: 10
-                            LPCLProgressBar {
+                            MLCProgressBar {
                                 anchors.fill: parent
                                 indeterminate: Launcher.launchState < Launcher.Downloading
                             }
@@ -1180,7 +1180,7 @@ Item {
                     }
 
                     // Cancel button at bottom (full-width, matching original Margin="20,0,20,20" Height=35)
-                    LPCLButton {
+                    MLCButton {
                         anchors {
                             left: parent.left
                             right: parent.right
@@ -1223,7 +1223,7 @@ Item {
                     ColumnLayout {
                         anchors.centerIn: parent
                         spacing: 12
-                        LPCLProgressBar {
+                        MLCProgressBar {
                             Layout.preferredWidth: 50
                             Layout.preferredHeight: 50
                             indeterminate: true
@@ -1246,7 +1246,7 @@ Item {
                     contentHeight: verCol.implicitHeight + 20
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    ScrollBar.vertical: MLCScrollBar {}
 
                     ColumnLayout {
                         id: verCol
@@ -1331,7 +1331,7 @@ Item {
                 }
 
                 // Back button overlay (top-right corner, matching original PageBack)
-                LPCLButton {
+                MLCButton {
                     anchors {
                         right: parent.right
                         top: parent.top
@@ -1365,7 +1365,7 @@ Item {
                     contentHeight: playerCol.implicitHeight + 20
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    ScrollBar.vertical: MLCScrollBar {}
 
                     ColumnLayout {
                         id: playerCol
@@ -1391,7 +1391,7 @@ Item {
                         Repeater {
                             model: page.playerListData
 
-                            LPCLListItem {
+                            MLCListItem {
                                 id: playerItem
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -1407,7 +1407,7 @@ Item {
                                 onClicked: PlayerBridge.selectPlayer(playerItem.modelData.uuid)
 
                                 buttons: [
-                                    LPCLIconButton {
+                                    MLCIconButton {
                                         lucideIcon: "x"
                                         theme: 3
                                         onClicked: page.confirmRemovePlayer(playerItem.modelData.uuid,
@@ -1430,7 +1430,7 @@ Item {
                         }
 
                         // 添加玩家入口：使用离线输入框中的用户名
-                        LPCLListItem {
+                        MLCListItem {
                             Layout.fillWidth: true
                             Layout.preferredHeight: 40
                             Layout.leftMargin: 5
@@ -1449,7 +1449,7 @@ Item {
                 }
 
                 // Back button overlay (top-right corner, matching original PageBack)
-                LPCLButton {
+                MLCButton {
                     anchors {
                         right: parent.right
                         top: parent.top
@@ -1485,7 +1485,7 @@ Item {
                     contentHeight: instCol.implicitHeight + 20
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    ScrollBar.vertical: MLCScrollBar {}
 
                     ColumnLayout {
                         id: instCol
@@ -1549,7 +1549,7 @@ Item {
                         }
 
                         // 打开实例文件夹
-                        LPCLButton {
+                        MLCButton {
                             Layout.leftMargin: 15
                             Layout.topMargin: 6
                             Layout.preferredWidth: 110
@@ -1574,7 +1574,7 @@ Item {
                         Repeater {
                             model: page.modListData
 
-                            LPCLListItem {
+                            MLCListItem {
                                 id: modItem
                                 required property var modelData
                                 Layout.fillWidth: true
@@ -1588,7 +1588,7 @@ Item {
 
                                 buttons: [
                                     // 启用/禁用开关：失败时轻提示并还原勾选态
-                                    LPCLCheckBox {
+                                    MLCCheckBox {
                                         id: modCheck
                                         height: 28
                                         checked: modItem.modelData.enabled
@@ -1609,7 +1609,7 @@ Item {
                                         }
                                     },
                                     // 删除 Mod（悬停出现，红色）
-                                    LPCLIconButton {
+                                    MLCIconButton {
                                         lucideIcon: "x"
                                         theme: 3
                                         // qmllint disable unqualified
@@ -1646,7 +1646,7 @@ Item {
                             Layout.bottomMargin: 4
                         }
 
-                        LPCLButton {
+                        MLCButton {
                             Layout.fillWidth: true
                             Layout.leftMargin: 5
                             Layout.rightMargin: 5
@@ -1664,7 +1664,7 @@ Item {
                 }
 
                 // 返回按钮（右上角，同其他子页）
-                LPCLButton {
+                MLCButton {
                     anchors {
                         right: parent.right
                         top: parent.top
@@ -1692,7 +1692,7 @@ Item {
                 contentHeight: panMain.implicitHeight + 25
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: LPCLScrollBar {}
+                ScrollBar.vertical: MLCScrollBar {}
 
                 ColumnLayout {
                     id: panMain
@@ -1773,11 +1773,11 @@ Item {
                                 clip: true
                                 contentWidth: width
                                 contentHeight: labLog.implicitHeight
-                                ScrollBar.vertical: LPCLScrollBar {}
+                                ScrollBar.vertical: MLCScrollBar {}
                                 Text {
                                     id: labLog
                                     width: parent.width
-                                    text: "LPCL v" + Qt.application.version + "\nReady.\n"
+                                    text: "MLC v" + Qt.application.version + "\nReady.\n"
                                     color: Theme.color1
                                     font.family: Theme.fontFamily
                                     font.pixelSize: Theme.fontSize
@@ -1962,7 +1962,7 @@ Item {
         ColumnLayout {
             anchors.centerIn: parent
             spacing: Theme.itemSpacing
-            LPCLIcon {
+            MLCIcon {
                 Layout.alignment: Qt.AlignHCenter
                 size: 48
                 // qmllint disable unqualified

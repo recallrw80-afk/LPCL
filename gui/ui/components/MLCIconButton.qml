@@ -1,5 +1,5 @@
 import QtQuick
-import LPCL
+import MLC
 
 // 复刻原版 MyIconButton（Controls/MyIconButton.xaml + .xaml.vb）
 // 纯图标按钮：圆形背景，悬停变色，按下缩放回弹
@@ -55,7 +55,7 @@ Item {
     }
 
     // ---- 图标（原版 Path Margin=5，即图标区 = 整体 - 10） ----
-    LPCLIcon {
+    MLCIcon {
         id: icon
         anchors.centerIn: parent
         width: (control.width - 10) * control.logoScale

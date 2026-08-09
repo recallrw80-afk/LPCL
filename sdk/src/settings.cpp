@@ -7,7 +7,7 @@
 #include <QLoggingCategory>
 #include <QUuid>
 
-static Q_LOGGING_CATEGORY(logSettings, "lpcl.settings")
+static Q_LOGGING_CATEGORY(logSettings, "mlc.settings")
 
 Settings& Settings::instance() {
     static Settings s;
@@ -31,7 +31,7 @@ void Settings::initialize(const QString &configPath) {
     QString path = configPath;
     if (path.isEmpty()) {
         // Use app data directory
-        path = QCoreApplication::applicationDirPath() + "/LPCL.ini";
+        path = QCoreApplication::applicationDirPath() + "/MLC.ini";
     }
 
     // Ensure directory exists
@@ -42,7 +42,7 @@ void Settings::initialize(const QString &configPath) {
 
     s.m_settings = new QSettings(path, QSettings::IniFormat);
     // 设置组名
-    s.m_settings->beginGroup("LPCL");
+    s.m_settings->beginGroup("MLC");
     s.initDefaults();
 
     qCDebug(logSettings) << "Settings initialized at" << path;

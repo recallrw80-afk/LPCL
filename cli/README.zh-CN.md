@@ -1,8 +1,8 @@
-# lpcl — Linux 上的 Minecraft 启动器
+# mlc — Linux 上的 Minecraft 启动器
 
 [English](README.md) | **简体中文**
 
-**LPCL（Linux Plain Craft Launcher）** 是 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的跨平台移植版——一个用 C++/Qt 编写的 Minecraft 启动器。`lpcl` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
+**MinecraftLauncherCLI（简称 MLC）** 是 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的跨平台移植版——一个用 C++/Qt 编写的 Minecraft 启动器。`mlc` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
 
 ## 功能特性
 
@@ -28,19 +28,19 @@
 下载并安装官方预编译包——**完整体验**（内嵌 CurseForge key，Mod 下载走官方 API）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
 ```
 
 **国内网络**：下载源自动降级——GitHub 优先，不可用（限流/超时）自动切 Gitee 镜像，无需任何参数：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
 ```
 
 国内装**测试版**（加 `--beta`，源同样自动降级）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
@@ -48,21 +48,21 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/
 装最新**预发布版**（Beta）：`latest` 地址不含预发布，install.sh 需从 tag 地址下载并加 `--beta`：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 预编译包支持 x86_64（即 amd64）与 macOS（Apple Silicon）；Linux aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：
 
 ```bash
-lpcl help
+mlc help
 ```
 
 ### 预编译包手动安装
 
-从 [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest) 下载对应架构的 `lpcl-linux-<arch>.tar.xz`，与 `install.sh` 放同一目录：
+从 [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest) 下载对应架构的 `mlc-linux-<arch>.tar.xz`，与 `install.sh` 放同一目录：
 
 ```bash
-bash install.sh lpcl-linux-x86_64.tar.xz
+bash install.sh mlc-linux-x86_64.tar.xz
 ```
 
 ### 源码编译安装
@@ -70,55 +70,55 @@ bash install.sh lpcl-linux-x86_64.tar.xz
 适合改代码/自定义构建。**注意**：本地编译的包不内嵌 CF key（CurseForge 自动走 MCIM 镜像，功能可用但非最佳链路），追求完整体验请用上面的官方包。
 
 ```bash
-git clone https://github.com/recallrw80-afk/LPCL.git
-cd LPCL
+git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+cd MLC
 make install        # 编译 Release → 零依赖打包 → 安装到本机
 ```
 
 依赖：Qt 6.11+（Core/Network）、CMake 3.16+、Ninja、C++20 编译器、nlohmann-json 3.11+、ZLIB。Qt 路径默认 `$HOME/Qt/6.11.1/gcc_64`，可用 `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64` 覆盖。
 
-其他电脑编译的包拷到本机安装：编译机 `make package-tar` 生成 `cli/dist/lpcl-linux-<arch>.tar.xz`，拷贝后 `bash cli/install.sh lpcl-linux-<arch>.tar.xz`。
+其他电脑编译的包拷到本机安装：编译机 `make package-tar` 生成 `cli/dist/mlc-linux-<arch>.tar.xz`，拷贝后 `bash cli/install.sh mlc-linux-<arch>.tar.xz`。
 
 ### 更新与卸载
 
 ```bash
-lpcl update         # 检查 GitHub Releases 新版本并原地更新（仅 install.sh 安装的副本）
-lpcl uninstall      # 卸载（清空游戏目录）
-lpcl uninstall -r   # 卸载但保留游戏目录内容
+mlc update         # 检查 GitHub Releases 新版本并原地更新（仅 install.sh 安装的副本）
+mlc uninstall      # 卸载（清空游戏目录）
+mlc uninstall -r   # 卸载但保留游戏目录内容
 ```
 
 ### 常用构建命令
 
 ```bash
-make cli            # 构建 lpcl + liblpclcore.so（Debug）
-make package-tar    # 生成零依赖发布包 cli/dist/lpcl-linux-<arch>.tar.xz
-make run            # 构建并启动 QML GUI（测试版，二进制名 lpcl-gui）
+make cli            # 构建 mlc + libmlccore.so（Debug）
+make package-tar    # 生成零依赖发布包 cli/dist/mlc-linux-<arch>.tar.xz
+make run            # 构建并启动 QML GUI（测试版，二进制名 mlc-gui）
 ```
 
 ## 快速上手
 
 ```bash
 # 1. 设置游戏目录（默认是程序旁的 ./mc/，可省略）
-lpcl set-folder /home/yourname/mc
+mlc set-folder /home/yourname/mc
 
 # 2. 导入一个整合包
-lpcl inpack ~/Downloads/某某整合包.zip
+mlc inpack ~/Downloads/某某整合包.zip
 
 # 3. 看看有哪些实例
-lpcl list
+mlc list
 
 # 4. 启动！
-lpcl launch
+mlc launch
 # 或者直接指定：
-lpcl launch 实例名
+mlc launch 实例名
 ```
 
 没有整合包？先装个原版：
 
 ```bash
-lpcl mc-install          # 最新正式版
-lpcl mc-install 1.20.1   # 指定版本
-lpcl launch 1.20.1
+mlc mc-install          # 最新正式版
+mlc mc-install 1.20.1   # 指定版本
+mlc launch 1.20.1
 ```
 
 ## 本地开服
@@ -129,11 +129,11 @@ lpcl launch 1.20.1
 
 ```bash
 # 原版
-lpcl server-install 1.20.1
+mlc server-install 1.20.1
 
 # 加载器（Forge / Fabric / NeoForge）——裸写自动选最新加载器版本，也可带值指定
-lpcl server-install 1.20.1 --forge
-lpcl server-install 1.20.1 --fabric 0.16.9
+mlc server-install 1.20.1 --forge
+mlc server-install 1.20.1 --fabric 0.16.9
 ```
 
 安装产物在 `{游戏目录}/servers/<标识>/`：原版标识就是版本号（`1.20.1`），加载器标识带后缀（`1.20.1-forge-47.3.0`）。
@@ -141,7 +141,7 @@ lpcl server-install 1.20.1 --fabric 0.16.9
 要把你正在玩的整合包搬进服务端，加 `--from <实例名>`——会把该实例的 `mods/`、`config/`、`defaultconfigs/` 复制进服务端目录：
 
 ```bash
-lpcl server-install 1.20.1 --forge --from 我的整合包
+mlc server-install 1.20.1 --forge --from 我的整合包
 ```
 
 > **注意**：客户端专属 mod（Sodium 等渲染/界面类）会让服务端启动崩溃。启动失败就先从服务端的 `mods/` 里删掉它们。
@@ -149,7 +149,7 @@ lpcl server-install 1.20.1 --forge --from 我的整合包
 ### 2. 启动
 
 ```bash
-lpcl server-start 1.20.1-forge-47.3.0
+mlc server-start 1.20.1-forge-47.3.0
 ```
 
 - **首次启动**要求同意 [Minecraft EULA](https://aka.ms/MinecraftEULA)：交互终端里回答确认，或加 `--eula` 参数书面同意（只问一次，写入 `eula.txt` 后不再问）
@@ -178,25 +178,25 @@ whitelist add 朋友的名字
 ### 场景 1：玩整合包
 
 ```bash
-lpcl set-folder ~/mc                          # 设置游戏目录（可选，默认程序旁的 ./mc/）
-lpcl inpack ~/Downloads/ATM9.zip              # 导入整合包（自动下齐游戏本体/Forge/Mod）
-lpcl list                                     # 查看已有实例
-lpcl mods "All the Mods 9"                    # 查看实例的 Mod 列表和启用状态
-lpcl launch "All the Mods 9"                  # 启动（也可省略名称，上下键选择）
+mlc set-folder ~/mc                          # 设置游戏目录（可选，默认程序旁的 ./mc/）
+mlc inpack ~/Downloads/ATM9.zip              # 导入整合包（自动下齐游戏本体/Forge/Mod）
+mlc list                                     # 查看已有实例
+mlc mods "All the Mods 9"                    # 查看实例的 Mod 列表和启用状态
+mlc launch "All the Mods 9"                  # 启动（也可省略名称，上下键选择）
 ```
 
 ### 场景 2：快速玩原版
 
 ```bash
-lpcl mc-install 1.20.1                        # 下载 1.20.1（无参 = 最新正式版）
-lpcl launch 1.20.1                            # 启动
+mlc mc-install 1.20.1                        # 下载 1.20.1（无参 = 最新正式版）
+mlc launch 1.20.1                            # 启动
 ```
 
 ### 场景 3：开服和朋友玩
 
 ```bash
-lpcl server-install 1.20.1 --forge            # 装 Forge 服务端（原版去掉 --forge）
-lpcl server-start 1.20.1-forge-47.3.0         # 首次会问 EULA（或加 --eula）
+mlc server-install 1.20.1 --forge            # 装 Forge 服务端（原版去掉 --forge）
+mlc server-start 1.20.1-forge-47.3.0         # 首次会问 EULA（或加 --eula）
 
 # 服务端跑起来后，直接在终端敲控制台命令：
 whitelist on                                  # 开白名单（公网必做）
@@ -210,24 +210,24 @@ stop                                          # 关服
 ### 场景 4：外置登录（LittleSkin 等）
 
 ```bash
-lpcl login                                    # 向导：服务器地址 → 邮箱 → 密码（默认 LittleSkin）
-lpcl launch 我的整合包                         # 启动自动用外置账号（每次启动在线刷新）
-lpcl config                                   # 查看当前登录状态
-lpcl logout                                   # 退出登录，回退离线玩家
+mlc login                                    # 向导：服务器地址 → 邮箱 → 密码（默认 LittleSkin）
+mlc launch 我的整合包                         # 启动自动用外置账号（每次启动在线刷新）
+mlc config                                   # 查看当前登录状态
+mlc logout                                   # 退出登录，回退离线玩家
 ```
 
 ### 场景 5：日常维护
 
 ```bash
-lpcl update                                   # 检查并更新 lpcl 自身
-lpcl test                                     # 全系统自检（出问题先跑这个）
-lpcl report 启动1.20.1闪退                     # 生成预填 Issue 链接（自动附环境+日志，已脱敏）
-lpcl uninstall -r                             # 卸载但保留游戏内容
+mlc update                                   # 检查并更新 mlc 自身
+mlc test                                     # 全系统自检（出问题先跑这个）
+mlc report 启动1.20.1闪退                     # 生成预填 Issue 链接（自动附环境+日志，已脱敏）
+mlc uninstall -r                             # 卸载但保留游戏内容
 ```
 
 ## 命令参考
 
-任何命令都可以加 `-h`（或 `--help`）打印该命令的参数详解，如 `lpcl inpack -h`。
+任何命令都可以加 `-h`（或 `--help`）打印该命令的参数详解，如 `mlc inpack -h`。
 
 ### 实例
 
@@ -294,10 +294,10 @@ mc/
 ├── assets/         # 游戏资源（多实例共享）
 ├── javas/          # 自动下载的 Java
 ├── servers/        # 本地服务端（server-install 的产物，每个版本/加载器一个目录）
-└── logs/           # 启动器日志（lpcl-launch-*.log，滚动保留 10 份）
+└── logs/           # 启动器日志（mlc-launch-*.log，滚动保留 10 份）
 ```
 
-游戏自己的日志在 `<实例>/logs/latest.log`（MC/mod 标准位置）；启动器每次 `launch` 另写一份完整会话日志（启动命令行 + 全部游戏输出 + 退出码）到 `mc/logs/lpcl-launch-<时间戳>.log`，排查启动问题看这个。
+游戏自己的日志在 `<实例>/logs/latest.log`（MC/mod 标准位置）；启动器每次 `launch` 另写一份完整会话日志（启动命令行 + 全部游戏输出 + 退出码）到 `mc/logs/mlc-launch-<时间戳>.log`，排查启动问题看这个。
 
 ## 常见问题
 
@@ -305,10 +305,10 @@ mc/
 不需要。官方发布的预编译包内嵌了 key（走官方 API，最快最稳）；源码构建默认不带 key，自动使用 MCIM 镜像下载。key 失效或被吊销时会自动回退镜像重试，无需手动处理。
 
 **界面怎么变成中文？**
-`lpcl set-lang zh`（一次设置，永久生效）。
+`mlc set-lang zh`（一次设置，永久生效）。
 
 **有图形界面吗？**
-QML GUI 目前是测试版，与 CLI 共享同一套 SDK。开发构建后用 `make run` 启动（二进制名 `lpcl-gui`）；发布包如包含 GUI 会注册 `lpcl-gui` 命令。
+QML GUI 目前是测试版，与 CLI 共享同一套 SDK。开发构建后用 `make run` 启动（二进制名 `mlc-gui`）；发布包如包含 GUI 会注册 `mlc-gui` 命令。
 
 **导入失败会怎样？**
 任一下载环节失败（游戏文件/Modloader/Mod）都会整体回滚，不会留下装了一半的实例，重试即可。

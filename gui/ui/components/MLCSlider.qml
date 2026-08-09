@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import LPCL
+import MLC
 
 // 复刻原版 MySlider（Controls/MySlider.xaml + .xaml.vb）
 // 拖动滑块：1px 未完成轨道 + 2px 完成轨道 + 10px 圆点，支持拖动与方向键

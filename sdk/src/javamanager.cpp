@@ -10,7 +10,7 @@
 #include <QLoggingCategory>
 #include <QThreadPool>
 
-static Q_LOGGING_CATEGORY(logJava, "lpcl.java")
+static Q_LOGGING_CATEGORY(logJava, "mlc.java")
 
 JavaManager& JavaManager::instance() {
     static JavaManager m;
@@ -28,7 +28,7 @@ QStringList JavaManager::javaSearchPaths() {
         }
     };
 
-    // LPCL 自动下载的 Java 存放目录（{mcFolder}/javas/）——确保重装/重启后仍被发现
+    // MLC 自动下载的 Java 存放目录（{mcFolder}/javas/）——确保重装/重启后仍被发现
     QString mcFolder = VersionManager::instance().mcFolder();
     if (!mcFolder.isEmpty())
         addIfExists(mcFolder + "javas/");

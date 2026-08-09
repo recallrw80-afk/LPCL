@@ -1,5 +1,5 @@
-#ifndef LPCL_MOD_PLATFORM_BRIDGE_H
-#define LPCL_MOD_PLATFORM_BRIDGE_H
+#ifndef MLC_MOD_PLATFORM_BRIDGE_H
+#define MLC_MOD_PLATFORM_BRIDGE_H
 
 #include <QObject>
 #include <QString>
@@ -62,4 +62,4 @@ private:
     int m_downloadPercent = 0;
 };
 
-#endif // LPCL_MOD_PLATFORM_BRIDGE_H
+#endif // MLC_MOD_PLATFORM_BRIDGE_H

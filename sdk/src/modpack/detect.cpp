@@ -100,7 +100,7 @@ PackType detectPackType(const QString &filePath) {
         if (zipCount == 1) {
             // 把内层 zip 解出到唯一临时文件再检测（避免固定路径并发冲突）
             QString tmpInner = QDir::temp().filePath(
-                QString("_lpcl_detect_%1.zip").arg(QCoreApplication::applicationPid()));
+                QString("_mlc_detect_%1.zip").arg(QCoreApplication::applicationPid()));
             QFile::remove(tmpInner);
             QStringList innerEntries;
             if (FileUtils::extractZipEntry(filePath, innerZipPath, tmpInner))

@@ -1,6 +1,6 @@
-#include "core/lpclcore_export.h"
-#ifndef LPCL_PLATFORM_UTILS_H
-#define LPCL_PLATFORM_UTILS_H
+#include "core/mlccore_export.h"
+#ifndef MLC_PLATFORM_UTILS_H
+#define MLC_PLATFORM_UTILS_H
 
 #include <QString>
 #include <QSysInfo>
@@ -37,4 +37,4 @@ inline QString platformName() {
     }
 }
 
-#endif // LPCL_PLATFORM_UTILS_H
+#endif // MLC_PLATFORM_UTILS_H

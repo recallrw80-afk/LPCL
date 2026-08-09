@@ -31,12 +31,12 @@ int main(int argc, char *argv[]){
     QSurfaceFormat::setDefaultFormat(fmt);
 
     QGuiApplication app(argc, argv);
-    app.setApplicationName("LPCL");
+    app.setApplicationName("MLC");
     app.setApplicationVersion(QString::fromLatin1(APP_VERSION));
-    app.setOrganizationName("LPCL");
+    app.setOrganizationName("MLC");
 
     // Print version info at startup
-    qInfo() << "LPCL version:" << GIT_DESCRIBE << "commit:" << GIT_COMMIT_HASH;
+    qInfo() << "MLC version:" << GIT_DESCRIBE << "commit:" << GIT_COMMIT_HASH;
 
     // Initialize settings
     Settings::initialize();
@@ -48,7 +48,7 @@ int main(int argc, char *argv[]){
     auto &downloadMgr = DownloadManager::instance();
 
     // Set up logging
-    QLoggingCategory::setFilterRules("lpcl.*.debug=true\nlpcl.java.debug=false");
+    QLoggingCategory::setFilterRules("mlc.*.debug=true\nmlc.java.debug=false");
 
     // Initial Minecraft folder from settings
     QString savedFolder = Settings::instance().getString("LaunchFolderSelect");
@@ -64,28 +64,28 @@ int main(int argc, char *argv[]){
     // Create QML engine
     QQmlApplicationEngine engine;
 
-    // ---- QML type registrations (manual, since liblpclcore has no QML macros) ----
+    // ---- QML type registrations (manual, since libmlccore has no QML macros) ----
     // Singletons
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "Settings", &Settings::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "JavaManager", &JavaManager::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "VersionManager", &VersionManager::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "Launcher", &Launcher::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "DownloadManager", &DownloadManager::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "Settings", &Settings::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "JavaManager", &JavaManager::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "VersionManager", &VersionManager::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "Launcher", &Launcher::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "DownloadManager", &DownloadManager::instance());
     // OfflineAuth is a singleton (created on demand)
-    qmlRegisterSingletonType<OfflineAuth>("LPCL", 1, 0, "OfflineAuth",
+    qmlRegisterSingletonType<OfflineAuth>("MLC", 1, 0, "OfflineAuth",
         [](QQmlEngine *, QJSEngine *) -> QObject* { return new OfflineAuth(); });
     // MsAuth is a regular type (instantiated per login)
-    qmlRegisterType<MsAuth>("LPCL", 1, 0, "MsAuth");
+    qmlRegisterType<MsAuth>("MLC", 1, 0, "MsAuth");
 
     // FileDropHandler — manual registration because it needs setupWindow()
     FileDropHandler *dropHandler = new FileDropHandler(&app);
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "FileDropHandler", dropHandler);
+    qmlRegisterSingletonInstance("MLC", 1, 0, "FileDropHandler", dropHandler);
 
-    // GUI 桥接层（包装 lpcl:: 自由函数为 QML 可调用的单例）
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "PlayerBridge", &PlayerBridge::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "InstallBridge", &InstallBridge::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "InstanceBridge", &InstanceBridge::instance());
-    qmlRegisterSingletonInstance("LPCL", 1, 0, "ModPlatformBridge", &ModPlatformBridge::instance());
+    // GUI 桥接层（包装 mlc:: 自由函数为 QML 可调用的单例）
+    qmlRegisterSingletonInstance("MLC", 1, 0, "PlayerBridge", &PlayerBridge::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "InstallBridge", &InstallBridge::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "InstanceBridge", &InstanceBridge::instance());
+    qmlRegisterSingletonInstance("MLC", 1, 0, "ModPlatformBridge", &ModPlatformBridge::instance());
 
     // Connect status text changes
     QObject::connect(&launcher, &Launcher::statusTextChanged, []() {
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
     engine.setInitialProperties({
         {"appVersion", QString::fromLatin1(GIT_DESCRIBE)}
     });
-    engine.loadFromModule("LPCL", "Main");
+    engine.loadFromModule("MLC", "Main");
 
     // Close splash after main window renders + fade overlap
     //   Splash fades → 400ms, window fades in → 250ms (starts immediately)

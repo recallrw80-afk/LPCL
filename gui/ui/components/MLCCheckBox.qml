@@ -1,5 +1,5 @@
 import QtQuick
-import LPCL
+import MLC
 
 // 复刻原版 MyCheckBox（Controls/MyCheckBox.xaml + .xaml.vb）
 // 勾选框 + 文字：18px 圆角方框，勾号 OutBack 缩放动画

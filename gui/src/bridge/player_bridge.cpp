@@ -1,6 +1,6 @@
 #include "bridge/player_bridge.h"
 
-#include "lpcl.h"
+#include "mlc.h"
 #include "auth/offlineauth.h"
 #include "core/settings.h"
 
@@ -28,7 +28,7 @@ QString PlayerBridge::currentSkinType() const {
 QVariantList PlayerBridge::playerList() const {
     QVariantList out;
     QString selected = currentUuid();
-    for (const auto &p : lpcl::listPlayers()) {
+    for (const auto &p : mlc::listPlayers()) {
         QVariantMap m;
         m.insert("uuid", p.uuid);
         m.insert("name", p.name);
@@ -41,26 +41,26 @@ QVariantList PlayerBridge::playerList() const {
 }
 
 bool PlayerBridge::selectPlayer(const QString &uuid) {
-    bool ok = lpcl::selectPlayer(uuid);
+    bool ok = mlc::selectPlayer(uuid);
     if (ok) emit playersChanged();
     return ok;
 }
 
 QVariantMap PlayerBridge::addPlayer(const QString &name, const QString &skinType) {
-    auto p = lpcl::addPlayer(name, QString(), skinType);
-    // lpcl::addPlayer 只在首个玩家时自动选中，这里保证"添加即选中"的契约
-    if (!p.uuid.isEmpty()) lpcl::selectPlayer(p.uuid);
+    auto p = mlc::addPlayer(name, QString(), skinType);
+    // mlc::addPlayer 只在首个玩家时自动选中，这里保证"添加即选中"的契约
+    if (!p.uuid.isEmpty()) mlc::selectPlayer(p.uuid);
     emit playersChanged();
     return { {"uuid", p.uuid}, {"name", p.name}, {"skinType", p.skinType} };
 }
 
 bool PlayerBridge::removePlayer(const QString &uuid) {
-    bool ok = lpcl::removePlayer(uuid);
+    bool ok = mlc::removePlayer(uuid);
     if (!ok) return false;
-    // 删除选中玩家后 lpcl:: 会把 SelectedPlayer 置空——GUI 侧自动回退到剩余首个，避免无选中态
+    // 删除选中玩家后 mlc:: 会把 SelectedPlayer 置空——GUI 侧自动回退到剩余首个，避免无选中态
     if (currentUuid().isEmpty()) {
-        auto rest = lpcl::listPlayers();
-        if (!rest.isEmpty()) lpcl::selectPlayer(rest.first().uuid);
+        auto rest = mlc::listPlayers();
+        if (!rest.isEmpty()) mlc::selectPlayer(rest.first().uuid);
     }
     emit playersChanged();
     return true;

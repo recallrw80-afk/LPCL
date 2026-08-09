@@ -1,11 +1,11 @@
-#ifndef LPCL_ASSETDOWNLOADER_H
-#define LPCL_ASSETDOWNLOADER_H
+#ifndef MLC_ASSETDOWNLOADER_H
+#define MLC_ASSETDOWNLOADER_H
 
 #include <QObject>
 #include <functional>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 using json = nlohmann::json;
 
@@ -13,7 +13,7 @@ using json = nlohmann::json;
  * Minecraft asset and library downloader.
  * Handles version JSON, JAR, assets, and native library download/extraction.
  */
-class LPCLCORE_EXPORT AssetDownloader : public QObject
+class MLCCORE_EXPORT AssetDownloader : public QObject
 {
     Q_OBJECT
 
@@ -62,4 +62,4 @@ private:
     int m_completedTasks = 0;
 };
 
-#endif // LPCL_ASSETDOWNLOADER_H
+#endif // MLC_ASSETDOWNLOADER_H

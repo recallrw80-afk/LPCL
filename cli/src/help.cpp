@@ -5,7 +5,7 @@
 #include <iostream>
 
 void printHelpTable() {
-    std::cout << T("Usage: lpcl <command> [args]\n", "Usage: lpcl <command> [args]\n").toStdString();
+    std::cout << T("Usage: mlc <command> [args]\n", "Usage: mlc <command> [args]\n").toStdString();
     std::cout << "\n" << T("命令 / Commands:\n", "Commands:\n").toStdString();
     for (int i = 0; i < COMMANDS_COUNT; ++i) {
         const Command &c = COMMANDS[i];

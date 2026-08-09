@@ -1,8 +1,8 @@
-# lpcl — A Minecraft Launcher for Linux
+# mlc — A Minecraft Launcher for Linux
 
 **English** | [简体中文](README.zh-CN.md)
 
-**LPCL (Linux Plain Craft Launcher)** is a cross-platform port of [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) — a Minecraft launcher written in C++/Qt. `lpcl` is its command-line frontend: no graphical interface needed, just a few MB of memory, with support for modpack import, multi-version management, and game launching.
+**MinecraftLauncherCLI (MLC)** is a cross-platform port of [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) — a Minecraft launcher written in C++/Qt. `mlc` is its command-line frontend: no graphical interface needed, just a few MB of memory, with support for modpack import, multi-version management, and game launching.
 
 ## Features
 
@@ -28,19 +28,19 @@
 Downloads the official prebuilt package — **the full experience** (CI-built, with an embedded CurseForge key so mod downloads use the official API):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
 ```
 
 **In China**: the source falls back automatically — GitHub first, Gitee mirror on failure (rate limit/timeout). No flags needed:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
 ```
 
 For **betas** (add `--beta`; same auto-fallback):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.
@@ -48,21 +48,21 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/
 To install the latest **pre-release** (beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
 ```
 
 Prebuilt packages for x86_64 (amd64) and macOS (Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
 
 ```bash
-lpcl help
+mlc help
 ```
 
 ### Manual prebuilt install
 
-Download `lpcl-linux-<arch>.tar.xz` from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, then:
+Download `mlc-linux-<arch>.tar.xz` from [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest), put it next to `install.sh`, then:
 
 ```bash
-bash install.sh lpcl-linux-x86_64.tar.xz
+bash install.sh mlc-linux-x86_64.tar.xz
 ```
 
 ### Build from source
@@ -70,55 +70,55 @@ bash install.sh lpcl-linux-x86_64.tar.xz
 For hacking/custom builds. **Note**: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror — works, but not the best path); for the full experience use the official package above.
 
 ```bash
-git clone https://github.com/recallrw80-afk/LPCL.git
-cd LPCL
+git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+cd MLC
 make install        # build Release → zero-dependency package → install
 ```
 
 Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
 
-To install a package built on another machine: `make package-tar` there, copy `cli/dist/lpcl-linux-<arch>.tar.xz` over, then `bash cli/install.sh lpcl-linux-<arch>.tar.xz`.
+To install a package built on another machine: `make package-tar` there, copy `cli/dist/mlc-linux-<arch>.tar.xz` over, then `bash cli/install.sh mlc-linux-<arch>.tar.xz`.
 
 ### Update & uninstall
 
 ```bash
-lpcl update         # check GitHub Releases and update in place (install.sh-installed copies only)
-lpcl uninstall      # uninstall (clears the game folder)
-lpcl uninstall -r   # uninstall but keep game folder contents
+mlc update         # check GitHub Releases and update in place (install.sh-installed copies only)
+mlc uninstall      # uninstall (clears the game folder)
+mlc uninstall -r   # uninstall but keep game folder contents
 ```
 
 ### Common build targets
 
 ```bash
-make cli            # build lpcl + liblpclcore.so (Debug)
-make package-tar    # zero-dependency tarball at cli/dist/lpcl-linux-<arch>.tar.xz
-make run            # build & launch the QML GUI (test version, binary name lpcl-gui)
+make cli            # build mlc + libmlccore.so (Debug)
+make package-tar    # zero-dependency tarball at cli/dist/mlc-linux-<arch>.tar.xz
+make run            # build & launch the QML GUI (test version, binary name mlc-gui)
 ```
 
 ## Quick start
 
 ```bash
 # 1. Set the game folder (defaults to ./mc/ next to the binary; optional)
-lpcl set-folder /home/yourname/mc
+mlc set-folder /home/yourname/mc
 
 # 2. Import a modpack
-lpcl inpack ~/Downloads/some-modpack.zip
+mlc inpack ~/Downloads/some-modpack.zip
 
 # 3. See what instances you have
-lpcl list
+mlc list
 
 # 4. Launch!
-lpcl launch
+mlc launch
 # or pick directly:
-lpcl launch <instance-name>
+mlc launch <instance-name>
 ```
 
 No modpack? Install vanilla first:
 
 ```bash
-lpcl mc-install          # latest release
-lpcl mc-install 1.20.1   # specific version
-lpcl launch 1.20.1
+mlc mc-install          # latest release
+mlc mc-install 1.20.1   # specific version
+mlc launch 1.20.1
 ```
 
 ## Local server hosting
@@ -129,11 +129,11 @@ No GUI needed — two commands to a joinable server.
 
 ```bash
 # Vanilla
-lpcl server-install 1.20.1
+mlc server-install 1.20.1
 
 # Loaders (Forge / Fabric / NeoForge) — bare flag picks the latest loader version, or pin one
-lpcl server-install 1.20.1 --forge
-lpcl server-install 1.20.1 --fabric 0.16.9
+mlc server-install 1.20.1 --forge
+mlc server-install 1.20.1 --fabric 0.16.9
 ```
 
 Files land in `{game folder}/servers/<id>/`: the vanilla id is just the version (`1.20.1`); loader ids carry a suffix (`1.20.1-forge-47.3.0`).
@@ -141,7 +141,7 @@ Files land in `{game folder}/servers/<id>/`: the vanilla id is just the version 
 To bring the modpack you play onto the server, add `--from <instance>` — this copies the instance's `mods/`, `config/`, and `defaultconfigs/` into the server directory:
 
 ```bash
-lpcl server-install 1.20.1 --forge --from my-modpack
+mlc server-install 1.20.1 --forge --from my-modpack
 ```
 
 > **Note**: client-only mods (rendering/UI ones like Sodium) crash dedicated servers. If startup fails, remove them from the server's `mods/` first.
@@ -149,7 +149,7 @@ lpcl server-install 1.20.1 --forge --from my-modpack
 ### 2. Start
 
 ```bash
-lpcl server-start 1.20.1-forge-47.3.0
+mlc server-start 1.20.1-forge-47.3.0
 ```
 
 - **First start** requires accepting the [Minecraft EULA](https://aka.ms/MinecraftEULA): answer the interactive prompt, or pass `--eula` (asked once, written to `eula.txt`)
@@ -178,25 +178,25 @@ End-to-end command flows for four common scenarios.
 ### Scenario 1: Play a modpack
 
 ```bash
-lpcl set-folder ~/mc                          # set game folder (optional, defaults to ./mc/ next to the binary)
-lpcl inpack ~/Downloads/ATM9.zip              # import modpack (game files/Forge/mods auto-downloaded)
-lpcl list                                     # show instances
-lpcl mods "All the Mods 9"                    # list the instance's mods + enabled state
-lpcl launch "All the Mods 9"                  # launch (omit the name for an interactive picker)
+mlc set-folder ~/mc                          # set game folder (optional, defaults to ./mc/ next to the binary)
+mlc inpack ~/Downloads/ATM9.zip              # import modpack (game files/Forge/mods auto-downloaded)
+mlc list                                     # show instances
+mlc mods "All the Mods 9"                    # list the instance's mods + enabled state
+mlc launch "All the Mods 9"                  # launch (omit the name for an interactive picker)
 ```
 
 ### Scenario 2: Quick vanilla
 
 ```bash
-lpcl mc-install 1.20.1                        # download 1.20.1 (no arg = latest release)
-lpcl launch 1.20.1                            # launch
+mlc mc-install 1.20.1                        # download 1.20.1 (no arg = latest release)
+mlc launch 1.20.1                            # launch
 ```
 
 ### Scenario 3: Host a server for friends
 
 ```bash
-lpcl server-install 1.20.1 --forge            # Forge server (drop --forge for vanilla)
-lpcl server-start 1.20.1-forge-47.3.0         # asks for the EULA on first run (or pass --eula)
+mlc server-install 1.20.1 --forge            # Forge server (drop --forge for vanilla)
+mlc server-start 1.20.1-forge-47.3.0         # asks for the EULA on first run (or pass --eula)
 
 # once the server is up, type console commands right into the terminal:
 whitelist on                                  # enable whitelist (a must on public internet)
@@ -210,24 +210,24 @@ Friends add the server under "Multiplayer → Add Server" with `<your-ip>:25565`
 ### Scenario 4: External login (LittleSkin etc.)
 
 ```bash
-lpcl login                                    # wizard: server address → email → password (LittleSkin by default)
-lpcl launch my-modpack                        # launches with the external account (auto-refreshed)
-lpcl config                                   # show current login state
-lpcl logout                                   # log out, back to the offline player
+mlc login                                    # wizard: server address → email → password (LittleSkin by default)
+mlc launch my-modpack                        # launches with the external account (auto-refreshed)
+mlc config                                   # show current login state
+mlc logout                                   # log out, back to the offline player
 ```
 
 ### Scenario 5: Maintenance
 
 ```bash
-lpcl update                                   # check for and apply lpcl updates
-lpcl test                                     # full system self-check (run this first when things break)
-lpcl report crash on 1.20.1                   # prefilled issue link (env + logs attached, sanitized)
-lpcl uninstall -r                             # uninstall but keep game contents
+mlc update                                   # check for and apply mlc updates
+mlc test                                     # full system self-check (run this first when things break)
+mlc report crash on 1.20.1                   # prefilled issue link (env + logs attached, sanitized)
+mlc uninstall -r                             # uninstall but keep game contents
 ```
 
 ## Command reference
 
-Every command accepts `-h` (or `--help`) to print detailed parameter help, e.g. `lpcl inpack -h`.
+Every command accepts `-h` (or `--help`) to print detailed parameter help, e.g. `mlc inpack -h`.
 
 ### Instances
 
@@ -294,10 +294,10 @@ mc/
 ├── assets/         # game assets (shared across instances)
 ├── javas/          # auto-downloaded Java runtimes
 ├── servers/        # local servers (server-install output; one dir per version/loader)
-└── logs/           # launcher logs (lpcl-launch-*.log, last 10 kept)
+└── logs/           # launcher logs (mlc-launch-*.log, last 10 kept)
 ```
 
-The game's own log is at `<instance>/logs/latest.log` (standard MC/mod location); each `launch` also writes a full session log (launch command line + all game output + exit code) to `mc/logs/lpcl-launch-<timestamp>.log` — check that one for launch problems.
+The game's own log is at `<instance>/logs/latest.log` (standard MC/mod location); each `launch` also writes a full session log (launch command line + all game output + exit code) to `mc/logs/mlc-launch-<timestamp>.log` — check that one for launch problems.
 
 ## FAQ
 
@@ -305,10 +305,10 @@ The game's own log is at `<instance>/logs/latest.log` (standard MC/mod location)
 No. Official prebuilt packages embed a key (fastest, official API); source builds ship without one and automatically use the MCIM mirror. If a key expires or is revoked, requests automatically fall back to the mirror — nothing to handle manually.
 
 **How do I switch the UI to Chinese?**
-`lpcl set-lang zh` (persistent, one-time).
+`mlc set-lang zh` (persistent, one-time).
 
 **Is there a GUI?**
-The QML GUI is currently a test version sharing the same SDK as the CLI. Start it with `make run` from a dev build (binary name `lpcl-gui`); release packages containing the GUI register an `lpcl-gui` command.
+The QML GUI is currently a test version sharing the same SDK as the CLI. Start it with `make run` from a dev build (binary name `mlc-gui`); release packages containing the GUI register an `mlc-gui` command.
 
 **What happens when an import fails?**
 Any failed download stage (game files / modloader / mods) rolls back everything — no half-installed instance is left behind; just retry.

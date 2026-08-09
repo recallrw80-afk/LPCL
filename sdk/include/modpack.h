@@ -1,10 +1,10 @@
-#ifndef LPCLCORE_MODPACK_H
-#define LPCLCORE_MODPACK_H
+#ifndef MLCCORE_MODPACK_H
+#define MLCCORE_MODPACK_H
 
 #include <QString>
 #include <QStringList>
 #include <functional>
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 /// 整合包类型（对应原版 ModModpack.vb PackType）
 enum class PackType {
@@ -25,10 +25,10 @@ using PackProgressCallback = std::function<void(const QString &status, int progr
 using PackCompleteCallback = std::function<void(bool ok, const QString &msg)>;
 
 /// 检测整合包类型（打开 zip 扫描标记文件）
-LPCLCORE_EXPORT PackType detectPackType(const QString &filePath);
+MLCCORE_EXPORT PackType detectPackType(const QString &filePath);
 
 /// 返回 pack type 的中文名
-LPCLCORE_EXPORT QString packTypeName(PackType type);
+MLCCORE_EXPORT QString packTypeName(PackType type);
 
 /// 安装整合包
 /// @param filePath      zip 文件路径
@@ -36,10 +36,10 @@ LPCLCORE_EXPORT QString packTypeName(PackType type);
 /// @param targetInstance Mod 包的目标实例显示名（仅 PackType::Mod 使用，其余类型传空）
 /// @param onProgress    进度回调
 /// @param onComplete    完成回调
-LPCLCORE_EXPORT void installModpack(const QString &filePath,
+MLCCORE_EXPORT void installModpack(const QString &filePath,
                                      const QString &instanceName,
                                      const QString &targetInstance,
                                      PackProgressCallback onProgress,
                                      PackCompleteCallback onComplete);
 
-#endif // LPCLCORE_MODPACK_H
+#endif // MLCCORE_MODPACK_H

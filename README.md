@@ -1,8 +1,8 @@
-# LPCL — Linux Plain Craft Launcher
+# MLC — MinecraftLauncherCLI
 
 **English** | [简体中文](README.zh-CN.md)
 
-A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lightweight command-line frontend `lpcl` (RSS ~4MB) — suitable for desktops, servers, and headless environments.
+A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lightweight command-line frontend `mlc` (RSS ~4MB) — suitable for desktops, servers, and headless environments.
 
 > This is an independently developed open-source project with no affiliation to or endorsement from [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2). Its public implementation ideas were referenced during development, but no code or assets were taken. It is likewise unaffiliated with Mojang / Microsoft (see the disclaimer at the end).
 
@@ -16,7 +16,7 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 - **Player profiles**: multiple offline player profiles (name / avatar / skin type) with interactive add/edit/remove/select; authlib-injector external login (e.g. LittleSkin) with encrypted, persisted sessions auto-refreshed online at launch
 - **Launch stability**: automatic memory sizing (50% of available RAM, capped at 16G), GC tiers, auto-fix for fcitx/ibus XIM crashes (GLFW 3.4 replacement), full launch logs on disk
 - **Local server hosting**: install and run vanilla/Forge/Fabric/NeoForge servers with two commands (`server-install`/`server-start`), console attached, headless-friendly
-- **QML GUI** (test version): shares the same SDK (liblpclcore) with the CLI
+- **QML GUI** (test version): shares the same SDK (libmlccore) with the CLI
 
 ## Install
 
@@ -25,68 +25,68 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 Official prebuilt package (embedded CurseForge key — the full experience), for x86_64 (amd64) and macOS (Apple Silicon). Linux aarch64 users: build from source below (Qt has no official 6.11 Linux ARM64 packages, so no prebuilt for now):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
 ```
 
 In China, the source falls back automatically — GitHub first, Gitee mirror on failure; no flags needed (add `--beta` for pre-releases).
 
-> The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub: `git clone https://github.com/recallrw80-afk/LPCL.git`
+> The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub: `git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git`
 
 To install the latest **pre-release** (Beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 (Replace `v0.1.3-beta` with the latest pre-release tag.)
 
-Or grab the tarball from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, and run `bash install.sh lpcl-linux-<arch>.tar.xz`.
+Or grab the tarball from [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest), put it next to `install.sh`, and run `bash install.sh mlc-linux-<arch>.tar.xz`.
 
 ### Build from source
 
 For hacking/custom builds. Note: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror); use the official package for the full experience.
 
 ```bash
-git clone https://github.com/recallrw80-afk/LPCL.git
-cd LPCL
+git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+cd MLC
 make install        # build Release → zero-dependency package → install to ~/.local
 ```
 
 Requirements: Qt 6.11+ (Core/Network), CMake 3.16+, Ninja, a C++20 compiler, nlohmann-json 3.11+, ZLIB. Qt prefix defaults to `$HOME/Qt/6.11.1/gcc_64`; override with `make install QT_PREFIX=/path/to/Qt/6.x/gcc_64`.
 
-To install a package built on another machine: `bash cli/install.sh lpcl-linux-<arch>.tar.xz`.
+To install a package built on another machine: `bash cli/install.sh mlc-linux-<arch>.tar.xz`.
 
 ### Update & uninstall
 
 ```bash
-lpcl update         # check GitHub Releases and update in place (install.sh-installed copies only)
-lpcl uninstall      # uninstall (clears the game folder)
-lpcl uninstall -r   # uninstall but keep game folder contents
+mlc update         # check GitHub Releases and update in place (install.sh-installed copies only)
+mlc uninstall      # uninstall (clears the game folder)
+mlc uninstall -r   # uninstall but keep game folder contents
 ```
 
 ### Common build targets
 
 ```bash
-make cli            # build lpcl + liblpclcore.so (Debug)
-make package-tar    # zero-dependency tarball at cli/dist/lpcl-linux-<arch>.tar.xz
-make run            # build & launch the QML GUI (test version, binary name lpcl-gui)
+make cli            # build mlc + libmlccore.so (Debug)
+make package-tar    # zero-dependency tarball at cli/dist/mlc-linux-<arch>.tar.xz
+make run            # build & launch the QML GUI (test version, binary name mlc-gui)
 ```
 
 ## Quick start
 
 ```bash
 # Import a modpack (game folder defaults to ./mc/ next to the binary; change with set-folder)
-lpcl inpack ~/Downloads/some-modpack.zip
+mlc inpack ~/Downloads/some-modpack.zip
 
 # List instances and pick one interactively to launch
-lpcl launch
+mlc launch
 
 # Or play vanilla
-lpcl mc-install        # latest release
-lpcl launch 1.20.1
+mlc mc-install        # latest release
+mlc launch 1.20.1
 ```
 
-See [cli/README.md](cli/README.md) for the full command reference. Every command accepts `-h` for detailed parameter help (e.g. `lpcl inpack -h`); `lpcl help` lists all commands.
+See [cli/README.md](cli/README.md) for the full command reference. Every command accepts `-h` for detailed parameter help (e.g. `mlc inpack -h`); `mlc help` lists all commands.
 
 ## Docs
 
@@ -100,7 +100,7 @@ Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) befor
 ## Disclaimer
 
 - This project is not an official Minecraft product and is not associated with, approved by, or endorsed by Mojang Studios / Microsoft. "Minecraft" is a trademark of Mojang Synergies AB.
-- This project has no affiliation with or authorization from the official Plain Craft Launcher (PCL); "LPCL" merely denotes a similar launcher targeting Linux.
+- This project has no affiliation with or authorization from the official Plain Craft Launcher (PCL); "MLC" merely denotes a similar launcher targeting Linux.
 - This software is provided "as is"; the authors accept no liability for damages arising from its use (see sections 15–16 of the license).
 
 ## Credits
@@ -113,4 +113,4 @@ Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) befor
 
 [GNU General Public License v3.0](LICENSE)
 
-Copyright (C) 2026 LPCL authors. This program is free software: you may redistribute and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3. Derivative works must be open-sourced under the same license.
+Copyright (C) 2026 MLC authors. This program is free software: you may redistribute and/or modify it under the terms of the GNU General Public License as published by the Free Software Foundation, version 3. Derivative works must be open-sourced under the same license.

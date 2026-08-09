@@ -11,7 +11,7 @@
 #include <QRegularExpression>
 #include <QStandardPaths>
 
-static Q_LOGGING_CATEGORY(logLaunch, "lpcl.launcher")
+static Q_LOGGING_CATEGORY(logLaunch, "mlc.launcher")
 
 Launcher& Launcher::instance() {
     static Launcher l;
@@ -208,14 +208,14 @@ void Launcher::doLaunch() {
     appendLog("> " + cmdLog);
     appendLog("");
 
-    // GLFW 3.4 中文输入修复：lpcl::launchVersion 已把 lwjgl-glfw natives jar 换成
+    // GLFW 3.4 中文输入修复：mlc::launchVersion 已把 lwjgl-glfw natives jar 换成
     // 3.3.6（标记 libglfw.so.glfw34-fixed），LWJGL 提取出来的就是 GLFW 3.4
     QString mcFolder = VersionManager::instance().mcFolder();
     QString vanillaId = m_version.vanillaVersion.toString();
     bool glfw34Fixed = !vanillaId.isEmpty()
         && QFileInfo::exists(mcFolder + "versions/" + vanillaId + "/natives/libglfw.so.glfw34-fixed");
     if (glfw34Fixed)
-        appendLog("[LPCL] 使用 GLFW 3.4（IME 修复），保留中文输入");
+        appendLog("[MLC] 使用 GLFW 3.4（IME 修复），保留中文输入");
 
     // Set up environment
     QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
@@ -241,7 +241,7 @@ void Launcher::doLaunch() {
         env.insert("APPDATA", gameDir);
 
     // Minecraft-specific env
-    env.insert("MINECRAFT_LAUNCHER_NAME", "LPCL");
+    env.insert("MINECRAFT_LAUNCHER_NAME", "MLC");
     env.insert("MINECRAFT_LAUNCHER_VERSION", "0.1");
 
     // NVIDIA Linux 驱动的 threaded optimizations 会在渲染线程随机 SIGSEGV
@@ -257,10 +257,10 @@ void Launcher::doLaunch() {
     // （原版 MC 也会在窗口出现后几秒内崩，pc=0xc906 固定坏地址，已实测）。
     // 首选 GLFW 3.4 修复（上面 glfw34Fixed 为真时 XIM 无害，可打中文，跳过禁用）；
     // 否则回退：强制 XMODIFIERS=@im=none——副作用是游戏内不能用输入法，但换来不崩溃。
-    if (!env.contains("LPCL_KEEP_XIM") && !glfw34Fixed) {
+    if (!env.contains("MLC_KEEP_XIM") && !glfw34Fixed) {
         if (env.value("XMODIFIERS") != "@im=none") {
             env.insert("XMODIFIERS", "@im=none");
-            appendLog("[LPCL] 已禁用 XIM 输入法钩子（XMODIFIERS=@im=none），"
+            appendLog("[MLC] 已禁用 XIM 输入法钩子（XMODIFIERS=@im=none），"
                       "规避 fcitx/ibus 导致的 GLFW 崩溃");
         }
     }
@@ -274,7 +274,7 @@ void Launcher::doLaunch() {
     if (headless) {
         QString xvfb = QStandardPaths::findExecutable("xvfb-run");
         if (!xvfb.isEmpty()) {
-            appendLog("[LPCL] 无显示环境，使用 xvfb 虚拟显示启动");
+            appendLog("[MLC] 无显示环境，使用 xvfb 虚拟显示启动");
             program = xvfb;
             finalArgs.prepend(javaExe);
             finalArgs.prepend("-a");  // 自动分配 display 号
@@ -312,7 +312,7 @@ void Launcher::interrupt() {
             m_gameProcess->kill();
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
-        appendLog("[LPCL] Game process killed by user.");
+        appendLog("[MLC] Game process killed by user.");
     } else if (m_state == LaunchState::Downloading) {
         setState(LaunchState::Interrupted);
         setStatus("Interrupted");
@@ -364,16 +364,16 @@ void Launcher::onGameFinished(int exitCode, QProcess::ExitStatus exitStatus) {
         return;
     }
     if (exitStatus == QProcess::CrashExit) {
-        appendLog(QString("[LPCL] Game crashed with exit code %1").arg(exitCode));
+        appendLog(QString("[MLC] Game crashed with exit code %1").arg(exitCode));
         setState(LaunchState::Failed);
         emit gameExited(exitCode, "Game crashed");
     } else if (exitCode != 0) {
         // JVM 正常启动但以非零码退出（参数错误、mainClass 缺失等）——不是"正常退出"
-        appendLog(QString("[LPCL] Game exited abnormally with code %1").arg(exitCode));
+        appendLog(QString("[MLC] Game exited abnormally with code %1").arg(exitCode));
         setState(LaunchState::Failed);
         emit gameExited(exitCode, "Game exited abnormally");
     } else {
-        appendLog(QString("[LPCL] Game exited with code %1").arg(exitCode));
+        appendLog(QString("[MLC] Game exited with code %1").arg(exitCode));
         setState(LaunchState::Finished);
         setStatus("Game exited");
         emit gameExited(exitCode, "Game exited normally");
@@ -400,7 +400,7 @@ void Launcher::onGameError(QProcess::ProcessError error) {
         break;
     }
 
-    appendLog("[LPCL] ERROR: " + errMsg);
+    appendLog("[MLC] ERROR: " + errMsg);
     qCWarning(logLaunch) << errMsg;
     setState(LaunchState::Failed);
     if (m_logFile.isOpen()) m_logFile.close();
@@ -438,7 +438,7 @@ void Launcher::setProgress(int value) {
 
 void Launcher::appendLog(const QString &line) {
     // Log to Qt logging system
-    static QLoggingCategory logCat("lpcl.game");
+    static QLoggingCategory logCat("mlc.game");
     qCInfo(logCat).noquote() << line;
 
     // 落盘：每次启动一份文件，攒 100 行刷一次（游戏日志量大，逐行 flush 太贵）
@@ -464,16 +464,16 @@ void Launcher::openLaunchLog() {
     if (!logDir.mkpath(".")) return;
 
     // 滚动清理：只留最近 9 份，加上本次共 10 份
-    const auto old = logDir.entryInfoList({"lpcl-launch-*.log"}, QDir::Files, QDir::Time);
+    const auto old = logDir.entryInfoList({"mlc-launch-*.log"}, QDir::Files, QDir::Time);
     for (int i = 9; i < old.size(); ++i)
         QFile::remove(old[i].absoluteFilePath());
 
-    QString name = "lpcl-launch-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss") + ".log";
+    QString name = "mlc-launch-" + QDateTime::currentDateTime().toString("yyyyMMdd-HHmmss") + ".log";
     m_logFile.setFileName(logDir.filePath(name));
     if (!m_logFile.open(QIODevice::WriteOnly | QIODevice::Text)) {
         qCWarning(logLaunch) << "Cannot open launch log file:" << m_logFile.fileName();
         return;
     }
     m_logLinesSinceFlush = 0;
-    appendLog("[LPCL] Launch log: " + m_logFile.fileName());
+    appendLog("[MLC] Launch log: " + m_logFile.fileName());
 }

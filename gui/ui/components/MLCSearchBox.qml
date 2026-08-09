@@ -1,10 +1,10 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import LPCL
+import MLC
 
 // 复刻原版 MySearchBox（Controls/MySearchBox.xaml + .xaml.vb）
-// 搜索框：40px 卡片外观（继承 LPCLCard），左侧放大镜，右侧清空按钮
-LPCLCard {
+// 搜索框：40px 卡片外观（继承 MLCCard），左侧放大镜，右侧清空按钮
+MLCCard {
     id: box
 
     // ---- 公开 API ----
@@ -63,7 +63,7 @@ LPCLCard {
     }
 
     // ---- 清空按钮（原版 BtnClear：24×24，Theme=Black，有文本时淡入） ----
-    LPCLIconButton {
+    MLCIconButton {
         id: btnClear
         anchors { right: parent.right; rightMargin: 10; verticalCenter: parent.verticalCenter }
         width: 24

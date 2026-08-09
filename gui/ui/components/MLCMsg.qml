@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import Qt5Compat.GraphicalEffects
-import LPCL
+import MLC
 
 // 消息弹窗层（对应原版 ModMain.MyMsgBox / MyMsgText + FormMain.PanMsg）
 // 模态对话框：半透明遮罩覆盖整个窗口，居中卡片带滑入/旋转动画，一次一个、其余排队
@@ -309,7 +309,7 @@ Item {
                     contentHeight: captionText.contentHeight
                     clip: true
                     boundsBehavior: Flickable.StopAtBounds
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    ScrollBar.vertical: MLCScrollBar {}
 
                     Text {
                         id: captionText
@@ -341,20 +341,20 @@ Item {
                         anchors.rightMargin: 8
                         spacing: 12
 
-                        LPCLButton {
+                        MLCButton {
                             id: btn1
                             text: card.button1
                             // 警告 → 红色；有第二按钮 → 高亮；否则普通（对应原版 Load 逻辑）
                             colorType: card.warn ? 2 : (btn2.visible ? 1 : 0)
                             onClicked: card.accept(1)
                         }
-                        LPCLButton {
+                        MLCButton {
                             id: btn2
                             text: card.button2
                             visible: card.button2 !== ""
                             onClicked: card.accept(2)
                         }
-                        LPCLButton {
+                        MLCButton {
                             id: btn3
                             text: card.button3
                             visible: card.button3 !== ""

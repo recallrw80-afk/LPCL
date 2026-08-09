@@ -1,5 +1,5 @@
-#ifndef LPCL_JAVAMANAGER_H
-#define LPCL_JAVAMANAGER_H
+#ifndef MLC_JAVAMANAGER_H
+#define MLC_JAVAMANAGER_H
 
 #include <QObject>
 #include <QList>
@@ -8,13 +8,13 @@
 #include <QMutex>
 #include <atomic>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 /**
  * Cross-platform Java detection, selection, and compatibility matching.
  * Mirrors the original ModJava + Java selection logic from ModLaunch.
  */
-class LPCLCORE_EXPORT JavaManager : public QObject
+class MLCCORE_EXPORT JavaManager : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QStringList javaNames READ javaNames NOTIFY javaListChanged)
@@ -105,4 +105,4 @@ private:
     mutable QMutex m_mutex;
 };
 
-#endif // LPCL_JAVAMANAGER_H
+#endif // MLC_JAVAMANAGER_H

@@ -8,7 +8,7 @@
 #include <QLoggingCategory>
 #include <nlohmann/json.hpp>
 
-static Q_LOGGING_CATEGORY(logDl, "lpcl.download")
+static Q_LOGGING_CATEGORY(logDl, "mlc.download")
 
 DownloadManager& DownloadManager::instance() {
     static DownloadManager m;
@@ -66,7 +66,7 @@ QNetworkReply* DownloadManager::downloadInternal(const QString &url,
     emit downloadStarted(url);
 
     QNetworkRequest request(url);
-    request.setRawHeader("User-Agent", "LPCL/0.1");
+    request.setRawHeader("User-Agent", "MLC/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);
@@ -199,7 +199,7 @@ QNetworkReply* DownloadManager::downloadToStringWithStatus(const QString &url,
                                                            int maxRetries) {
     emit downloadStarted(url);
     QNetworkRequest request(url);
-    request.setRawHeader("User-Agent", "LPCL/0.1");
+    request.setRawHeader("User-Agent", "MLC/0.1");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute,
                          QNetworkRequest::NoLessSafeRedirectPolicy);
     request.setAttribute(QNetworkRequest::Http2AllowedAttribute, false);

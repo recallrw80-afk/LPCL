@@ -1,6 +1,6 @@
-#include "core/lpclcore_export.h"
-#ifndef LPCL_MODPLATFORM_H
-#define LPCL_MODPLATFORM_H
+#include "core/mlccore_export.h"
+#ifndef MLC_MODPLATFORM_H
+#define MLC_MODPLATFORM_H
 
 #include <QObject>
 #include <QString>
@@ -44,7 +44,7 @@ struct ModFileInfo {
  * Unified mod platform API for CurseForge and Modrinth.
  * Mirrors ModDownload.vb from Windows PCL.
  */
-class LPCLCORE_EXPORT ModPlatform : public QObject
+class MLCCORE_EXPORT ModPlatform : public QObject
 {
     Q_OBJECT
 
@@ -140,4 +140,4 @@ private:
     static const QString MR_API;
 };
 
-#endif // LPCL_MODPLATFORM_H
+#endif // MLC_MODPLATFORM_H

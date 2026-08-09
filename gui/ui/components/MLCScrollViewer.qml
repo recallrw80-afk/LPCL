@@ -1,9 +1,9 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import LPCL
+import MLC
 
 // 复刻原版 MyScrollViewer（Controls/MyScrollViewer.vb）
-// 滚动容器：自带 LPCLScrollBar，滚轮接管为 300ms 平滑滚动动画
+// 滚动容器：自带 MLCScrollBar，滚轮接管为 300ms 平滑滚动动画
 // 默认约定：内容宽度随视图（不横向滚动），高度由内容自动撑开；
 // 内容请使用顶部锚定的容器（如 ColumnLayout），也可直接显式设置 contentHeight
 Flickable {
@@ -20,7 +20,7 @@ Flickable {
     boundsBehavior: Flickable.StopAtBounds
     flickableDirection: Flickable.VerticalFlick
 
-    ScrollBar.vertical: LPCLScrollBar { id: vScroll }
+    ScrollBar.vertical: MLCScrollBar { id: vScroll }
 
     // ---- 滚轮平滑滚动（原版 PerformVerticalOffsetDelta：300ms 缓动） ----
     property real _targetY: 0

@@ -1,12 +1,12 @@
-#ifndef LPCL_INSTANCE_BRIDGE_H
-#define LPCL_INSTANCE_BRIDGE_H
+#ifndef MLC_INSTANCE_BRIDGE_H
+#define MLC_INSTANCE_BRIDGE_H
 
 #include <QObject>
 #include <QString>
 #include <QVariantList>
 #include <QVariantMap>
 
-// 实例管理的 QML 桥接层：包装 lpcl:: 实例信息 / Mod 管理 API（SDK 自由函数 QML 不可直接调用）
+// 实例管理的 QML 桥接层：包装 mlc:: 实例信息 / Mod 管理 API（SDK 自由函数 QML 不可直接调用）
 class InstanceBridge : public QObject
 {
     Q_OBJECT
@@ -34,4 +34,4 @@ signals:
     void instancesChanged();
 };
 
-#endif // LPCL_INSTANCE_BRIDGE_H
+#endif // MLC_INSTANCE_BRIDGE_H

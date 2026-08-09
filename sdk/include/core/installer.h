@@ -1,18 +1,18 @@
-#ifndef LPCL_INSTALLER_H
-#define LPCL_INSTALLER_H
+#ifndef MLC_INSTALLER_H
+#define MLC_INSTALLER_H
 
 #include <QObject>
 #include <QProcess>
 #include <QMap>
 #include <functional>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 /**
  * Mod loader installer — Forge, Fabric, NeoForge, OptiFine, LiteLoader.
  * Mirrors the installer logic from ModLaunch and ModDownload in Windows PCL.
  */
-class LPCLCORE_EXPORT Installer : public QObject
+class MLCCORE_EXPORT Installer : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(bool isRunning READ isRunning NOTIFY runningChanged)
@@ -109,4 +109,4 @@ private:
     static const QString NEOFORGE_API;
 };
 
-#endif // LPCL_INSTALLER_H
+#endif // MLC_INSTALLER_H

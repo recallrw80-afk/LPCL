@@ -1,5 +1,5 @@
-#ifndef LPCL_VERSIONMANAGER_H
-#define LPCL_VERSIONMANAGER_H
+#ifndef MLC_VERSIONMANAGER_H
+#define MLC_VERSIONMANAGER_H
 
 #include <QObject>
 #include <QList>
@@ -8,7 +8,7 @@
 #include <QVariantList>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 class QNetworkAccessManager;
 
@@ -19,7 +19,7 @@ using json = nlohmann::json;
  * Handles version list parsing, JSON reading, inheritance chains,
  * mod loader detection, and Minecraft folder management.
  */
-class LPCLCORE_EXPORT VersionManager : public QObject
+class MLCCORE_EXPORT VersionManager : public QObject
 {
     Q_OBJECT
     Q_PROPERTY(QString mcFolder READ mcFolder WRITE setMcFolder NOTIFY mcFolderChanged)
@@ -107,4 +107,4 @@ private:
     bool m_isLoading = false;
 };
 
-#endif // LPCL_VERSIONMANAGER_H
+#endif // MLC_VERSIONMANAGER_H

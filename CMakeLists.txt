@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 
-project(LPCL VERSION 0.1 LANGUAGES CXX)
+project(MLC VERSION 0.1 LANGUAGES CXX)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
@@ -49,7 +49,7 @@ set(CORE_HEADERS gui/include/util/file_drop_handler.h
                  gui/include/bridge/instance_bridge.h
                  gui/include/bridge/mod_platform_bridge.h)
 
-qt_add_executable(lpcl-gui gui/src/main.cpp)
+qt_add_executable(mlc-gui gui/src/main.cpp)
 
 # Lucide icons
 set(LUCIDE_ICONS "play" "bolt" "arrow-down-to-line" "layout-grid" "x" "minus"
@@ -84,20 +84,20 @@ endforeach()
 file(GLOB_RECURSE ICON_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/icons/*.svg)
 file(GLOB ASSET_SVG_FILES RELATIVE ${CMAKE_CURRENT_SOURCE_DIR} gui/assets/*.svg)
 list(APPEND ICON_FILES ${ASSET_SVG_FILES})
-qt_add_resources(lpcl-gui "assets" PREFIX "/" FILES ${ICON_FILES})
+qt_add_resources(mlc-gui "assets" PREFIX "/" FILES ${ICON_FILES})
 
-target_include_directories(lpcl-gui PUBLIC
+target_include_directories(mlc-gui PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/src
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/include
     ${CMAKE_CURRENT_SOURCE_DIR}/gui/include/util
     ${CMAKE_CURRENT_SOURCE_DIR}/sdk/include
     ${CMAKE_BINARY_DIR}/_deps/nlohmann_json-src/include)
 
-target_link_libraries(lpcl-gui
+target_link_libraries(mlc-gui
     PUBLIC Qt6::Quick Qt6::Network Qt6::Concurrent
-    PUBLIC nlohmann_json::nlohmann_json ZLIB::ZLIB lpclcore)
+    PUBLIC nlohmann_json::nlohmann_json ZLIB::ZLIB mlccore)
 
-target_compile_definitions(lpcl-gui PRIVATE
+target_compile_definitions(mlc-gui PRIVATE
     APP_VERSION="${PROJECT_VERSION}"
     GIT_DESCRIBE="${GIT_DESCRIBE}"
     GIT_COMMIT_HASH="${GIT_COMMIT_HASH}")
@@ -105,39 +105,39 @@ target_compile_definitions(lpcl-gui PRIVATE
 # Theme.qml singleton
 set_source_files_properties(gui/ui/styles/Theme.qml PROPERTIES QT_QML_SINGLETON_TYPE TRUE)
 
-qt_add_qml_module(lpcl-gui URI LPCL VERSION 1.0
+qt_add_qml_module(mlc-gui URI MLC VERSION 1.0
     QML_FILES
         gui/ui/Main.qml
         gui/ui/pages/PageLaunch.qml
         gui/ui/pages/PageDownload.qml
         gui/ui/pages/PageSettings.qml
         gui/ui/pages/PageMore.qml
-        gui/ui/components/LPCLButton.qml
-        gui/ui/components/LPCLIcon.qml
-        gui/ui/components/LPCLComboBox.qml
-        gui/ui/components/LPCLProgressBar.qml
-        gui/ui/components/LPCLTextBox.qml
-        gui/ui/components/LPCLScrollBar.qml
-        gui/ui/components/LPCLCard.qml
-        gui/ui/components/LPCLListItem.qml
-        gui/ui/components/LPCLIconButton.qml
-        gui/ui/components/LPCLCheckBox.qml
-        gui/ui/components/LPCLSlider.qml
-        gui/ui/components/LPCLSearchBox.qml
-        gui/ui/components/LPCLScrollViewer.qml
-        gui/ui/components/LPCLMsg.qml
-        gui/ui/components/LPCLHint.qml
-        gui/ui/components/LPCLDownloadPanel.qml
+        gui/ui/components/MLCButton.qml
+        gui/ui/components/MLCIcon.qml
+        gui/ui/components/MLCComboBox.qml
+        gui/ui/components/MLCProgressBar.qml
+        gui/ui/components/MLCTextBox.qml
+        gui/ui/components/MLCScrollBar.qml
+        gui/ui/components/MLCCard.qml
+        gui/ui/components/MLCListItem.qml
+        gui/ui/components/MLCIconButton.qml
+        gui/ui/components/MLCCheckBox.qml
+        gui/ui/components/MLCSlider.qml
+        gui/ui/components/MLCSearchBox.qml
+        gui/ui/components/MLCScrollViewer.qml
+        gui/ui/components/MLCMsg.qml
+        gui/ui/components/MLCHint.qml
+        gui/ui/components/MLCDownloadPanel.qml
         gui/ui/styles/Theme.qml
     SOURCES ${CORE_SOURCES} ${CORE_HEADERS})
 
-set_target_properties(lpcl-gui PROPERTIES
+set_target_properties(mlc-gui PROPERTIES
     MACOSX_BUNDLE_BUNDLE_VERSION ${PROJECT_VERSION}
     MACOSX_BUNDLE_SHORT_VERSION_STRING ${PROJECT_VERSION_MAJOR}.${PROJECT_VERSION_MINOR}
     MACOSX_BUNDLE TRUE WIN32_EXECUTABLE TRUE)
 
 include(GNUInstallDirs)
-install(TARGETS lpcl-gui
+install(TARGETS mlc-gui
     BUNDLE DESTINATION .
     LIBRARY DESTINATION ${CMAKE_INSTALL_LIBDIR}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})

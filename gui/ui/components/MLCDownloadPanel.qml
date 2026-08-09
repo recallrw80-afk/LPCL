@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import Qt5Compat.GraphicalEffects
-import LPCL
+import MLC
 
 // 下载任务面板（对应原版 PageSpeedLeft/PageSpeedRight 的精简版）
 // 左下角悬浮按钮：有进行中任务时显示数量徽标与总进度（大小全部未知时改为脉冲动画）；
@@ -191,7 +191,7 @@ Item {
         width: panel._btnSize
         height: panel._btnSize
 
-        // 投影（同 LPCLCard：color1 7%）
+        // 投影（同 MLCCard：color1 7%）
         DropShadow {
             anchors.fill: btnCard
             source: btnCard
@@ -207,7 +207,7 @@ Item {
             color: Qt.alpha(Theme.pureWhite, 245 / 255)
         }
 
-        LPCLIconButton {
+        MLCIconButton {
             id: btnIcon
             anchors.centerIn: parent
             anchors.verticalCenterOffset: -3
@@ -216,7 +216,7 @@ Item {
         }
 
         // 总进度细条（仅收起且已知总大小时显示）
-        LPCLProgressBar {
+        MLCProgressBar {
             anchors {
                 left: parent.left
                 right: parent.right
@@ -289,7 +289,7 @@ Item {
         height: panel.expanded ? panel._contentHeight : 0
         enabled: panel.expanded
 
-        // 展开/收起 150ms 高度动画（同 LPCLHint 的时长与缓动）
+        // 展开/收起 150ms 高度动画（同 MLCHint 的时长与缓动）
         Behavior on height {
             NumberAnimation {
                 duration: 150
@@ -369,7 +369,7 @@ Item {
                     boundsBehavior: Flickable.StopAtBounds
                     interactive: contentHeight > height
                     model: taskModel
-                    ScrollBar.vertical: LPCLScrollBar {}
+                    ScrollBar.vertical: MLCScrollBar {}
                     delegate: taskDelegate
                 }
             }
@@ -442,7 +442,7 @@ Item {
                     }
                 }
 
-                LPCLProgressBar {
+                MLCProgressBar {
                     width: parent.width
                     indeterminate: row.status === 0 && row.total <= 0
                     value: row.status === 1 ? 1 : (row.total > 0 ? Math.min(1, row.received / row.total) : 0)

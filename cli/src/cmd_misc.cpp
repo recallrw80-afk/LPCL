@@ -3,7 +3,7 @@
 #include "i18n.h"
 #include "tui_select.h"
 #include "tui_prompt.h"
-#include "lpcl.h"
+#include "mlc.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
@@ -26,8 +26,8 @@
 
 int handleSetFolder(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl set-folder <路径>\n",
-                       "error:  lpcl set-folder <path>\n");
+        std::cerr << _("error:  mlc set-folder <路径>\n",
+                       "error:  mlc set-folder <path>\n");
         return 1;
     }
     Settings::instance().setString("LaunchFolderSelect", args[1]);
@@ -37,8 +37,8 @@ int handleSetFolder(QStringList &args) {
 
 int handleSetLang(QStringList &args) {
     if (args.size() < 2 || (args[1] != "en" && args[1] != "zh")) {
-        std::cerr << _("error:  lpcl set-lang <en|zh>\n",
-                       "error:  lpcl set-lang <en|zh>\n");
+        std::cerr << _("error:  mlc set-lang <en|zh>\n",
+                       "error:  mlc set-lang <en|zh>\n");
         return 1;
     }
     // 持久保存 + 立即生效
@@ -51,8 +51,8 @@ int handleSetLang(QStringList &args) {
 // set-mem <MB|auto>：对应 PCL 的 LaunchRamType/LaunchRamCustom（0=自动，>0=固定 MB）
 int handleSetMem(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl set-mem <MB|auto>\n",
-                       "error:  lpcl set-mem <MB|auto>\n");
+        std::cerr << _("error:  mlc set-mem <MB|auto>\n",
+                       "error:  mlc set-mem <MB|auto>\n");
         return 1;
     }
     QString v = args[1].toLower();
@@ -78,7 +78,7 @@ static QString latestLaunchLogTail(int maxLines, int maxChars) {
     QString mcFolder = VersionManager::instance().mcFolder();  // 尊重 --folder 一次性覆盖
     if (mcFolder.isEmpty()) return QString();
     QDir logDir(mcFolder + "/logs");
-    const auto files = logDir.entryInfoList({"lpcl-launch-*.log"}, QDir::Files, QDir::Time);
+    const auto files = logDir.entryInfoList({"mlc-launch-*.log"}, QDir::Files, QDir::Time);
     if (files.isEmpty()) return QString();
     QFile f(files.first().absoluteFilePath());
     if (!f.open(QIODevice::ReadOnly | QIODevice::Text)) return QString();
@@ -97,7 +97,7 @@ static QString latestLaunchLogTail(int maxLines, int maxChars) {
 }
 
 static QString buildIssueUrl(const QString &repo, const QString &desc, const QString &tail) {
-    QString body = QString("%1\n\n**环境 / Environment**\n- LPCL: %2 (%3)\n- OS: %4 %5\n- Qt: %6\n")
+    QString body = QString("%1\n\n**环境 / Environment**\n- MLC: %2 (%3)\n- OS: %4 %5\n- Qt: %6\n")
         .arg(desc, GIT_DESCRIBE, GIT_COMMIT_HASH,
              QSysInfo::prettyProductName(), QSysInfo::currentCpuArchitecture(), qVersion());
     if (!tail.isEmpty())
@@ -120,13 +120,13 @@ int handleReport(QStringList &args) {
         }
         desc = *d;
     } else {
-        std::cerr << _("error:  lpcl report <问题描述>\n",
-                       "error:  lpcl report <description>\n");
+        std::cerr << _("error:  mlc report <问题描述>\n",
+                       "error:  mlc report <description>\n");
         return 1;
     }
-    if (desc.isEmpty()) desc = "LPCL 问题反馈";
+    if (desc.isEmpty()) desc = "MLC 问题反馈";
 
-    QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
+    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MinecraftLauncherCLI");
     // GitHub URL 长度有限，先给 4000 字符日志，超长再砍到 1200
     QString url = buildIssueUrl(repo, desc, latestLaunchLogTail(40, 4000));
     if (url.size() > 7500)
@@ -144,7 +144,7 @@ int handleReport(QStringList &args) {
 }
 
 int handleListJavas(QStringList &args) { Q_UNUSED(args);
-    auto names = lpcl::listJavas();
+    auto names = mlc::listJavas();
     if (names.isEmpty()) {
         std::cout << _("(No Java detected)\n", "(No Java detected)\n");
     } else {
@@ -161,9 +161,9 @@ int handleListJavas(QStringList &args) { Q_UNUSED(args);
 // 交互流程全在 CLI 层，SDK 只提供 add/update/list 数据接口
 struct WizardResult { QString name, avatar, skin, customUuid; };
 int handleConfig(QStringList &args) { Q_UNUSED(args);
-    auto cfg = lpcl::getConfig();
+    auto cfg = mlc::getConfig();
 
-    std::cout << _("LPCL 版本: ", "LPCL version: ") << cfg.version.toStdString() << std::endl
+    std::cout << _("MLC 版本: ", "MLC version: ") << cfg.version.toStdString() << std::endl
               << _("提交: ",       "Commit: ")       << cfg.commit.toStdString() << std::endl;
     QString folder = cfg.gameFolderSet ? cfg.gameFolder : _("（未设置）", "(not set)");
     std::cout << _("默认游戏目录: ", "Default game folder: ") << folder.toStdString() << std::endl;
@@ -202,7 +202,7 @@ int handleConfig(QStringList &args) { Q_UNUSED(args);
         }
     }
     // 外置登录态（authlib，持久化）
-    auto al = lpcl::currentAuthlibLogin();
+    auto al = mlc::currentAuthlibLogin();
     std::cout << _("外置登录: ", "External login: ");
     if (al.loggedIn)
         std::cout << al.name.toStdString() << " @ " << al.server.toStdString() << std::endl;
@@ -216,7 +216,7 @@ int handleConfig(QStringList &args) { Q_UNUSED(args);
 int handleSetCfKey(QStringList &args) {
     // 无参 = 状态查询（不回显 key 本体——内嵌 key 禁止透露）
     if (args.size() < 2) {
-        QString src = lpcl::cfApiKeySource();
+        QString src = mlc::cfApiKeySource();
         if (src == "user")
             std::cout << _("CurseForge key: 指令设置的自定义 key（加密保存中）\n",
                            "CurseForge key: custom key set via command (stored encrypted)\n");
@@ -229,12 +229,12 @@ int handleSetCfKey(QStringList &args) {
         return 0;
     }
     if (args[1] == "--clear" || args[1] == "-") {
-        lpcl::setCfApiKey("");
+        mlc::setCfApiKey("");
         std::cout << _("已清除自定义 key，回退编译期内嵌/镜像\n",
                        "Custom key cleared, falling back to embedded/mirror\n");
         return 0;
     }
-    lpcl::setCfApiKey(args[1]);
+    mlc::setCfApiKey(args[1]);
     std::cout << _("已保存自定义 CurseForge key（加密存储，立即生效）\n",
                    "Custom CurseForge key saved (encrypted, effective immediately)\n");
     return 0;
@@ -243,7 +243,7 @@ int handleSetCfKey(QStringList &args) {
 // ---- 外置登录（authlib-injector，如 LittleSkin） ----
 
 static QString installedRoot() {
-    QString root = QDir::homePath() + "/.local/lib/lpcl";
+    QString root = QDir::homePath() + "/.local/lib/mlc";
     QString appDir = QCoreApplication::applicationDirPath();
     return appDir.startsWith(root) ? root : QString();
 }
@@ -274,8 +274,8 @@ int handleUninstall(QStringList &args) {
         }
     }
 
-    // 2. 删除 PATH 符号链接（指向本安装目录的才删；lpcl-cli 为改名前遗留，lpcl-gui 为 GUI 入口）
-    for (const char *name : {"lpcl", "lpcl-cli", "lpcl-gui"}) {
+    // 2. 删除 PATH 符号链接（指向本安装目录的才删；lpcl* 为改名前遗留，mlc-gui 为 GUI 入口）
+    for (const char *name : {"mlc", "mlc-gui", "lpcl", "lpcl-cli", "lpcl-gui"}) {
         QString link = QDir::homePath() + "/.local/bin/" + name;
         if (QFileInfo(link).isSymLink() && QFileInfo(link).symLinkTarget().startsWith(root)) {
             std::cout << _("删除命令链接: ", "Removing command link: ") << link.toStdString() << std::endl;
@@ -288,12 +288,16 @@ int handleUninstall(QStringList &args) {
         // -r：只删程序本体和配置，保留 mc/ 等其余内容
         std::cout << _("删除程序本体和配置（保留游戏内容）\n",
                        "Removing binaries and config (keeping game contents)\n");
-        QFile::remove(root + "/lpcl");
-        QFile::remove(root + "/lpcl-cli");            // 改名前遗留二进制
-        QFile::remove(root + "/lpcl-gui");
+        QFile::remove(root + "/mlc");
+        QFile::remove(root + "/mlc-gui");
         QFile::remove(root + "/THIRD-PARTY-NOTICES.md");
         FileUtils::removeTree(root + "/lib");       // 零依赖包收编的 Qt/第三方库
         FileUtils::removeTree(root + "/plugins");   // TLS 插件
+        QFile::remove(root + "/MLC.ini");
+        // 改名前（lpcl 时代）遗留
+        QFile::remove(root + "/lpcl");
+        QFile::remove(root + "/lpcl-cli");
+        QFile::remove(root + "/lpcl-gui");
         QFile::remove(root + "/liblpclcore.so");  // 旧动态布局遗留
         QFile::remove(root + "/LPCL.ini");
     } else {
@@ -305,7 +309,7 @@ int handleUninstall(QStringList &args) {
     if (keepGame)
         std::cout << _("（已按 -r 保留游戏目录内容）\n", "(game folder contents kept as requested by -r)\n");
     std::cout.flush();
-    // 自毁退出：跳过析构（QSettings 析构会把缓存配置重新写回 LPCL.ini，导致"删不干净"）
+    // 自毁退出：跳过析构（QSettings 析构会把缓存配置重新写回 MLC.ini，导致"删不干净"）
     _Exit(0);
 }
 
@@ -321,9 +325,9 @@ int handleUpdate(QStringList &args) {
                        "error:  not an install.sh-installed copy (dev/dist path), refusing to update\n");
         return 1;
     }
-    // 发布源自动降级：GitHub 优先，失败自动切 Gitee（LPCL_GITEE_REPO 可换镜像）
-    QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
-    QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "recall80/lpcl");
+    // 发布源自动降级：GitHub 优先，失败自动切 Gitee（MLC_GITEE_REPO 可换镜像）
+    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MinecraftLauncherCLI");
+    QString giteeRepo = qEnvironmentVariable("MLC_GITEE_REPO", "recall80/mlc");
 
     std::cout << _("正在检查更新...\n", "Checking for updates...\n");
     bool done = false;
@@ -387,8 +391,8 @@ int handleUpdate(QStringList &args) {
             if (beta) {
                 std::cout << _("当前没有预发布版本\n", "No pre-release available\n");
             } else {
-                std::cout << _("当前只有预发布版本（没有正式版）。需要测试版请用 lpcl update -beta\n",
-                               "Only pre-releases exist (no stable). Use lpcl update -beta for those\n");
+                std::cout << _("当前只有预发布版本（没有正式版）。需要测试版请用 mlc update -beta\n",
+                               "Only pre-releases exist (no stable). Use mlc update -beta for those\n");
             }
             finish(1); return;
         }
@@ -420,7 +424,7 @@ int handleUpdate(QStringList &args) {
 
         // 找对应架构的包
         QString arch = QSysInfo::currentCpuArchitecture() == "aarch64" ? "aarch64" : "x86_64";
-        QString pkg = "lpcl-linux-" + arch + ".tar.xz";
+        QString pkg = "mlc-linux-" + arch + ".tar.xz";
         QString dlUrl;
         if (useCn) {
             // Gitee 的 release JSON 不带资产直链，按固定路径规则拼接
@@ -463,12 +467,12 @@ int handleUpdate(QStringList &args) {
                 FileUtils::removeTree(tmpDir);
                 finish(1); return;
             }
-            // 交换式替换，与发布包布局一致（lpcl + lib/ + plugins/）：
+            // 交换式替换，与发布包布局一致（mlc + lib/ + plugins/）：
             // 旧项先移入 .update-tmp/old/ 备份，再移入新项；任一步失败整体回滚，
             // 避免出现"二进制新、库文件旧"的版本错配。同目录 rename 无跨盘问题。
             QString backupDir = tmpDir + "/old";
             QDir().mkpath(backupDir);
-            const QStringList items = {"lpcl", "lib", "plugins", "THIRD-PARTY-NOTICES.md"};
+            const QStringList items = {"mlc", "lib", "plugins", "THIRD-PARTY-NOTICES.md"};
             QStringList swapped;
             bool swapOk = true;
             for (const auto &item : items) {
@@ -495,11 +499,13 @@ int handleUpdate(QStringList &args) {
             }
             FileUtils::removeTree(tmpDir);  // 含 old/ 备份与下载的压缩包
             QFile::remove(appDir + "/liblpclcore.so");  // 旧动态布局遗留（现已静态链接进主程序）
-            QFile::remove(appDir + "/lpcl-cli");        // 改名前遗留二进制
-            QFile(appDir + "/lpcl").setPermissions(
-                QFile::permissions(appDir + "/lpcl") | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther);
+            QFile::remove(appDir + "/lpcl");            // 改名前（lpcl 时代）遗留二进制
+            QFile::remove(appDir + "/lpcl-cli");
+            QFile::remove(appDir + "/lpcl-gui");
+            QFile(appDir + "/mlc").setPermissions(
+                QFile::permissions(appDir + "/mlc") | QFile::ExeOwner | QFile::ExeGroup | QFile::ExeOther);
             std::cout << _("更新完成: ", "Updated to: ") << remoteTag.toStdString()
-                      << _("（重启 lpcl 生效）\n", " (restart lpcl to take effect)\n");
+                      << _("（重启 mlc 生效）\n", " (restart mlc to take effect)\n");
             finish(0);
         });
     });

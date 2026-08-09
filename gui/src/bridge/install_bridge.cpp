@@ -3,7 +3,7 @@
 #include <QTimer>
 #include <QtConcurrent>
 
-#include "lpcl.h"
+#include "mlc.h"
 
 InstallBridge& InstallBridge::instance() {
     static InstallBridge b;
@@ -32,8 +32,8 @@ void InstallBridge::finish() {
 void InstallBridge::importModpack(const QString &filePath, const QString &targetInstance) {
     if (!tryStart(QStringLiteral("正在解析整合包..."))) return;
 
-    lpcl::importModpack(filePath, QString(), targetInstance,
-        [this](const lpcl::ImportProgress &p) {
+    mlc::importModpack(filePath, QString(), targetInstance,
+        [this](const mlc::ImportProgress &p) {
             // 回调可能来自 SDK 内部任意线程，统一投递到 UI 线程
             QTimer::singleShot(0, this, [this, step = p.step, percent = p.percent]() {
                 setProgress(step, percent);
@@ -51,8 +51,8 @@ void InstallBridge::installMcVersion(const QString &versionId) {
     if (!tryStart(QStringLiteral("正在下载游戏文件..."))) return;
 
     QtConcurrent::run([this, versionId]() {
-        bool ok = lpcl::installVersion(versionId,
-            [this](const lpcl::ImportProgress &p) {
+        bool ok = mlc::installVersion(versionId,
+            [this](const mlc::ImportProgress &p) {
                 QTimer::singleShot(0, this, [this, step = p.step, percent = p.percent]() {
                     setProgress(step, percent);
                 });
@@ -69,7 +69,7 @@ void InstallBridge::installJava(int majorVersion) {
 
     QtConcurrent::run([this, majorVersion]() {
         QString err;
-        bool ok = lpcl::installJavaRuntime(majorVersion, &err);
+        bool ok = mlc::installJavaRuntime(majorVersion, &err);
         QTimer::singleShot(0, this, [this, ok, err]() {
             finish();
             emit javaInstallFinished(ok, err);

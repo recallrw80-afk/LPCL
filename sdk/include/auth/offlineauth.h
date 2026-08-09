@@ -1,5 +1,5 @@
-#ifndef LPCL_OFFLINEAUTH_H
-#define LPCL_OFFLINEAUTH_H
+#ifndef MLC_OFFLINEAUTH_H
+#define MLC_OFFLINEAUTH_H
 
 #include "auth/authbase.h"
 #include <QCryptographicHash>
@@ -8,7 +8,7 @@
  * Offline / legacy login.
  * Generates a UUID (v3 offline) from the username.
  */
-class LPCLCORE_EXPORT OfflineAuth : public AuthBase
+class MLCCORE_EXPORT OfflineAuth : public AuthBase
 {
     Q_OBJECT
 
@@ -41,4 +41,4 @@ private:
     QString m_username;
 };
 
-#endif // LPCL_OFFLINEAUTH_H
+#endif // MLC_OFFLINEAUTH_H

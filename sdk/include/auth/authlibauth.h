@@ -1,5 +1,5 @@
-#ifndef LPCL_AUTHLIBAUTH_H
-#define LPCL_AUTHLIBAUTH_H
+#ifndef MLC_AUTHLIBAUTH_H
+#define MLC_AUTHLIBAUTH_H
 
 #include "auth/authbase.h"
 #include <QNetworkAccessManager>
@@ -8,7 +8,7 @@
  * Authlib-Injector / Nide8 (Unified Pass) login.
  * Both use a third-party authentication server with a custom Yggdrasil API.
  */
-class LPCLCORE_EXPORT AuthlibAuth : public AuthBase
+class MLCCORE_EXPORT AuthlibAuth : public AuthBase
 {
     Q_OBJECT
 
@@ -57,4 +57,4 @@ private:
     Callback m_callback = nullptr;  // cancel() 时也需要回调（与 MsAuth 行为一致）
 };
 
-#endif // LPCL_AUTHLIBAUTH_H
+#endif // MLC_AUTHLIBAUTH_H

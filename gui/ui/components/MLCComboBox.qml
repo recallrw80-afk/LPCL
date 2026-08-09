@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import LPCL
+import MLC
 
 // Exact replica of original MyComboBox (Controls/MyComboBox.vb)
 ComboBox {
@@ -12,7 +12,7 @@ ComboBox {
     font.family: Theme.fontFamily
     font.pixelSize: Theme.fontSize
 
-    // Dynamic border color (same logic as LPCLTextBox)
+    // Dynamic border color (same logic as MLCTextBox)
     property color borderColor: {
         if (!enabled) return Theme.gray5
         if (down || popup.visible) return Theme.color3

@@ -40,14 +40,14 @@ jobs:
           cache: true
 
       - name: Prepare embedded CF key (optional)
-        # 仓库 Secret 配了 LPCL_CURSEFORGE_API_KEY 时嵌入（macOS 包也走官方 API）；
+        # 仓库 Secret 配了 MLC_CURSEFORGE_API_KEY 时嵌入（macOS 包也走官方 API）；
         # 未配置则产物无 key 走 MCIM 镜像。fork PR 读不到 secrets。
         env:
-          CF_KEY: ${{ secrets.LPCL_CURSEFORGE_API_KEY }}
+          CF_KEY: ${{ secrets.MLC_CURSEFORGE_API_KEY }}
         run: |
           echo "EMBED_CF=OFF" >> "$GITHUB_ENV"
           if [ -n "$CF_KEY" ]; then
-            echo "LPCL_CURSEFORGE_API_KEY=$CF_KEY" > .env
+            echo "MLC_CURSEFORGE_API_KEY=$CF_KEY" > .env
             echo "EMBED_CF=ON" >> "$GITHUB_ENV"
           fi
 
@@ -59,13 +59,13 @@ jobs:
           QT_ROOT="$(qmake6 -query QT_INSTALL_PREFIX 2>/dev/null || true)"
           if [ -z "$QT_ROOT" ]; then QT_ROOT="$(cd "$Qt6_DIR/../../.." && pwd)"; fi
           echo "Qt root: $QT_ROOT"
-          make package-tar QT_PREFIX="$QT_ROOT" LPCL_EMBED_CF_KEY="${{ env.EMBED_CF }}"
+          make package-tar QT_PREFIX="$QT_ROOT" MLC_EMBED_CF_KEY="${{ env.EMBED_CF }}"
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lpcl-${{ matrix.pkg_os }}
-          path: cli/dist/lpcl-macos-*.tar.xz
+          name: mlc-${{ matrix.pkg_os }}
+          path: cli/dist/mlc-macos-*.tar.xz
           retention-days: 14
 
   release:
@@ -80,4 +80,4 @@ jobs:
         # release.sh 已建好 Release（含 x86_64 嵌 key 包 + install.sh），此处追加 macOS 包
         uses: softprops/action-gh-release@v2
         with:
-          files: '**/lpcl-macos-*.tar.xz'
+          files: '**/mlc-macos-*.tar.xz'

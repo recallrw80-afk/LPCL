@@ -1,6 +1,6 @@
 # Third-Party Notices / 第三方声明
 
-LPCL 的发布包（`lpcl-linux-*.tar.gz`）为便于零依赖运行，收编了以下第三方组件的运行库。
+MLC 的发布包（`mlc-linux-*.tar.gz`）为便于零依赖运行，收编了以下第三方组件的运行库。
 各组件版权归其作者所有，按各自许可证使用。完整许可证文本见各项目官网。
 
 ## Qt 6（Core / Network）— LGPL-3.0

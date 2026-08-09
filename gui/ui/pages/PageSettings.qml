@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import LPCL
+import MLC
 
 // Settings tab — left sidebar + right content
 Item {
@@ -112,7 +112,7 @@ Item {
             contentHeight: panContent.implicitHeight + 35
             clip: true
             boundsBehavior: Flickable.StopAtBounds
-            ScrollBar.vertical: LPCLScrollBar {}
+            ScrollBar.vertical: MLCScrollBar {}
 
             ColumnLayout {
                 id: panContent
@@ -144,7 +144,7 @@ Item {
                             id: launchGrid
                             columns: 2; rowSpacing: 8; columnSpacing: 15
                             Text { text: "Max Memory:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            LPCLTextBox {
+                            MLCTextBox {
                                 id: maxMemField; Layout.preferredWidth: 120; placeholderText: "0 = auto"
                                 // qmllint disable unqualified
                                 Component.onCompleted: text = Settings.value("LaunchMaxMemory", "0")
@@ -158,7 +158,7 @@ Item {
                             }
                             Text { text: "Window Size:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
                             RowLayout {
-                                LPCLTextBox {
+                                MLCTextBox {
                                     id: widthField; Layout.preferredWidth: 70; placeholderText: "W"
                                     // qmllint disable unqualified
                                     Component.onCompleted: text = Settings.value("LaunchWidth", "854")
@@ -171,7 +171,7 @@ Item {
                                     }
                                 }
                                 Text { text: "×"; color: Theme.gray3 }
-                                LPCLTextBox {
+                                MLCTextBox {
                                     id: heightField; Layout.preferredWidth: 70; placeholderText: "H"
                                     // qmllint disable unqualified
                                     Component.onCompleted: text = Settings.value("LaunchHeight", "480")
@@ -185,7 +185,7 @@ Item {
                                 }
                             }
                             Text { text: "Java Args:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            LPCLTextBox {
+                            MLCTextBox {
                                 id: javaArgsField; Layout.fillWidth: true; placeholderText: "Custom JVM arguments"
                                 // qmllint disable unqualified
                                 Component.onCompleted: text = Settings.value("LaunchAdvanceJvm", "")
@@ -213,7 +213,7 @@ Item {
                         RowLayout {
                             spacing: Theme.itemSpacing
                             Text { text: "Java:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            LPCLComboBox {
+                            MLCComboBox {
                                 id: javaCombo
                                 Layout.fillWidth: true
                                 onActivated: index => {
@@ -236,7 +236,7 @@ Item {
 
                         // ---- 扫描系统 Java ----
                         RowLayout {
-                            LPCLButton {
+                            MLCButton {
                                 // qmllint disable unqualified
                                 text: JavaManager.isScanning ? "Scanning..." : "Scan for Java"
                                 colorType: 1
@@ -253,11 +253,11 @@ Item {
                             spacing: Theme.itemSpacing
                             Text { text: "Download JRE:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
                             // qmllint disable unqualified
-                            LPCLButton { text: "下载 JRE 8"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(8) }
+                            MLCButton { text: "下载 JRE 8"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(8) }
                             // qmllint disable unqualified
-                            LPCLButton { text: "下载 JRE 17"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(17) }
+                            MLCButton { text: "下载 JRE 17"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(17) }
                             // qmllint disable unqualified
-                            LPCLButton { text: "下载 JRE 21"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(21) }
+                            MLCButton { text: "下载 JRE 21"; enabled: !InstallBridge.busy; onClicked: InstallBridge.installJava(21) }
                             Item { Layout.fillWidth: true }
                         }
                         Text {
@@ -285,11 +285,11 @@ Item {
                         Text { text: "UI Settings"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         RowLayout {
                             Text { text: "Theme Color:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            LPCLComboBox { model: ["Blue (Default)", "Red", "Green", "Purple", "Orange"]; Layout.preferredWidth: 180 }
+                            MLCComboBox { model: ["Blue (Default)", "Red", "Green", "Purple", "Orange"]; Layout.preferredWidth: 180 }
                         }
                         RowLayout {
                             Text { text: "Background Music:"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize }
-                            LPCLComboBox { model: ["Off", "On"]; Layout.preferredWidth: 120 }
+                            MLCComboBox { model: ["Off", "On"]; Layout.preferredWidth: 120 }
                         }
                     }
                 }
@@ -305,7 +305,7 @@ Item {
                         anchors { left: parent.left; right: parent.right; top: parent.top }
                         anchors.margins: Theme.contentMargin; anchors.topMargin: 40
                         spacing: 8
-                        Text { text: "About LPCL"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
+                        Text { text: "About MLC"; color: Theme.color1; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeLarge; font.bold: true }
                         Text {
                             text: "Version 0.1 (MVP)\nBuilt with Qt 6.11 + QML + C++20\n\nPort of Plain Craft Launcher 2\nOriginal: ~49,000 lines VB.NET/WPF\n\nTarget: Windows, macOS, Linux"
                             color: Theme.gray3; font.family: Theme.fontFamily; font.pixelSize: Theme.fontSize; Layout.fillWidth: true; wrapMode: Text.Wrap

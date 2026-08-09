@@ -3,7 +3,7 @@
 #include "i18n.h"
 #include "tui_select.h"
 #include "tui_prompt.h"
-#include "lpcl.h"
+#include "mlc.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
@@ -52,8 +52,8 @@ int handleServerInstall(QStringList &args) {
         ? _("正在下载最新版 MC 服务端 ...\n", "Downloading latest MC server ...\n")
         : _(QString("正在下载 MC %1 服务端 ...\n").arg(ver).toStdString(),
             QString("Downloading MC %1 server ...\n").arg(ver).toStdString()));
-    bool ok = lpcl::installServer(ver, hasLoader ? loaderType : QString(), loaderVer,
-        [](const lpcl::ImportProgress &p) {
+    bool ok = mlc::installServer(ver, hasLoader ? loaderType : QString(), loaderVer,
+        [](const mlc::ImportProgress &p) {
             std::cout << "  " << p.step.toStdString() << "\n";
         });
     if (!ok) {
@@ -74,7 +74,7 @@ int handleServerInstall(QStringList &args) {
         // 服务端标识 = 版本[-加载器-版本]：与 installServer 内部一致；
         // --from 需要显式版本号（ver 为空时刚装的是最新正式版，无法可靠拼目录名）
         if (ver.isEmpty()) {
-            std::cerr << _("error:  --from 需要显式版本号（如 lpcl server-install 1.20.1 --forge --from xxx）\n",
+            std::cerr << _("error:  --from 需要显式版本号（如 mlc server-install 1.20.1 --forge --from xxx）\n",
                            "error:  --from requires an explicit version\n");
             return 1;
         }
@@ -107,14 +107,14 @@ int handleServerInstall(QStringList &args) {
 
 int handleServerStart(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl server-start <版本>\n", "error:  lpcl server-start <version>\n");
+        std::cerr << _("error:  mlc server-start <版本>\n", "error:  mlc server-start <version>\n");
         return 1;
     }
     QString ver = args[1];
     QString dir = VersionManager::instance().mcFolder() + "servers/" + ver + "/";
     if (!QDir(dir).exists()) {
-        std::cerr << T("error:  服务端未安装，请先 lpcl server-install %1\n",
-                       "error:  server not installed, run lpcl server-install %1 first\n")
+        std::cerr << T("error:  服务端未安装，请先 mlc server-install %1\n",
+                       "error:  server not installed, run mlc server-install %1 first\n")
                          .arg(ver).toStdString();
         return 1;
     }
@@ -149,7 +149,7 @@ int handleServerStart(QStringList &args) {
 
     std::cout << T("正在启动服务端 %1（控制台直通，/stop 关服）...\n",
                    "Starting server %1 (console attached, /stop to halt)...\n").arg(ver).toStdString();
-    if (!lpcl::startServer(ver,
+    if (!mlc::startServer(ver,
             [](const QString &line) { std::cout << line.toStdString() << "\n"; },
             [](int code) {
                 std::cout << _("服务端已退出: ", "Server exited: ") << code << "\n";

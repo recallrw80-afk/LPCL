@@ -1,5 +1,5 @@
-#ifndef LPCL_CLI_TUI_SELECT_H
-#define LPCL_CLI_TUI_SELECT_H
+#ifndef MLC_CLI_TUI_SELECT_H
+#define MLC_CLI_TUI_SELECT_H
 
 #include <QString>
 #include <QStringList>
@@ -10,4 +10,4 @@
 /// 非 TTY 环境（管道/重定向）调用方必须退回输序号模式。
 int tuiSelect(const QString &title, const QStringList &items, int initial = 0);
 
-#endif // LPCL_CLI_TUI_SELECT_H
+#endif // MLC_CLI_TUI_SELECT_H

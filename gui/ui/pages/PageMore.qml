@@ -1,7 +1,7 @@
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import LPCL
+import MLC
 
 // More tab — about, tools, help links
 Item {
@@ -9,7 +9,7 @@ Item {
     property bool isActive: false
 
     // 发布前替换为真实仓库地址
-    readonly property string repoUrl: "https://github.com/owner/LPCL"
+    readonly property string repoUrl: "https://github.com/owner/MLC"
 
     // qmllint disable unqualified
     // qmllint disable missing-property
@@ -42,7 +42,7 @@ Item {
     function openAbout(act) {
         if (act === "update") {
             // GUI 更新功能未做，引导到 CLI
-            Window.window.showHint("请使用 lpcl update 检查更新", "info");
+            Window.window.showHint("请使用 mlc update 检查更新", "info");
         } else {
             Qt.openUrlExternally(repoUrl);
         }
@@ -81,7 +81,7 @@ Item {
                 contentHeight: panMore.implicitHeight + 20
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: LPCLScrollBar {}
+                ScrollBar.vertical: MLCScrollBar {}
 
                 ColumnLayout {
                     id: panMore
@@ -112,7 +112,7 @@ Item {
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 12; spacing: Theme.itemSpacing
                                             // qmllint disable unqualified
-                                LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
+                                MLCIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
                                             // qmllint disable unqualified
                                     text: modelData.name; color: Theme.color1
@@ -153,7 +153,7 @@ Item {
                             RowLayout {
                                 anchors.fill: parent; anchors.leftMargin: 12; spacing: Theme.itemSpacing
                                             // qmllint disable unqualified
-                                LPCLIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
+                                MLCIcon { size: 16; lucideIcon: modelData.icon; iconColor: Theme.color3 }
                                 Text {
                                             // qmllint disable unqualified
                                     text: modelData.name; color: Theme.color1
@@ -186,7 +186,7 @@ Item {
                 contentHeight: panContent.implicitHeight + 35
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
-                ScrollBar.vertical: LPCLScrollBar {}
+                ScrollBar.vertical: MLCScrollBar {}
 
                 ColumnLayout {
                     id: panContent
@@ -194,7 +194,7 @@ Item {
                     anchors.margins: Theme.contentMargin
                     spacing: Theme.sectionSpacing
 
-                    // About LPCL card
+                    // About MLC card
                     Rectangle {
                         Layout.fillWidth: true
                         implicitHeight: aboutInner.height + 36
@@ -207,7 +207,7 @@ Item {
                             anchors { left: parent.left; right: parent.right; top: parent.top }
                             anchors.margins: 20; spacing: 8
                             Text {
-                                text: "关于 Linux Plain Craft Launcher"
+                                text: "关于 MinecraftLauncherCLI"
                                 color: Theme.color1; font.family: Theme.fontFamily
                                 font.pixelSize: Theme.fontSizeLarge; font.bold: true
                             }
@@ -249,7 +249,7 @@ Item {
                                     { text: "帮助文档", desc: "PCL2Help 帮助文档库", url: "https://github.com/LTCatt/PCL2Help" },
                                     { text: "功能投票", desc: "参与功能投票，决定开发优先级", url: "https://github.com/Meloong-Git/PCL/discussions/2" }
                                 ]
-                                LPCLButton {
+                                MLCButton {
                                     Layout.fillWidth: true
                                     Layout.preferredHeight: 40
                                     colorType: 0

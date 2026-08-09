@@ -13,7 +13,7 @@
 
 using json = nlohmann::json;
 
-static Q_LOGGING_CATEGORY(logInstall, "lpcl.installer")
+static Q_LOGGING_CATEGORY(logInstall, "mlc.installer")
 
 const QString Installer::FORGE_API = "https://files.minecraftforge.net/net/minecraftforge/forge";
 const QString Installer::FABRIC_API = "https://meta.fabricmc.net/v2";

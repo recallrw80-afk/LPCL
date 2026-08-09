@@ -1,5 +1,5 @@
 import QtQuick
-import LPCL
+import MLC
 
 // 复刻原版 MyListItem（Controls/MyListItem.xaml + .xaml.vb）
 // 列表项：左侧勾选竖条 + 图标 + 标题/副标题 + 右侧悬停按钮区
@@ -21,7 +21,7 @@ Item {
     property int checkType: 0                // 0=None 1=Clickable 2=RadioBox 3=CheckBox
     property bool checked: false
     property bool scaleAnimationEnabled: true
-    property alias buttons: buttonRow.data   // 右侧按钮列表（悬停显示），一般放 LPCLIconButton
+    property alias buttons: buttonRow.data   // 右侧按钮列表（悬停显示），一般放 MLCIconButton
     property bool hovered: false
     property bool pressed: false
 
@@ -111,7 +111,7 @@ Item {
         anchors { left: parent.left; leftMargin: item.paddingLeft; top: parent.top; bottom: parent.bottom }
         width: item._hasIcon ? 34 : 0
 
-        LPCLIcon {
+        MLCIcon {
             anchors.centerIn: parent
             visible: item.lucideIcon !== ""
             width: 24 * item.logoScale

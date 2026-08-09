@@ -2,7 +2,7 @@
 #include "test.h"
 #include "i18n.h"
 
-#include "lpcl.h"
+#include "mlc.h"
 #include "modpack.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
@@ -32,8 +32,8 @@ static ImportResult importAndWait(const QString &filePath, const QString &name,
     auto state = QSharedPointer<ImportResult>::create();
     QEventLoop loop;
     QPointer<QEventLoop> loopGuard = &loop;
-    lpcl::importModpack(filePath, name, to,
-        [](const lpcl::ImportProgress &) {},
+    mlc::importModpack(filePath, name, to,
+        [](const mlc::ImportProgress &) {},
         [state, loopGuard](bool ok, const QString &msg, const QStringList &data) {
             state->success = ok; state->message = msg; state->data = data; state->done = true;
             if (loopGuard) loopGuard->quit();
@@ -58,9 +58,9 @@ static QString makeSyntheticCfPack(const QString &workDir, bool badMod,
   "minecraft": {"version": "1.20.1", "modLoaders": [{"id": "forge-)" + forgeVer.toUtf8() + R"(", "primary": true}]},
   "manifestType": "minecraftModpack",
   "manifestVersion": 1,
-  "name": "LPCLSmokeCF",
+  "name": "MLCSmokeCF",
   "version": "1.0",
-  "author": "lpcl-test",
+  "author": "mlc-test",
   "overrides": "overrides",
   "files": [)" + files + "]\n}"));
     mf.close();
@@ -80,7 +80,7 @@ static QString makeSyntheticHmclPack(const QString &workDir) {
     QDir().mkpath(workDir);
     QFile mf(workDir + "/modpack.json");
     if (!mf.open(QIODevice::WriteOnly)) return {};
-    mf.write(R"({"name": "LPCLSmoke112", "gameVersion": "1.12.2", "version": "1.0"})");
+    mf.write(R"({"name": "MLCSmoke112", "gameVersion": "1.12.2", "version": "1.0"})");
     mf.close();
 
     QString zipPath = workDir + "/pack.zip";
@@ -136,7 +136,7 @@ static QList<TestItem> runCommandTests() {
 
     // config
     {
-        auto cfg = lpcl::getConfig();
+        auto cfg = mlc::getConfig();
         if (!cfg.version.isEmpty() && !cfg.commit.isEmpty())
             ok("config", QString("%1 (%2)").arg(cfg.version, cfg.commit));
         else
@@ -146,7 +146,7 @@ static QList<TestItem> runCommandTests() {
     // set-folder（写入 → 读回 → 还原）
     {
         QString orig = Settings::instance().getString("LaunchFolderSelect");
-        const QString testPath = "/tmp/_lpcl_test_mc_/";
+        const QString testPath = "/tmp/_mlc_test_mc_/";
         Settings::instance().setString("LaunchFolderSelect", testPath);
         QString readBack = Settings::instance().getString("LaunchFolderSelect");
         Settings::instance().setString("LaunchFolderSelect", orig);
@@ -171,8 +171,8 @@ static QList<TestItem> runCommandTests() {
     // player-add → list → select → rm 全链路
     QString testUuid;
     {
-        auto entry = lpcl::addPlayer("_lpcl_test_");
-        if (!entry.uuid.isEmpty() && entry.name == "_lpcl_test_") {
+        auto entry = mlc::addPlayer("_mlc_test_");
+        if (!entry.uuid.isEmpty() && entry.name == "_mlc_test_") {
             ok("player-add", QString("创建 (uuid: %1)").arg(entry.uuid));
             testUuid = entry.uuid;
         } else {
@@ -181,7 +181,7 @@ static QList<TestItem> runCommandTests() {
     }
 
     if (!testUuid.isEmpty()) {
-        auto players = lpcl::listPlayers();
+        auto players = mlc::listPlayers();
         bool found = false;
         for (const auto &p : players)
             if (p.uuid == testUuid) { found = true; break; }
@@ -191,16 +191,16 @@ static QList<TestItem> runCommandTests() {
             fail("player-list", "测试玩家未出现在列表中");
 
         QString before = Settings::instance().selectedPlayer();
-        lpcl::selectPlayer(testUuid);
+        mlc::selectPlayer(testUuid);
         QString after = Settings::instance().selectedPlayer();
-        lpcl::selectPlayer(before);
+        mlc::selectPlayer(before);
         if (after == testUuid)
             ok("player-select", "选中/还原 正常");
         else
             fail("player-select", "选中失败");
 
-        lpcl::removePlayer(testUuid);
-        players = lpcl::listPlayers();
+        mlc::removePlayer(testUuid);
+        players = mlc::listPlayers();
         bool gone = true;
         for (const auto &p : players)
             if (p.uuid == testUuid) { gone = false; break; }
@@ -218,16 +218,16 @@ static QList<TestItem> runCommandTests() {
     {
         auto &s = Settings::instance();
         s.setString("Authlib/Server", "https://example.com/api/yggdrasil");
-        s.setEncrypted("Authlib/AccessToken", "_lpcl_test_token_");
-        s.setEncrypted("Authlib/ClientToken", "_lpcl_test_client_");
-        s.setString("Authlib/Name", "_lpcl_test_");
+        s.setEncrypted("Authlib/AccessToken", "_mlc_test_token_");
+        s.setEncrypted("Authlib/ClientToken", "_mlc_test_client_");
+        s.setString("Authlib/Name", "_mlc_test_");
         s.setString("Authlib/Uuid", "00000000-0000-0000-0000-000000000000");
-        auto info = lpcl::currentAuthlibLogin();
-        bool readOk = info.loggedIn && info.name == "_lpcl_test_"
+        auto info = mlc::currentAuthlibLogin();
+        bool readOk = info.loggedIn && info.name == "_mlc_test_"
                       && info.server == "https://example.com/api/yggdrasil"
-                      && s.getEncrypted("Authlib/AccessToken") == "_lpcl_test_token_";
-        lpcl::logoutAuthlib();
-        bool cleared = !lpcl::currentAuthlibLogin().loggedIn;
+                      && s.getEncrypted("Authlib/AccessToken") == "_mlc_test_token_";
+        mlc::logoutAuthlib();
+        bool cleared = !mlc::currentAuthlibLogin().loggedIn;
         if (readOk && cleared)
             ok("login-persist", "加密持久化/读取/注销 往返正常");
         else
@@ -236,15 +236,15 @@ static QList<TestItem> runCommandTests() {
 
     // CF key 保密：用户 key 只以密文存在；清除后 ini 无 CfApiKey 行；内嵌 key 永不落盘
     {
-        QString iniPath = QCoreApplication::applicationDirPath() + "/LPCL.ini";
-        lpcl::setCfApiKey("_lpcl_test_cfkey_");
+        QString iniPath = QCoreApplication::applicationDirPath() + "/MLC.ini";
+        mlc::setCfApiKey("_mlc_test_cfkey_");
         bool plainLeak = false;
         QFile f(iniPath);
         if (f.open(QIODevice::ReadOnly)) {
-            plainLeak = QString::fromUtf8(f.readAll()).contains("_lpcl_test_cfkey_");
+            plainLeak = QString::fromUtf8(f.readAll()).contains("_mlc_test_cfkey_");
             f.close();
         }
-        lpcl::setCfApiKey("");  // 清除
+        mlc::setCfApiKey("");  // 清除
         bool leftover = false;
         QFile f2(iniPath);
         if (f2.open(QIODevice::ReadOnly)) {
@@ -259,7 +259,7 @@ static QList<TestItem> runCommandTests() {
 
     // list-javas
     {
-        auto names = lpcl::listJavas();
+        auto names = mlc::listJavas();
         if (!names.isEmpty())
             ok("list-javas", QString("检测到 %1 个 Java: %2").arg(names.size()).arg(names.join(", ")));
         else
@@ -271,7 +271,7 @@ static QList<TestItem> runCommandTests() {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (!folder.isEmpty()) {
             VersionManager::instance().setMcFolder(folder);
-            auto ids = lpcl::listVersions();
+            auto ids = mlc::listVersions();
             if (ids.isEmpty())
                 ok("list", "目录已设置，无导入实例");
             else
@@ -286,7 +286,7 @@ static QList<TestItem> runCommandTests() {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (!folder.isEmpty()) {
             VersionManager::instance().setMcFolder(folder);
-            auto ids = lpcl::listMcVersions();
+            auto ids = mlc::listMcVersions();
             if (ids.isEmpty())
                 ok("mc-list", "无原版 MC 版本");
             else
@@ -377,7 +377,7 @@ static QList<TestItem> runCommandTests() {
             skip("mc-install", "zip 命令不可用，跳过");
         } else {
             VersionManager::instance().setMcFolder(folder);
-            QString base = QDir::temp().filePath("_lpcl_smoke_"
+            QString base = QDir::temp().filePath("_mlc_smoke_"
                 + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8));
 
             QString cfOkZip  = makeSyntheticCfPack(base + "/cf_ok", false);
@@ -395,11 +395,11 @@ static QList<TestItem> runCommandTests() {
             }
 
             // CF 成功路：1 个真实 mod（JEI）→ 导入成功 + 实例可见
-            const QString cfName = "__lpcl_smoke_cf__";
-            lpcl::removeInstance(cfName);
+            const QString cfName = "__mlc_smoke_cf__";
+            mlc::removeInstance(cfName);
             if (!cfOkZip.isEmpty()) {
                 auto r = importAndWait(cfOkZip, cfName);
-                if (r.success && lpcl::listVersions().contains(cfName))
+                if (r.success && mlc::listVersions().contains(cfName))
                     ok("inpack-cf", "CF 合成包导入成功（mod 下载链路正常）");
                 else
                     fail("inpack-cf", "导入失败: " + r.message);
@@ -424,49 +424,49 @@ static QList<TestItem> runCommandTests() {
                     else
                         fail("inpack-mod-to", QString("success=%1 jar 未到位 (%2)").arg(rTo.success).arg(rTo.message));
                 }
-                lpcl::removeInstance(cfName);
+                mlc::removeInstance(cfName);
             } else {
                 skip("inpack-cf", "合成包失败");
             }
 
             // CF 回滚路：假 mod → 必须导入失败且实例无残留
-            const QString badName = "__lpcl_smoke_bad__";
-            lpcl::removeInstance(badName);
+            const QString badName = "__mlc_smoke_bad__";
+            mlc::removeInstance(badName);
             if (!cfBadZip.isEmpty()) {
                 auto r = importAndWait(cfBadZip, badName);
-                bool listed = lpcl::listVersions().contains(badName);
+                bool listed = mlc::listVersions().contains(badName);
                 if (!r.success && !listed)
                     ok("inpack-rollback", "mod 失败 → 导入失败且无残留");
                 else
                     fail("inpack-rollback",
                          QString("预期失败且无残留，实际 success=%1 listed=%2")
                              .arg(r.success).arg(listed));
-                lpcl::removeInstance(badName);
+                mlc::removeInstance(badName);
             } else {
                 skip("inpack-rollback", "合成包失败");
             }
 
             // modloader 回滚路：假 Forge 版本 → 安装必须失败且无残留
-            const QString loaderName = "__lpcl_smoke_loader__";
-            lpcl::removeInstance(loaderName);
+            const QString loaderName = "__mlc_smoke_loader__";
+            mlc::removeInstance(loaderName);
             QString cfLoaderZip = makeSyntheticCfPack(base + "/cf_loader", false, "99.99.99");
             if (!cfLoaderZip.isEmpty()) {
                 auto r = importAndWait(cfLoaderZip, loaderName);
-                bool listed = lpcl::listVersions().contains(loaderName);
+                bool listed = mlc::listVersions().contains(loaderName);
                 if (!r.success && !listed)
                     ok("inpack-loader-rollback", "modloader 失败 → 导入失败且无残留");
                 else
                     fail("inpack-loader-rollback",
                          QString("预期失败且无残留，实际 success=%1 listed=%2")
                              .arg(r.success).arg(listed));
-                lpcl::removeInstance(loaderName);
+                mlc::removeInstance(loaderName);
             } else {
                 skip("inpack-loader-rollback", "合成包失败");
             }
 
             // HMCL 1.12.2：旧格式库下载 + 老格式 natives 解压
-            const QString hmclName = "__lpcl_smoke_112__";
-            lpcl::removeInstance(hmclName);
+            const QString hmclName = "__mlc_smoke_112__";
+            mlc::removeInstance(hmclName);
             if (!hmclZip.isEmpty()) {
                 auto r = importAndWait(hmclZip, hmclName);
                 if (!folder.endsWith('/')) folder += '/';
@@ -479,14 +479,14 @@ static QList<TestItem> runCommandTests() {
                 else
                     fail("inpack-112", QString("success=%1 verOk=%2 nativesOk=%3 (%4)")
                                          .arg(r.success).arg(verOk).arg(nativesOk).arg(r.message));
-                lpcl::removeInstance(hmclName);
+                mlc::removeInstance(hmclName);
             } else {
                 skip("inpack-112", "合成包失败");
             }
 
             // install：原版 MC 下载（1.12.2 经 inpack-112 已缓存，重复调用即校验补齐）
             {
-                if (lpcl::installVersion("1.12.2"))
+                if (mlc::installVersion("1.12.2"))
                     ok("mc-install", "install 1.12.2 校验补齐正常");
                 else
                     fail("mc-install", "install 1.12.2 失败");
@@ -501,7 +501,7 @@ static QList<TestItem> runCommandTests() {
         QString folder = Settings::instance().getString("LaunchFolderSelect");
         if (!folder.isEmpty()) {
             if (!folder.endsWith('/')) folder += '/';
-            const QString testName = "_lpcl_test_rm_";
+            const QString testName = "_mlc_test_rm_";
             // 用随机目录名模拟新存储模型（instances/ 子目录）
             QString randomDir = "test_" + QUuid::createUuid().toString(QUuid::WithoutBraces).left(8);
             QString testDir = folder + "instances/" + randomDir + "/";
@@ -510,7 +510,7 @@ static QList<TestItem> runCommandTests() {
             // 写入 INI 映射
             Settings::instance().setInstanceDir(randomDir, testName);
             if (QDir(testDir).exists()) {
-                bool removed = lpcl::removeInstance(testName);
+                bool removed = mlc::removeInstance(testName);
                 bool dirGone = !QDir(testDir).exists();
                 bool mappingGone = Settings::instance().dirForDisplayName(testName).isEmpty();
                 if (removed && dirGone && mappingGone)
@@ -533,7 +533,7 @@ static QList<TestItem> runCommandTests() {
 }
 
 int handleTest() {
-    std::cout << _("=== LPCL 全系统自检 ===\n", "=== LPCL System Self-Test ===\n") << std::endl;
+    std::cout << _("=== MLC 全系统自检 ===\n", "=== MLC System Self-Test ===\n") << std::endl;
 
     auto results = runCommandTests();
     bool hasFail = false;

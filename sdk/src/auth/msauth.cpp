@@ -6,7 +6,7 @@
 #include <QNetworkReply>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logMs, "lpcl.auth.ms")
+static Q_LOGGING_CATEGORY(logMs, "mlc.auth.ms")
 
 // Microsoft OAuth constants
 static const QString CLIENT_ID = "00000000402b5328"; // Official Minecraft launcher client ID

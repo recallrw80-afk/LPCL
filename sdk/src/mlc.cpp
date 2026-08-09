@@ -1,6 +1,6 @@
-#include "lpcl.h"
+#include "mlc.h"
 #include "modpack.h"
-#include "cf_key_embedded.h"  // CMake 生成：LPCL_CF_API_KEY_EMBEDDED（key 来源判定/回退用）
+#include "cf_key_embedded.h"  // CMake 生成：MLC_CF_API_KEY_EMBEDDED（key 来源判定/回退用）
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "core/javamanager.h"
@@ -314,7 +314,7 @@ static void maybeInstallGlfw34(const McVersion &version) {
 
 } // namespace
 
-namespace lpcl {
+namespace mlc {
 
 // 外置登录持久化（定义见文件尾部 "外置登录" 一节）
 static void persistAuthlibLogin(const LoginResult &r);
@@ -474,7 +474,7 @@ bool launchVersion(const QString &versionId,
                 qWarning() << "authlib-injector 下载失败，回退离线模式";
             }
         } else {
-            qWarning() << "外置登录刷新失败（token 过期或网络问题），回退离线模式。重新登录: lpcl login";
+            qWarning() << "外置登录刷新失败（token 过期或网络问题），回退离线模式。重新登录: mlc login";
         }
     }
     if (!login.isValid()) {
@@ -807,12 +807,12 @@ void setCfApiKey(const QString &key) {
         Settings::instance().setEncrypted("CfApiKey", key);
     // 同步单例（本进程后续 CF 请求立即生效）；清除后回退编译期内嵌
     ModPlatform::instance().setCurseForgeApiKey(
-        key.isEmpty() ? QStringLiteral(LPCL_CF_API_KEY_EMBEDDED) : key);
+        key.isEmpty() ? QStringLiteral(MLC_CF_API_KEY_EMBEDDED) : key);
 }
 
 QString cfApiKeySource() {
     if (!Settings::instance().getEncrypted("CfApiKey").isEmpty()) return "user";
-    if (!QStringLiteral(LPCL_CF_API_KEY_EMBEDDED).isEmpty()) return "embedded";
+    if (!QStringLiteral(MLC_CF_API_KEY_EMBEDDED).isEmpty()) return "embedded";
     return "none";
 }
 
@@ -1023,4 +1023,4 @@ bool startServer(const QString &versionId, LogCallback onLog, ExitCallback onExi
     return true;
 }
 
-} // namespace lpcl
+} // namespace mlc

@@ -1,11 +1,11 @@
-#ifndef LPCL_INSTALL_BRIDGE_H
-#define LPCL_INSTALL_BRIDGE_H
+#ifndef MLC_INSTALL_BRIDGE_H
+#define MLC_INSTALL_BRIDGE_H
 
 #include <QObject>
 #include <QString>
 #include <QStringList>
 
-// 下载/安装任务的 QML 桥接层：包装 lpcl:: 的导入与安装 API
+// 下载/安装任务的 QML 桥接层：包装 mlc:: 的导入与安装 API
 // importModpack 本身异步；installVersion/installJavaRuntime 是同步阻塞，
 // 统一放 QtConcurrent 工作线程执行，进度/结果经 QTimer::singleShot 回到 UI 线程
 class InstallBridge : public QObject
@@ -54,4 +54,4 @@ private:
     QString m_text;
 };
 
-#endif // LPCL_INSTALL_BRIDGE_H
+#endif // MLC_INSTALL_BRIDGE_H

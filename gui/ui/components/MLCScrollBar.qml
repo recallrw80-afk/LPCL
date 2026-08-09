@@ -1,6 +1,6 @@
 import QtQuick
 import QtQuick.Controls.Basic
-import LPCL
+import MLC
 
 // Original PCL scrollbar: 8px wide, thumb radius 3, semi-transparent track
 ScrollBar {

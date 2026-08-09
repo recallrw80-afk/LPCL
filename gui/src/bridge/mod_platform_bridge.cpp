@@ -3,7 +3,7 @@
 #include <QDir>
 #include <QTimer>
 
-#include "lpcl.h"
+#include "mlc.h"
 #include "core/versionmanager.h"
 #include "download/modplatform.h"
 
@@ -72,7 +72,7 @@ void ModPlatformBridge::downloadModToInstance(int platform, const QString &modId
         emit downloadFinished(false, QStringLiteral("非法目标子目录"));
         return;
     }
-    auto info = lpcl::instanceInfo(instanceName);
+    auto info = mlc::instanceInfo(instanceName);
     if (info.dirName.isEmpty()) {
         emit downloadFinished(false, QStringLiteral("实例不存在: ") + instanceName);
         return;
@@ -129,8 +129,8 @@ void ModPlatformBridge::downloadModpackAndImport(int platform, const QString &mo
                 return;
             }
             // 下载成功 → 走导入管线（进度与完成回调都投递回 UI 线程）
-            lpcl::importModpack(savePath, QString(), QString(),
-                [this](const lpcl::ImportProgress &p) {
+            mlc::importModpack(savePath, QString(), QString(),
+                [this](const mlc::ImportProgress &p) {
                     QTimer::singleShot(0, this, [this, percent = p.percent]() {
                         m_downloadPercent = percent;
                         emit downloadProgressChanged();

@@ -3,7 +3,7 @@
 #include "i18n.h"
 #include "tui_select.h"
 #include "tui_prompt.h"
-#include "lpcl.h"
+#include "mlc.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
@@ -25,7 +25,7 @@
 #include <unistd.h>
 
 int handleList(QStringList &args) { Q_UNUSED(args);
-    auto ids = lpcl::listVersions();
+    auto ids = mlc::listVersions();
     if (ids.isEmpty()) {
         std::cout << T("(No instances)\n", "(No instances)\n").toStdString();
     } else {
@@ -37,7 +37,7 @@ int handleList(QStringList &args) { Q_UNUSED(args);
 }
 
 int handleMcList(QStringList &args) { Q_UNUSED(args);
-    auto ids = lpcl::listMcVersions();
+    auto ids = mlc::listMcVersions();
     if (ids.isEmpty()) {
         std::cout << T("(No vanilla MC versions)\n",
                        "(No vanilla MC versions)\n").toStdString();
@@ -53,19 +53,19 @@ int handleMcList(QStringList &args) { Q_UNUSED(args);
 int handleMods(QStringList &args) {
     QString name = args.size() >= 2 ? args.at(1) : QString();
     if (name.isEmpty()) {
-        auto ids = lpcl::listVersions();
-        std::cerr << T("用法: lpcl mods <实例名>\n", "usage: lpcl mods <instance>\n").toStdString();
+        auto ids = mlc::listVersions();
+        std::cerr << T("用法: mlc mods <实例名>\n", "usage: mlc mods <instance>\n").toStdString();
         for (const auto &id : ids)
             std::cerr << "  " << id.toStdString() << "\n";
         return ids.isEmpty() ? 0 : 1;
     }
-    auto info = lpcl::instanceInfo(name);
+    auto info = mlc::instanceInfo(name);
     if (info.dirName.isEmpty()) {
         std::cerr << T("error: 实例不存在: ", "error: instance not found: ").toStdString()
                   << name.toStdString() << "\n";
         return 1;
     }
-    auto mods = lpcl::listMods(name);
+    auto mods = mlc::listMods(name);
     std::cout << name.toStdString() << T(" 的 Mod（共 ", " mods (").toStdString()
               << mods.size() << T(" 个）:\n", "):\n").toStdString();
     if (mods.isEmpty())
@@ -83,8 +83,8 @@ int handleLaunch(QStringList &args) {
     if (args.size() < 2) {
         // 未指定实例：TTY 用上下键 TUI 选择，非 TTY（管道）退回输序号。
         // 列表 = 实例 + 原版/加载器版本（launchVersion 解析时实例名优先，原版走 loadVersion）
-        auto ids = lpcl::listVersions();
-        const auto mcIds = lpcl::listMcVersions();
+        auto ids = mlc::listVersions();
+        const auto mcIds = mlc::listMcVersions();
         for (const auto &v : mcIds)
             if (!ids.contains(v)) ids << v;
         if (ids.isEmpty()) {
@@ -121,7 +121,7 @@ int handleLaunch(QStringList &args) {
     }
     std::cout << _(QString("正在启动 %1 ...\n").arg(target).toStdString(),
                    QString("Launching %1 ...\n").arg(target).toStdString());
-    if (!lpcl::launchVersion(target,
+    if (!mlc::launchVersion(target,
             [](const QString &line) { std::cout << "[MC] " << line.toStdString() << std::endl; },
             [](int code) {
                 std::cout << _("exit: ", "exit: ") << code << "\n";
@@ -137,15 +137,15 @@ int handleLaunch(QStringList &args) {
 
 int handleInpack(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
-                       "error:  lpcl inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
+        std::cerr << _("error:  mlc inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
+                       "error:  mlc inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
         return 1;
     }
     QString rename = extractRename(args);
     QString to = extractFlag(args, "--to");
     if (args.size() < 2) {  // --r/--to/--folder 移除后可能没有文件参数
-        std::cerr << _("error:  lpcl inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
-                       "error:  lpcl inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
+        std::cerr << _("error:  mlc inpack <文件> [--r <名称>] [--to <实例>] [--folder <路径>]\n",
+                       "error:  mlc inpack <file> [--r <name>] [--to <instance>] [--folder <path>]\n");
         return 1;
     }
     std::cout << _("正在导入整合包...\n", "Importing modpack...\n");
@@ -154,8 +154,8 @@ int handleInpack(QStringList &args) {
         bool done = false;
         int  result = 1;
         QString retryTo;  // mod 包场景：用户在 TUI 里选中的目标实例
-        lpcl::importModpack(args[1], rename, to,
-            [](const lpcl::ImportProgress &p) {
+        mlc::importModpack(args[1], rename, to,
+            [](const mlc::ImportProgress &p) {
                 int bars = p.percent / 5;
                 std::cout << "\r  [";
                 for (int i = 0; i < 20; ++i)
@@ -210,11 +210,11 @@ int handleRm(QStringList &args) {
     if (args.size() < 2) {
         // 无参：TTY 上下键选择要删的实例（二次确认）；非 TTY 报用法
         if (!isatty(fileno(stdin))) {
-            std::cerr << _("error:  lpcl list-rm <名称|*>\n",
-                           "error:  lpcl list-rm <name|*>\n");
+            std::cerr << _("error:  mlc list-rm <名称|*>\n",
+                           "error:  mlc list-rm <name|*>\n");
             return 1;
         }
-        auto ids = lpcl::listVersions();
+        auto ids = mlc::listVersions();
         if (ids.isEmpty()) {
             std::cout << _("没有可删除的实例\n", "No instances to remove\n");
             return 0;
@@ -229,7 +229,7 @@ int handleRm(QStringList &args) {
             std::cerr << _("已取消\n", "Cancelled\n");
             return 1;
         }
-        if (lpcl::removeInstance(ids[pick])) {
+        if (mlc::removeInstance(ids[pick])) {
             std::cout << "success" << std::endl;
             return 0;
         }
@@ -239,25 +239,25 @@ int handleRm(QStringList &args) {
     }
     // shell 会把不带引号的 * 展开成当前目录文件列表（多个参数）——检测并提示加引号
     if (args.size() > 2) {
-        std::cerr << _("error:  参数过多（shell 会展开 *）。删除全部实例请加引号：lpcl list-rm \"*\"\n",
-                       "error:  too many arguments (shell expands *). To remove all instances, quote it: lpcl list-rm \"*\"\n");
+        std::cerr << _("error:  参数过多（shell 会展开 *）。删除全部实例请加引号：mlc list-rm \"*\"\n",
+                       "error:  too many arguments (shell expands *). To remove all instances, quote it: mlc list-rm \"*\"\n");
         return 1;
     }
     if (args[1] == "*") {
-        auto ids = lpcl::listVersions();
+        auto ids = mlc::listVersions();
         if (ids.isEmpty()) {
             std::cout << _("没有可删除的实例\n", "No instances to remove\n");
             return 0;
         }
         int removed = 0;
         for (const auto &id : ids) {
-            if (lpcl::removeInstance(id)) removed++;
+            if (mlc::removeInstance(id)) removed++;
         }
         std::cout << _(QString("已删除 %1 个实例\n").arg(removed).toStdString(),
                        QString("Removed %1 instance(s)\n").arg(removed).toStdString());
         return 0;
     }
-    if (lpcl::removeInstance(args[1])) {
+    if (mlc::removeInstance(args[1])) {
         std::cout << "success" << std::endl;
         return 0;
     }
@@ -273,8 +273,8 @@ int handleInstall(QStringList &args) {
         ? _("正在下载最新版 MC ...\n", "Downloading latest MC ...\n")
         : _(QString("正在下载 MC %1 ...\n").arg(ver).toStdString(),
             QString("Downloading MC %1 ...\n").arg(ver).toStdString()));
-    bool ok = lpcl::installVersion(ver,
-        [](const lpcl::ImportProgress &p) {
+    bool ok = mlc::installVersion(ver,
+        [](const mlc::ImportProgress &p) {
             if (p.percent >= 0) {
                 int bars = p.percent / 5;
                 std::cout << "\r  [";
@@ -299,8 +299,8 @@ int handleInstall(QStringList &args) {
 
 int handleInstallJava(QStringList &args) {
     if (args.size() < 2) {
-        std::cerr << _("error:  lpcl java-install <大版本>\n",
-                       "error:  lpcl java-install <major>\n");
+        std::cerr << _("error:  mlc java-install <大版本>\n",
+                       "error:  mlc java-install <major>\n");
         return 1;
     }
     bool okNum = false;
@@ -312,7 +312,7 @@ int handleInstallJava(QStringList &args) {
     std::cout << _(QString("正在下载 JRE %1 ...\n").arg(major).toStdString(),
                    QString("Downloading JRE %1 ...\n").arg(major).toStdString());
     QString err;
-    if (!lpcl::installJavaRuntime(major, &err)) {
+    if (!mlc::installJavaRuntime(major, &err)) {
         std::cerr << _("error:  ", "error: ") << err.toStdString() << std::endl;
         return 1;
     }

@@ -1,5 +1,5 @@
-#ifndef LPCL_DOWNLOADMANAGER_H
-#define LPCL_DOWNLOADMANAGER_H
+#ifndef MLC_DOWNLOADMANAGER_H
+#define MLC_DOWNLOADMANAGER_H
 
 #include <QObject>
 #include <QNetworkAccessManager>
@@ -9,13 +9,13 @@
 #include <functional>
 #include <nlohmann/json.hpp>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 /**
  * HTTP download manager with retry logic and progress tracking.
  * Mirrors the original ModNet + ModDownload functionality.
  */
-class LPCLCORE_EXPORT DownloadManager : public QObject
+class MLCCORE_EXPORT DownloadManager : public QObject
 {
     Q_OBJECT
 
@@ -113,4 +113,4 @@ private:
     QNetworkAccessManager *m_nam = nullptr;
 };
 
-#endif // LPCL_DOWNLOADMANAGER_H
+#endif // MLC_DOWNLOADMANAGER_H

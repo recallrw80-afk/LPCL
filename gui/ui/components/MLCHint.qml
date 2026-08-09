@@ -1,6 +1,6 @@
 pragma ComponentBehavior: Bound
 import QtQuick
-import LPCL
+import MLC
 
 // 轻提示层（对应原版 ModMain.Hint / HintTick + FormMain.PanHint）
 // 在窗口左下角滑入提示条，停留一段时间后向左滑出并自动消失

@@ -1,7 +1,7 @@
-#ifndef LPCL_TYPES_H
-#define LPCL_TYPES_H
+#ifndef MLC_TYPES_H
+#define MLC_TYPES_H
 
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 #include <QString>
 #include <QList>
@@ -56,7 +56,7 @@ enum class LoginType {
     Ms = 5       // Microsoft OAuth
 };
 
-struct LPCLCORE_EXPORT LoginResult {
+struct MLCCORE_EXPORT LoginResult {
     Q_GADGET
     Q_PROPERTY(QString name MEMBER name)
     Q_PROPERTY(QString uuid MEMBER uuid)
@@ -177,4 +177,4 @@ struct LogEntry {
     enum Level { Info, Warn, Error } level = Info;
 };
 
-#endif // LPCL_TYPES_H
+#endif // MLC_TYPES_H

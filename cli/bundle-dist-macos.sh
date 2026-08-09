@@ -1,13 +1,13 @@
 #!/bin/bash
-# bundle-dist-macos.sh — 把 lpcl 运行所需的 Qt/第三方 dylib 收进 dist/，实现零依赖分发
+# bundle-dist-macos.sh — 把 mlc 运行所需的 Qt/第三方 dylib 收进 dist/，实现零依赖分发
 # 用法: bundle-dist-macos.sh <dist目录> <Qt前缀>
-# 产物布局: dist/lpcl + dist/lib/*.dylib + dist/plugins/tls/*.dylib
+# 产物布局: dist/mlc + dist/lib/*.dylib + dist/plugins/tls/*.dylib
 # 系统库（/usr/lib、/System）属 macOS 基线，一律不带；TLS 用系统 SecureTransport，无需 OpenSSL
 set -euo pipefail
 
 DIST="$1"
 QT_PREFIX="$2"
-BIN="$DIST/lpcl"
+BIN="$DIST/mlc"
 LIBDIR="$DIST/lib"
 mkdir -p "$LIBDIR" "$DIST/plugins/tls"
 

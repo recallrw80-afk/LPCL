@@ -1,6 +1,6 @@
 import QtQuick
 import Qt5Compat.GraphicalEffects
-import LPCL
+import MLC
 
 // 复刻原版 MyCard（Controls/MyCard.vb）
 // 圆角白卡片：投影、悬停高亮、可选标题栏折叠

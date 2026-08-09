@@ -1,16 +1,16 @@
-#ifndef LPCL_AUTHBASE_H
-#define LPCL_AUTHBASE_H
+#ifndef MLC_AUTHBASE_H
+#define MLC_AUTHBASE_H
 
 #include <QObject>
 #include <functional>
 #include "core/types.h"
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 
 /**
  * Base class for authentication providers.
  * Each provider implements doLogin() to perform its specific auth flow.
  */
-class LPCLCORE_EXPORT AuthBase : public QObject
+class MLCCORE_EXPORT AuthBase : public QObject
 {
     Q_OBJECT
 
@@ -36,4 +36,4 @@ signals:
     void loginFinished(bool success, const LoginResult &result);
 };
 
-#endif // LPCL_AUTHBASE_H
+#endif // MLC_AUTHBASE_H

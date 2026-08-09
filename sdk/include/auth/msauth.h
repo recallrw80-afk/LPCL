@@ -1,5 +1,5 @@
-#ifndef LPCL_MSAUTH_H
-#define LPCL_MSAUTH_H
+#ifndef MLC_MSAUTH_H
+#define MLC_MSAUTH_H
 
 #include "auth/authbase.h"
 #include <QNetworkAccessManager>
@@ -17,7 +17,7 @@
  * 6. Exchange XSTS token for Minecraft token
  * 7. Get Minecraft profile
  */
-class LPCLCORE_EXPORT MsAuth : public AuthBase
+class MLCCORE_EXPORT MsAuth : public AuthBase
 {
     Q_OBJECT
 
@@ -53,4 +53,4 @@ private:
     bool m_cancelled = false;
 };
 
-#endif // LPCL_MSAUTH_H
+#endif // MLC_MSAUTH_H

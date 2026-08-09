@@ -2,7 +2,7 @@ pragma ComponentBehavior: Bound
 import QtQuick
 import QtQuick.Controls.Basic
 import QtQuick.Layouts
-import LPCL
+import MLC
 
 // Download tab — 游戏安装与资源下载
 // 左侧：分类导航（游戏安装默认选中） | 右侧：游戏安装页 / Mod·整合包·材质包·光影包资源浏览 / 数据包“即将推出”占位
@@ -508,7 +508,7 @@ Item {
                     id: navRepeater
                     model: page.navModel
 
-                    LPCLListItem {
+                    MLCListItem {
                         id: navItem
                         required property var modelData
                         required property int index
@@ -547,14 +547,14 @@ Item {
                     Layout.fillWidth: true
                     spacing: Theme.itemSpacing
 
-                    LPCLSearchBox {
+                    MLCSearchBox {
                         id: searchBox
                         Layout.fillWidth: true
                         hintText: "搜索版本号..."
                         onTextChanged: page.rebuildFiltered()
                         onAccepted: page.rebuildFiltered()
                     }
-                    LPCLButton {
+                    MLCButton {
                         text: "刷新"
                         Layout.preferredHeight: 40
                         enabled: !page.versionsLoading && !page.installBusy
@@ -566,7 +566,7 @@ Item {
                 RowLayout {
                     Layout.fillWidth: true
 
-                    LPCLCheckBox {
+                    MLCCheckBox {
                         id: chkSnapshots
                         text: "显示快照与远古版本"
                         onChanged: page.rebuildFiltered()
@@ -608,7 +608,7 @@ Item {
                                 font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                             }
                         }
-                        LPCLProgressBar {
+                        MLCProgressBar {
                             Layout.fillWidth: true
                             value: page.installProgressPercent / 100
                         }
@@ -627,7 +627,7 @@ Item {
                         contentHeight: verCol.implicitHeight + 10
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
-                        ScrollBar.vertical: LPCLScrollBar {}
+                        ScrollBar.vertical: MLCScrollBar {}
 
                         ColumnLayout {
                             id: verCol
@@ -637,7 +637,7 @@ Item {
                             Repeater {
                                 model: page.filteredVersions
 
-                                LPCLListItem {
+                                MLCListItem {
                                     id: versionItem
                                     required property var modelData
                                     Layout.fillWidth: true
@@ -686,7 +686,7 @@ Item {
                     Layout.fillWidth: true
                     spacing: Theme.itemSpacing
 
-                    LPCLSearchBox {
+                    MLCSearchBox {
                         id: modSearchBox
                         Layout.fillWidth: true
                         hintText: "搜索 " + page.selectedNavName + "..."
@@ -696,7 +696,7 @@ Item {
                             page.startModSearch(true);
                         }
                     }
-                    LPCLComboBox {
+                    MLCComboBox {
                         id: cmbPlatform
                         Layout.preferredWidth: 130
                         Layout.preferredHeight: 40
@@ -716,7 +716,7 @@ Item {
                         color: Theme.gray3
                         font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                     }
-                    LPCLComboBox {
+                    MLCComboBox {
                         id: cmbInstance
                         visible: page.currentCategory !== 1
                         Layout.preferredWidth: 180
@@ -737,7 +737,7 @@ Item {
                         contentHeight: modCol.implicitHeight + 10
                         clip: true
                         boundsBehavior: Flickable.StopAtBounds
-                        ScrollBar.vertical: LPCLScrollBar {}
+                        ScrollBar.vertical: MLCScrollBar {}
 
                         ColumnLayout {
                             id: modCol
@@ -747,7 +747,7 @@ Item {
                             Repeater {
                                 model: page.modResults
 
-                                LPCLListItem {
+                                MLCListItem {
                                     id: modItem
                                     required property var modelData
                                     Layout.fillWidth: true
@@ -764,7 +764,7 @@ Item {
                             }
 
                             // 加载更多：page+1 追加结果，搜索中禁用
-                            LPCLButton {
+                            MLCButton {
                                 Layout.alignment: Qt.AlignHCenter
                                 Layout.topMargin: 6
                                 visible: page.modHasMore
@@ -801,7 +801,7 @@ Item {
                 visible: page.selectedNav === 5
                 spacing: 10
 
-                LPCLIcon {
+                MLCIcon {
                     Layout.alignment: Qt.AlignHCenter
                     size: 48
                     lucideIcon: page.selectedNavIcon
@@ -821,7 +821,7 @@ Item {
                 }
             }
 
-            // ---- 文件选择覆盖层（参考 LPCLMsg 遮罩：半透明 + 点击空白关闭） ----
+            // ---- 文件选择覆盖层（参考 MLCMsg 遮罩：半透明 + 点击空白关闭） ----
             Rectangle {
                 id: filesOverlay
                 anchors.fill: parent
@@ -869,7 +869,7 @@ Item {
                                 font.bold: true
                                 elide: Text.ElideRight
                             }
-                            LPCLIconButton {
+                            MLCIconButton {
                                 lucideIcon: "x"
                                 theme: 2
                                 onClicked: page.closeFiles()
@@ -899,7 +899,7 @@ Item {
                                     font.family: Theme.fontFamily; font.pixelSize: Theme.fontSizeSmall
                                 }
                             }
-                            LPCLProgressBar {
+                            MLCProgressBar {
                                 Layout.fillWidth: true
                                 value: page.modDownloadPercent / 100
                             }
@@ -917,7 +917,7 @@ Item {
                                 contentHeight: fileCol.implicitHeight + 10
                                 clip: true
                                 boundsBehavior: Flickable.StopAtBounds
-                                ScrollBar.vertical: LPCLScrollBar {}
+                                ScrollBar.vertical: MLCScrollBar {}
 
                                 ColumnLayout {
                                     id: fileCol
@@ -927,7 +927,7 @@ Item {
                                     Repeater {
                                         model: page.fileList
 
-                                        LPCLListItem {
+                                        MLCListItem {
                                             id: fileItem
                                             required property var modelData
                                             Layout.fillWidth: true
@@ -937,7 +937,7 @@ Item {
                                             lucideIcon: "file-archive"
                                             checkType: 0
                                             buttons: [
-                                                LPCLButton {
+                                                MLCButton {
                                                     text: "安装"
                                                     colorType: 1
                                                     enabled: (page.currentCategory === 1

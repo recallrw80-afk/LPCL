@@ -1,7 +1,7 @@
-#ifndef LPCL_SETTINGS_H
-#define LPCL_SETTINGS_H
+#ifndef MLC_SETTINGS_H
+#define MLC_SETTINGS_H
 
-#include "core/lpclcore_export.h"
+#include "core/mlccore_export.h"
 #include <QObject>
 #include <QSettings>
 #include <QVariant>
@@ -14,12 +14,12 @@
  * Mirrors the original VB Settings.Get(Of T)(key) / Settings.Set(key, value) API.
  *
  * Uses QSettings (INI file on Linux/Mac, registry on Windows).
- * Stored in <app data>/LPCL.ini on all platforms for consistency.
+ * Stored in <app data>/MLC.ini on all platforms for consistency.
  *
  * 线程安全：所有直接访问 m_settings 的公开方法持有 m_mutex（递归锁——
  * 便捷方法会嵌套调用模板方法，如 getEncrypted → get<QString>）。
  */
-class LPCLCORE_EXPORT Settings : public QObject
+class MLCCORE_EXPORT Settings : public QObject
 {
     Q_OBJECT
 
@@ -96,7 +96,7 @@ public:
 
     // ---- Instance directory mappings (随机名 → 实例名) ----
 
-    /// 写入实例目录映射：dirName → displayName（存储到 LPCL.ini 的 [LPCL] 节）
+    /// 写入实例目录映射：dirName → displayName（存储到 MLC.ini 的 [MLC] 节）
     void setInstanceDir(const QString &dirName, const QString &displayName);
 
     /// 读取全部实例映射：dirName → displayName
@@ -170,4 +170,4 @@ inline void Settings::set<bool>(const QString &key, const bool &value) {
     m_settings->sync();
 }
 
-#endif // LPCL_SETTINGS_H
+#endif // MLC_SETTINGS_H

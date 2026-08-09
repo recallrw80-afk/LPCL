@@ -3,7 +3,7 @@
 #include "i18n.h"
 #include "tui_select.h"
 #include "tui_prompt.h"
-#include "lpcl.h"
+#include "mlc.h"
 #include "core/settings.h"
 #include "core/versionmanager.h"
 #include "download/downloadmanager.h"
@@ -29,7 +29,7 @@
 // 玩家配置向导（create-vite 风格问答，仅 TTY；existing 非空 = 编辑模式，各问取现值为默认）
 // 交互流程全在 CLI 层，SDK 只提供 add/update/list 数据接口
 struct WizardResult { QString name, avatar, skin, customUuid; };
-static bool playerWizard(const lpcl::PlayerEntry *existing, WizardResult &out) {
+static bool playerWizard(const mlc::PlayerEntry *existing, WizardResult &out) {
     auto name = tuiInput(_("玩家名字", "Player name"),
                          existing ? existing->name : QString(),
                          _("必填", "required"));
@@ -69,8 +69,8 @@ int handlePlayerAdd(QStringList &args) {
     if (args.size() < 2) {
         // 无参：TTY 进交互向导，非 TTY（脚本/管道）报用法
         if (!isatty(fileno(stdin))) {
-            std::cerr << _("error:  lpcl player-add <名称> [--avatar <路径>] [--skin <slim|wide|default>]\n",
-                           "error:  lpcl player-add <name> [--avatar <path>] [--skin <slim|wide|default>]\n");
+            std::cerr << _("error:  mlc player-add <名称> [--avatar <路径>] [--skin <slim|wide|default>]\n",
+                           "error:  mlc player-add <name> [--avatar <path>] [--skin <slim|wide|default>]\n");
             return 1;
         }
         WizardResult w;
@@ -78,7 +78,7 @@ int handlePlayerAdd(QStringList &args) {
             std::cerr << _("已取消\n", "Cancelled\n");
             return 1;
         }
-        auto entry = lpcl::addPlayer(w.name, w.avatar, w.skin, w.customUuid);
+        auto entry = mlc::addPlayer(w.name, w.avatar, w.skin, w.customUuid);
         std::cout << _("已添加玩家:\n", "Player added:\n")
                   << "  UUID: " << entry.uuid.toStdString() << "\n"
                   << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n"
@@ -98,7 +98,7 @@ int handlePlayerAdd(QStringList &args) {
                        "error: skin type must be slim / wide / default\n");
         return 1;
     }
-    auto entry = lpcl::addPlayer(args[1], avatar, skin.isEmpty() ? "slim" : skin);
+    auto entry = mlc::addPlayer(args[1], avatar, skin.isEmpty() ? "slim" : skin);
     std::cout << _("已添加玩家:\n", "Player added:\n")
               << "  UUID: " << entry.uuid.toStdString() << "\n"
               << "  " << _("名称: ", "Name: ") << entry.name.toStdString() << "\n"
@@ -113,7 +113,7 @@ static QString resolvePlayerUuid(const QString &idOrIndex) {
     bool isNum = false;
     int n = idOrIndex.toInt(&isNum);
     if (isNum && n >= 1) {
-        auto players = lpcl::listPlayers();
+        auto players = mlc::listPlayers();
         if (n <= players.size()) return players[n - 1].uuid;
     }
     return idOrIndex;  // 不是有效序号则按 uuid 处理
@@ -123,11 +123,11 @@ int handlePlayerRm(QStringList &args) {
     if (args.size() < 2) {
         // 无参：TTY 上下键选择要删的玩家（二次确认）；非 TTY 报用法
         if (!isatty(fileno(stdin))) {
-            std::cerr << _("error:  lpcl player-rm <uuid|序号>\n",
-                           "error:  lpcl player-rm <uuid|index>\n");
+            std::cerr << _("error:  mlc player-rm <uuid|序号>\n",
+                           "error:  mlc player-rm <uuid|index>\n");
             return 1;
         }
-        auto players = lpcl::listPlayers();
+        auto players = mlc::listPlayers();
         if (players.isEmpty()) {
             std::cerr << _("error:  没有玩家配置\n", "error:  no player profiles\n");
             return 1;
@@ -144,7 +144,7 @@ int handlePlayerRm(QStringList &args) {
             std::cerr << _("已取消\n", "Cancelled\n");
             return 1;
         }
-        if (lpcl::removePlayer(players[pick].uuid)) {
+        if (mlc::removePlayer(players[pick].uuid)) {
             std::cout << "success" << std::endl;
             return 0;
         }
@@ -152,7 +152,7 @@ int handlePlayerRm(QStringList &args) {
         return 1;
     }
     QString uuid = resolvePlayerUuid(args[1]);
-    if (lpcl::removePlayer(uuid)) {
+    if (mlc::removePlayer(uuid)) {
         std::cout << "success" << std::endl;
         return 0;
     }
@@ -161,7 +161,7 @@ int handlePlayerRm(QStringList &args) {
 }
 
 int handlePlayerEdit(QStringList &args) {
-    auto players = lpcl::listPlayers();
+    auto players = mlc::listPlayers();
     if (players.isEmpty()) {
         std::cerr << _("error:  没有玩家配置，请先 player-add\n",
                        "error:  no player profiles, run player-add first\n");
@@ -173,8 +173,8 @@ int handlePlayerEdit(QStringList &args) {
         uuid = resolvePlayerUuid(args[1]);
     } else {
         if (!isatty(fileno(stdin))) {
-            std::cerr << _("error:  lpcl player-edit <uuid|序号>\n",
-                           "error:  lpcl player-edit <uuid|index>\n");
+            std::cerr << _("error:  mlc player-edit <uuid|序号>\n",
+                           "error:  mlc player-edit <uuid|index>\n");
             return 1;
         }
         QStringList names;
@@ -186,7 +186,7 @@ int handlePlayerEdit(QStringList &args) {
         }
         uuid = players[pick].uuid;
     }
-    const lpcl::PlayerEntry *existing = nullptr;
+    const mlc::PlayerEntry *existing = nullptr;
     for (const auto &p : players)
         if (p.uuid == uuid) { existing = &p; break; }
     if (!existing) {
@@ -199,7 +199,7 @@ int handlePlayerEdit(QStringList &args) {
         std::cerr << _("已取消\n", "Cancelled\n");
         return 1;
     }
-    if (!lpcl::updatePlayer(uuid, w.name, w.avatar, w.skin, w.customUuid)) {
+    if (!mlc::updatePlayer(uuid, w.name, w.avatar, w.skin, w.customUuid)) {
         std::cerr << _("error: 修改失败（UUID 冲突？）\n", "error: update failed (UUID conflict?)\n");
         return 1;
     }
@@ -208,7 +208,7 @@ int handlePlayerEdit(QStringList &args) {
 }
 
 int handlePlayerList(QStringList &args) { Q_UNUSED(args);
-    auto players = lpcl::listPlayers();
+    auto players = mlc::listPlayers();
     if (players.isEmpty()) {
         std::cout << _("（无玩家配置）\n", "(No player profiles)\n");
         return 0;
@@ -231,15 +231,15 @@ int handlePlayerSelect(QStringList &args) {
     QString uuid;
     if (args.size() < 2) {
         // 无参：TTY 弹上下键选择（非 TTY 提示用法）
-        auto players = lpcl::listPlayers();
+        auto players = mlc::listPlayers();
         if (players.isEmpty()) {
             std::cerr << _("error:  没有玩家配置，请先 player-add\n",
                            "error:  no player profiles, run player-add first\n");
             return 1;
         }
         if (!isatty(fileno(stdin))) {
-            std::cerr << _("error:  lpcl player-select <uuid|序号>\n",
-                           "error:  lpcl player-select <uuid|index>\n");
+            std::cerr << _("error:  mlc player-select <uuid|序号>\n",
+                           "error:  mlc player-select <uuid|index>\n");
             return 1;
         }
         QStringList names;
@@ -253,7 +253,7 @@ int handlePlayerSelect(QStringList &args) {
     } else {
         uuid = resolvePlayerUuid(args[1]);
     }
-    if (!lpcl::selectPlayer(uuid)) {
+    if (!mlc::selectPlayer(uuid)) {
         std::cerr << _("error:  玩家 UUID 或序号不存在\n", "error:  player UUID or index not found\n");
         return 1;
     }
@@ -264,7 +264,7 @@ int handlePlayerSelect(QStringList &args) {
 // ---- 需要 mcFolder 的命令 ----
 
 int handleLogin(QStringList &args) {
-    auto cur = lpcl::currentAuthlibLogin();
+    auto cur = mlc::currentAuthlibLogin();
     if (cur.loggedIn) {
         std::cout << T("当前已登录: %1 @ %2\n", "Currently logged in: %1 @ %2\n")
                          .arg(cur.name, cur.server).toStdString();
@@ -272,7 +272,7 @@ int handleLogin(QStringList &args) {
             auto again = tuiConfirm(_("重新登录？", "Log in again?"), false);
             if (!again || !*again) return 0;
         } else {
-            std::cout << _("切换账号请先 lpcl logout\n", "Run lpcl logout first to switch accounts\n");
+            std::cout << _("切换账号请先 mlc logout\n", "Run mlc logout first to switch accounts\n");
             return 0;
         }
     }
@@ -281,8 +281,8 @@ int handleLogin(QStringList &args) {
     QString server = args.size() >= 2 ? args[1] : QString();
     QString email  = args.size() >= 3 ? args[2] : QString();
     if (!isatty(fileno(stdin))) {
-        std::cerr << _("error:  login 需要交互终端（用法: lpcl login [服务器] [邮箱]）\n",
-                       "error:  login requires an interactive terminal (usage: lpcl login [server] [email])\n");
+        std::cerr << _("error:  login 需要交互终端（用法: mlc login [服务器] [邮箱]）\n",
+                       "error:  login requires an interactive terminal (usage: mlc login [server] [email])\n");
         return 1;
     }
     if (server.isEmpty()) {
@@ -310,8 +310,8 @@ int handleLogin(QStringList &args) {
     QString msg;
     QEventLoop loop;
     QPointer<QEventLoop> guard = &loop;
-    lpcl::loginAuthlib(server, email, *p,
-        [&](bool o, const QString &m, const lpcl::AuthlibLoginInfo &) {
+    mlc::loginAuthlib(server, email, *p,
+        [&](bool o, const QString &m, const mlc::AuthlibLoginInfo &) {
             ok = o; msg = m; done = true;
             if (guard) guard->quit();
         });
@@ -329,12 +329,12 @@ int handleLogin(QStringList &args) {
 
 int handleLogout(QStringList &args) {
     Q_UNUSED(args);
-    auto cur = lpcl::currentAuthlibLogin();
+    auto cur = mlc::currentAuthlibLogin();
     if (!cur.loggedIn) {
         std::cout << _("当前没有外置登录态\n", "No external login to clear\n");
         return 0;
     }
-    lpcl::logoutAuthlib();
+    mlc::logoutAuthlib();
     std::cout << T("已退出外置账号 %1，启动将回退为离线玩家\n",
                    "Logged out %1; launches fall back to the offline player\n")
                      .arg(cur.name).toStdString();

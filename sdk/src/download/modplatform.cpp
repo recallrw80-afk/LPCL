@@ -9,7 +9,7 @@
 #include <QUrlQuery>
 #include <QLoggingCategory>
 
-static Q_LOGGING_CATEGORY(logMod, "lpcl.mod")
+static Q_LOGGING_CATEGORY(logMod, "mlc.mod")
 
 // 安全读取字符串字段：键缺失、为 null 或类型不符时返回空串
 // （nlohmann 的 value(key, "") 在键存在但为 null 时会抛 type_error）
@@ -31,7 +31,7 @@ ModPlatform& ModPlatform::instance() {
         keyResolved = true;
         m.m_cfApiKey = Settings::instance().getEncrypted("CfApiKey");
         if (m.m_cfApiKey.isEmpty())
-            m.m_cfApiKey = QStringLiteral(LPCL_CF_API_KEY_EMBEDDED);
+            m.m_cfApiKey = QStringLiteral(MLC_CF_API_KEY_EMBEDDED);
         if (m.m_cfApiKey.isEmpty())
             qCInfo(logMod) << "未配置 CurseForge API key，使用 MCIM 镜像";
     }
