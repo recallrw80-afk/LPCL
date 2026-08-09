@@ -68,7 +68,7 @@ download_github() {
 }
 
 download_gitee() {
-    local API="https://gitee.com/api/v5/repos/${GITEE_REPO}/releases?per_page=10" TAG
+    local API="https://gitee.com/api/v5/repos/${GITEE_REPO}/releases?per_page=10&direction=desc" TAG
     if [ "$BETA" = 1 ]; then
         # 最新一条（含预发布）
         TAG="$(curl -fsSL "$API" 2>/dev/null | grep -oE '"tag_name": *"[^"]+"' | head -1 | cut -d'"' -f4 || true)"

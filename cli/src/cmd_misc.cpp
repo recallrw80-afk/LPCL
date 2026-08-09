@@ -337,7 +337,7 @@ int handleUpdate(QStringList &args) {
         // Gitee 的 releases/latest 不分预发布（实测会返回最新的 rc），一律用列表接口
         QString apiUrl;
         if (useCn) {
-            apiUrl = QString("https://gitee.com/api/v5/repos/%1/releases?per_page=10").arg(giteeRepo);
+            apiUrl = QString("https://gitee.com/api/v5/repos/%1/releases?per_page=10&direction=desc").arg(giteeRepo);
         } else {
             apiUrl = beta
                 ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
