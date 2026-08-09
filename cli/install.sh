@@ -25,7 +25,7 @@ OS_NAME="$(uname -s)"
 if [ "$OS_NAME" = "Darwin" ]; then
     # macOS：预编译包只有 Apple Silicon（liblzma 单架构出不了 universal 包）
     case "$(uname -m)" in
-        arm64)  PKG_NAME="lpcl-macos-arm64.tar.xz" ;;
+        arm64)  PKG_NAME="lpcl-macos-aarch64.tar.xz" ;;
         *)      echo "macOS 预编译包目前仅支持 Apple Silicon（M 系列）；Intel Mac 请走源码编译" >&2; exit 1 ;;
     esac
 else

@@ -22,7 +22,7 @@ jobs:
           # universal 链接不出——macOS 包只做 Apple Silicon（arm64）
           - runner: macos-latest
             qt_arch: clang_64
-            pkg_os: macos-arm64
+            pkg_os: macos-aarch64
     runs-on: ${{ matrix.runner }}
 
     steps:
