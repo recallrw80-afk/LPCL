@@ -143,9 +143,13 @@ if(APPLE)
     target_link_libraries(lpclcore PUBLIC iconv)
 endif()
 
-# .tar.xz 解压（自更新包）：liblzma 系统库，macOS/Linux 发行版自带
+# .tar.xz 解压（自更新包）：liblzma。Linux 发行版自带 dev 包；
+# macOS 用 Homebrew xz（Xcode SDK 只有 dylib 没有头文件）
+find_path(LZMA_INCLUDE_DIR lzma.h
+    PATHS /opt/homebrew/include /usr/local/include)
 find_library(LZMA_LIBRARY lzma)
-if(LZMA_LIBRARY)
+if(LZMA_INCLUDE_DIR AND LZMA_LIBRARY)
+    target_include_directories(lpclcore PRIVATE ${LZMA_INCLUDE_DIR})
     target_link_libraries(lpclcore PUBLIC ${LZMA_LIBRARY})
 else()
     message(WARNING "liblzma 未找到——.tar.xz 解压不可用（update 会解包失败）")

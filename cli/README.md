@@ -45,7 +45,7 @@ To install the latest **pre-release** (beta): `latest` never points at pre-relea
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
 ```
 
-Prebuilt packages for x86_64 (amd64) and macOS (universal — Intel & Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
+Prebuilt packages for x86_64 (amd64) and macOS (Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
 
 ```bash
 lpcl help

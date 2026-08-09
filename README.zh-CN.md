@@ -22,7 +22,7 @@
 
 ### 一键安装（推荐）
 
-官方预编译包（内嵌 CurseForge key，完整体验），支持 x86_64（即 amd64）与 macOS（universal）。Linux aarch64 用户请走下方源码编译（Qt 官方没有 6.11 的 Linux ARM64 安装包，暂无预编译）：
+官方预编译包（内嵌 CurseForge key，完整体验），支持 x86_64（即 amd64）与 macOS（Apple Silicon）。Linux aarch64 用户请走下方源码编译（Qt 官方没有 6.11 的 Linux ARM64 安装包，暂无预编译）：
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash

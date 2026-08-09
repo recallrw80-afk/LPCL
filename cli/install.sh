@@ -23,8 +23,11 @@ INSTALL_BIN="${LPCL_INSTALL_BIN:-$HOME/.local/bin}"
 # ---- 平台检测 ----
 OS_NAME="$(uname -s)"
 if [ "$OS_NAME" = "Darwin" ]; then
-    # macOS：预编译包是 universal（x86_64+arm64 合一），无需区分架构
-    PKG_NAME="lpcl-macos-universal.tar.xz"
+    # macOS：预编译包只有 Apple Silicon（liblzma 单架构出不了 universal 包）
+    case "$(uname -m)" in
+        arm64)  PKG_NAME="lpcl-macos-arm64.tar.xz" ;;
+        *)      echo "macOS 预编译包目前仅支持 Apple Silicon（M 系列）；Intel Mac 请走源码编译" >&2; exit 1 ;;
+    esac
 else
     case "$(uname -m)" in
         x86_64|amd64)    ARCH="x86_64" ;;

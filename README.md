@@ -22,7 +22,7 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 
 ### One-liner (recommended)
 
-Official prebuilt package (embedded CurseForge key — the full experience), for x86_64 (amd64) and macOS (universal). Linux aarch64 users: build from source below (Qt has no official 6.11 Linux ARM64 packages, so no prebuilt for now):
+Official prebuilt package (embedded CurseForge key — the full experience), for x86_64 (amd64) and macOS (Apple Silicon). Linux aarch64 users: build from source below (Qt has no official 6.11 Linux ARM64 packages, so no prebuilt for now):
 
 ```bash
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash

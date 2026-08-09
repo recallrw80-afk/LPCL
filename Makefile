@@ -48,7 +48,7 @@ package-cli:
 ARCH := $(shell uname -m | sed 's/arm64/aarch64/')
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Darwin)
-PKG_OS := macos-universal
+PKG_OS := macos-$(ARCH)
 BUNDLE_SCRIPT := bundle-dist-macos.sh
 else
 PKG_OS := linux-$(ARCH)

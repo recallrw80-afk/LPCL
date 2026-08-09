@@ -45,7 +45,7 @@ curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-Beta/install.sh | bash -s -- --beta
 ```
 
-预编译包支持 x86_64（即 amd64）与 macOS（universal，Intel/Apple Silicon 通用）；Linux aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：
+预编译包支持 x86_64（即 amd64）与 macOS（Apple Silicon）；Linux aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：
 
 ```bash
 lpcl help
