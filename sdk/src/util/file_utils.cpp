@@ -6,6 +6,7 @@
 #include <QCryptographicHash>
 #include <QDataStream>
 #include <zlib.h>
+#include <lzma.h>
 #ifndef Q_OS_WIN
 #include <iconv.h>
 #endif
@@ -369,7 +370,34 @@ bool copyDir(const QString &src, const QString &dst)
     return ok;
 }
 
-// ---- tar.gz 解压（Adoptium JRE 包用） ----
+// ---- tar.gz / tar.xz 解压（Adoptium JRE 包、自更新包用） ----
+
+// xz 解压（liblzma stream_buffer_decode；输出缓冲不足时倍增重试）
+static QByteArray unxz(const QByteArray &compressed)
+{
+    uint64_t memlimit = UINT64_MAX;
+    size_t inPos = 0;
+    size_t outCap = qMax<size_t>(size_t(compressed.size()) * 4, size_t(1) << 20);
+    for (int attempt = 0; attempt < 8; ++attempt) {
+        QByteArray out(outCap, Qt::Uninitialized);
+        size_t outPos = 0;
+        lzma_ret ret = lzma_stream_buffer_decode(&memlimit, 0, nullptr,
+            reinterpret_cast<const uint8_t *>(compressed.constData()), &inPos,
+            size_t(compressed.size()),
+            reinterpret_cast<uint8_t *>(out.data()), &outPos, outCap);
+        if (ret == LZMA_OK) {
+            out.resize(outPos);
+            return out;
+        }
+        if (ret == LZMA_BUF_ERROR) {  // 输出缓冲不够：放大重来
+            inPos = 0;
+            outCap *= 2;
+            continue;
+        }
+        return {};
+    }
+    return {};
+}
 
 // gzip 解压（inflateInit2 带 gzip 头，windowBits = 15+16）
 static QByteArray gunzip(const QByteArray &compressed)
@@ -418,10 +446,16 @@ bool extractTarGz(const QString &tgzPath, const QString &destDir, QString *error
         if (errorOut) *errorOut = "Cannot open: " + tgzPath;
         return false;
     }
-    QByteArray tar = gunzip(f.readAll());
+    QByteArray blob = f.readAll();
     f.close();
+    // 按魔数选解码器：xz（FD 37 7A 58 5A 00）或 gzip（1F 8B，兼容旧包）
+    QByteArray tar;
+    if (blob.startsWith("\xFD" "7zXZ"))
+        tar = unxz(blob);
+    else
+        tar = gunzip(blob);
     if (tar.isEmpty()) {
-        if (errorOut) *errorOut = "gzip decompress failed: " + tgzPath;
+        if (errorOut) *errorOut = "decompress failed: " + tgzPath;
         return false;
     }
 

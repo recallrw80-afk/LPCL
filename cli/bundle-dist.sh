@@ -15,7 +15,7 @@ mkdir -p "$LIBDIR" "$DIST/plugins/tls"
 NEEDED="
 libQt6Core.so.6 libQt6Network.so.6
 libicui18n.so. libicuuc.so. libicudata.so.
-libz.so.1 libzstd.so.1
+libz.so.1 libzstd.so.1 liblzma.so.5
 libgssapi_krb5.so.2 libkrb5.so.3 libk5crypto.so.3 libcom_err.so.2 libkrb5support.so.0 libkeyutils.so.1
 libbrotlidec.so.1 libbrotlicommon.so.1
 libglib-2.0.so.0 libgthread-2.0.so.0

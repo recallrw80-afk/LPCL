@@ -143,6 +143,14 @@ if(APPLE)
     target_link_libraries(lpclcore PUBLIC iconv)
 endif()
 
+# .tar.xz 解压（自更新包）：liblzma 系统库，macOS/Linux 发行版自带
+find_library(LZMA_LIBRARY lzma)
+if(LZMA_LIBRARY)
+    target_link_libraries(lpclcore PUBLIC ${LZMA_LIBRARY})
+else()
+    message(WARNING "liblzma 未找到——.tar.xz 解压不可用（update 会解包失败）")
+endif()
+
 # C++20
 target_compile_features(lpclcore PUBLIC cxx_std_20)
 

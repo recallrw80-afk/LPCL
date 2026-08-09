@@ -322,12 +322,12 @@ int handleUpdate(QStringList &args) {
     // 发布源：GitHub（默认）或 Gitee（-cn，国内网络）
     QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
     QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "Recall_m_wxd/lpcl");
-    // 默认查正式版（releases/latest 不含预发布）；-beta 走列表接口取最新一条（含预发布）
+    // 默认查正式版（不含预发布）；-beta 走列表接口取最新一条（含预发布）。
+    // 注意 Gitee 的 releases/latest 不按创建时间区分是否预发布（实测会返回最新的 rc），
+    // 所以 -cn 一律用列表接口：非 -beta 时过滤掉 prerelease 取首个正式版
     QString apiUrl;
     if (cn) {
-        apiUrl = beta
-            ? QString("https://gitee.com/api/v5/repos/%1/releases?per_page=1").arg(giteeRepo)
-            : QString("https://gitee.com/api/v5/repos/%1/releases/latest").arg(giteeRepo);
+        apiUrl = QString("https://gitee.com/api/v5/repos/%1/releases?per_page=10").arg(giteeRepo);
     } else {
         apiUrl = beta
             ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
@@ -344,16 +344,29 @@ int handleUpdate(QStringList &args) {
         [&](bool ok, QString err, nlohmann::json rel) {
         auto finish = [&](int code) { result = code; done = true; if (guard) guard->quit(); };
 
-        // -beta 的列表接口返回数组：取最新一条
+        // 列表接口返回数组：GitHub -beta 取最新一条；
+        // Gitee -beta 同取第一条，非 -beta 跳过 prerelease 取首个正式版
         if (ok && rel.is_array()) {
-            if (!rel.empty() && rel[0].is_object()) rel = rel[0];
-            else { rel = nlohmann::json::object(); }
+            nlohmann::json picked = nlohmann::json::object();
+            for (const auto &r : rel) {
+                if (!r.is_object()) continue;
+                bool pre = r.contains("prerelease") && r["prerelease"].is_boolean()
+                           && r["prerelease"].get<bool>();
+                if (beta || !pre) { picked = r; break; }
+            }
+            rel = picked;
         }
 
         if (!ok || !rel.contains("tag_name") || !rel["tag_name"].is_string()) {
-            std::cerr << T("error:  检查更新失败（%1）。如仓库未公开，请先用 LPCL_REPO 配置\n",
-                           "error:  update check failed (%1). If the repo is private, set LPCL_REPO first\n")
-                         .arg(err.isEmpty() ? "no tag_name" : err).toStdString();
+            if (!cn && err.contains("rate limit", Qt::CaseInsensitive)) {
+                // GitHub 匿名 API 限流（每 IP 每小时 60 次）——指路国内源
+                std::cerr << _("error:  检查更新失败（GitHub API 限流）。可稍后再试，或用国内源: lpcl update -cn\n",
+                               "error:  update check failed (GitHub API rate limit). Retry later, or use the mirror: lpcl update -cn\n");
+            } else {
+                std::cerr << T("error:  检查更新失败（%1）。如仓库未公开，请先用 LPCL_REPO 配置\n",
+                               "error:  update check failed (%1). If the repo is private, set LPCL_REPO first\n")
+                             .arg(err.isEmpty() ? "no tag_name" : err).toStdString();
+            }
             finish(1); return;
         }
 
