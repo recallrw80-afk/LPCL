@@ -31,16 +31,16 @@
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-**国内网络**用 Gitee 镜像源（`--cn` 让脚本从 Gitee 下载；tag 换成最新版本）：
+**国内网络**：下载源自动降级——GitHub 优先，不可用（限流/超时）自动切 Gitee 镜像，无需任何参数：
 
 ```bash
-curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-国内装**测试版**（Gitee + 预发布，`--cn --beta` 组合）：
+国内装**测试版**（加 `--beta`，源同样自动降级）：
 
 ```bash
-curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.1-beta/install.sh | bash -s -- --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。

@@ -311,7 +311,9 @@ int handleUninstall(QStringList &args) {
 
 int handleUpdate(QStringList &args) {
     bool beta = args.contains("-beta") || args.contains("--beta");
-    bool cn = args.contains("-cn") || args.contains("--cn");
+    if (args.contains("-cn") || args.contains("--cn"))
+        std::cout << _("（-cn 已废弃：现在自动 GitHub 优先、失败降级 Gitee，无需指定）\n",
+                       "(-cn is deprecated: GitHub-first with automatic Gitee fallback now)\n");
     // 只允许更新 install.sh 安装副本（开发/分发路径下跑 update 会误替换副本二进制）
     QString root = installedRoot();
     if (root.isEmpty()) {
@@ -319,30 +321,32 @@ int handleUpdate(QStringList &args) {
                        "error:  not an install.sh-installed copy (dev/dist path), refusing to update\n");
         return 1;
     }
-    // 发布源：GitHub（默认）或 Gitee（-cn，国内网络）
+    // 发布源自动降级：GitHub 优先，失败自动切 Gitee（LPCL_GITEE_REPO 可换镜像）
     QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
     QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "recall80/lpcl");
-    // 默认查正式版（不含预发布）；-beta 走列表接口取最新一条（含预发布）。
-    // 注意 Gitee 的 releases/latest 不按创建时间区分是否预发布（实测会返回最新的 rc），
-    // 所以 -cn 一律用列表接口：非 -beta 时过滤掉 prerelease 取首个正式版
-    QString apiUrl;
-    if (cn) {
-        apiUrl = QString("https://gitee.com/api/v5/repos/%1/releases?per_page=10").arg(giteeRepo);
-    } else {
-        apiUrl = beta
-            ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
-            : QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
-    }
 
     std::cout << _("正在检查更新...\n", "Checking for updates...\n");
     bool done = false;
     int result = 1;
     QEventLoop loop;
     QPointer<QEventLoop> guard = &loop;
+    bool useCn = false;
 
-    DownloadManager::instance().downloadJson(apiUrl,
-        [&](bool ok, QString err, nlohmann::json rel) {
-        auto finish = [&](int code) { result = code; done = true; if (guard) guard->quit(); };
+    std::function<void()> attempt = [&]() {
+        // 默认查正式版（不含预发布）；-beta 走列表接口取最新一条（含预发布）。
+        // Gitee 的 releases/latest 不分预发布（实测会返回最新的 rc），一律用列表接口
+        QString apiUrl;
+        if (useCn) {
+            apiUrl = QString("https://gitee.com/api/v5/repos/%1/releases?per_page=10").arg(giteeRepo);
+        } else {
+            apiUrl = beta
+                ? QString("https://api.github.com/repos/%1/releases?per_page=1").arg(repo)
+                : QString("https://api.github.com/repos/%1/releases/latest").arg(repo);
+        }
+
+        DownloadManager::instance().downloadJson(apiUrl,
+            [&](bool ok, QString err, nlohmann::json rel) {
+            auto finish = [&](int code) { result = code; done = true; if (guard) guard->quit(); };
 
         // 列表接口返回数组：GitHub -beta 取最新一条；
         // Gitee -beta 同取第一条，非 -beta 跳过 prerelease 取首个正式版
@@ -357,15 +361,34 @@ int handleUpdate(QStringList &args) {
             rel = picked;
         }
 
-        if (!ok || !rel.contains("tag_name") || !rel["tag_name"].is_string()) {
-            if (!cn && err.contains("rate limit", Qt::CaseInsensitive)) {
-                // GitHub 匿名 API 限流（每 IP 每小时 60 次）——指路国内源
-                std::cerr << _("error:  检查更新失败（GitHub API 限流）。可稍后再试，或用国内源: lpcl update -cn\n",
-                               "error:  update check failed (GitHub API rate limit). Retry later, or use the mirror: lpcl update -cn\n");
+        if (!ok) {
+            // 首选源失败（限流/404/网络/解析）——自动降级 Gitee 镜像
+            if (!useCn) {
+                std::cout << _("GitHub 不可用，自动切换 Gitee 镜像...\n",
+                               "GitHub unavailable, falling back to the Gitee mirror...\n");
+                useCn = true;
+                attempt();
+                return;
+            }
+            std::cerr << T("error:  检查更新失败（%1）\n",
+                           "error:  update check failed (%1)\n")
+                         .arg(err.isEmpty() ? "network error" : err).toStdString();
+            finish(1); return;
+        }
+        if (!rel.contains("tag_name") || !rel["tag_name"].is_string()) {
+            // API 成功但没有合适版本：没有正式版（或没有预发布）
+            if (!useCn) {  // GitHub 上没有合适的 → Gitee 再看看
+                std::cout << _("GitHub 上没有可更新的版本，尝试 Gitee 镜像...\n",
+                               "No suitable release on GitHub, trying the Gitee mirror...\n");
+                useCn = true;
+                attempt();
+                return;
+            }
+            if (beta) {
+                std::cout << _("当前没有预发布版本\n", "No pre-release available\n");
             } else {
-                std::cerr << T("error:  检查更新失败（%1）。如仓库未公开，请先用 LPCL_REPO 配置\n",
-                               "error:  update check failed (%1). If the repo is private, set LPCL_REPO first\n")
-                             .arg(err.isEmpty() ? "no tag_name" : err).toStdString();
+                std::cout << _("当前只有预发布版本（没有正式版）。需要测试版请用 lpcl update -beta\n",
+                               "Only pre-releases exist (no stable). Use lpcl update -beta for those\n");
             }
             finish(1); return;
         }
@@ -399,7 +422,7 @@ int handleUpdate(QStringList &args) {
         QString arch = QSysInfo::currentCpuArchitecture() == "aarch64" ? "aarch64" : "x86_64";
         QString pkg = "lpcl-linux-" + arch + ".tar.xz";
         QString dlUrl;
-        if (cn) {
+        if (useCn) {
             // Gitee 的 release JSON 不带资产直链，按固定路径规则拼接
             dlUrl = QString("https://gitee.com/%1/releases/download/%2/%3")
                         .arg(giteeRepo, remoteTag, pkg);
@@ -480,7 +503,9 @@ int handleUpdate(QStringList &args) {
             finish(0);
         });
     });
+    };
 
+    attempt();
     if (!done) loop.exec();
     return result;
 }

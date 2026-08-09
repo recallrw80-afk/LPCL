@@ -31,16 +31,16 @@ Downloads the official prebuilt package — **the full experience** (CI-built, w
 curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-**In China**, use the Gitee mirror (`--cn` makes the script download from Gitee; replace the tag with the latest version):
+**In China**: the source falls back automatically — GitHub first, Gitee mirror on failure (rate limit/timeout). No flags needed:
 
 ```bash
-curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/install.sh | bash
 ```
 
-In China, install the **beta** (Gitee + pre-release, `--cn --beta` combined):
+For **betas** (add `--beta`; same auto-fallback):
 
 ```bash
-curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/<beta-tag>/install.sh | bash -s -- --beta
 ```
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.
