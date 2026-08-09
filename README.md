@@ -4,8 +4,6 @@
 
 A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lightweight command-line frontend `mlc` (RSS ~4MB) — suitable for desktops, servers, and headless environments.
 
-> This is an independently developed open-source project with no affiliation to or endorsement from [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2). Its public implementation ideas were referenced during development, but no code or assets were taken. It is likewise unaffiliated with Mojang / Microsoft (see the disclaimer at the end).
-
 ## Features
 
 - **CLI first**: modpack import, instance management, version download, and game launch all work in a terminal; interactive pickers and wizards on TTY (create-vite style)
@@ -25,29 +23,29 @@ A cross-platform Minecraft launcher written in C++20 / Qt 6, centered on the lig
 Official prebuilt package (embedded CurseForge key — the full experience), for x86_64 (amd64) and macOS (Apple Silicon). Linux aarch64 users: build from source below (Qt has no official 6.11 Linux ARM64 packages, so no prebuilt for now):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 In China, the source falls back automatically — GitHub first, Gitee mirror on failure; no flags needed (add `--beta` for pre-releases).
 
-> The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub: `git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git`
+> The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub: `git clone https://github.com/recallrw80-afk/MLC.git`
 
 To install the latest **pre-release** (Beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 (Replace `v0.1.3-beta` with the latest pre-release tag.)
 
-Or grab the tarball from [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest), put it next to `install.sh`, and run `bash install.sh mlc-linux-<arch>.tar.xz`.
+Or grab the tarball from [Releases](https://github.com/recallrw80-afk/MLC/releases/latest), put it next to `install.sh`, and run `bash install.sh mlc-linux-<arch>.tar.xz`.
 
 ### Build from source
 
 For hacking/custom builds. Note: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror); use the official package for the full experience.
 
 ```bash
-git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+git clone https://github.com/recallrw80-afk/MLC.git
 cd MLC
 make install        # build Release → zero-dependency package → install to ~/.local
 ```
@@ -100,7 +98,7 @@ Issues and PRs are welcome. Please read [CONTRIBUTING.md](CONTRIBUTING.md) befor
 ## Disclaimer
 
 - This project is not an official Minecraft product and is not associated with, approved by, or endorsed by Mojang Studios / Microsoft. "Minecraft" is a trademark of Mojang Synergies AB.
-- This project has no affiliation with or authorization from the official Plain Craft Launcher (PCL); "MLC" merely denotes a similar launcher targeting Linux.
+- This project has no affiliation with or authorization from the official Plain Craft Launcher (PCL).
 - This software is provided "as is"; the authors accept no liability for damages arising from its use (see sections 15–16 of the license).
 
 ## Credits

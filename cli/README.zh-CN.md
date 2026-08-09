@@ -2,7 +2,7 @@
 
 [English](README.md) | **简体中文**
 
-**MinecraftLauncherCLI（简称 MLC）** 是 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的跨平台移植版——一个用 C++/Qt 编写的 Minecraft 启动器。`mlc` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
+**MinecraftLauncherCLI（简称 MLC）** 是一个用 C++/Qt 编写的独立开发 Minecraft 启动器，开发过程中参考了 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 的公开实现思路。`mlc` 是它的命令行前端：不依赖图形界面，几 MB 内存即可运行，支持整合包导入、多版本管理和游戏启动。
 
 ## 功能特性
 
@@ -28,19 +28,19 @@
 下载并安装官方预编译包——**完整体验**（内嵌 CurseForge key，Mod 下载走官方 API）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 **国内网络**：下载源自动降级——GitHub 优先，不可用（限流/超时）自动切 Gitee 镜像，无需任何参数：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 国内装**测试版**（加 `--beta`，源同样自动降级）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
@@ -48,7 +48,7 @@ curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/downl
 装最新**预发布版**（Beta）：`latest` 地址不含预发布，install.sh 需从 tag 地址下载并加 `--beta`：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 预编译包支持 x86_64（即 amd64）与 macOS（Apple Silicon）；Linux aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：
@@ -59,7 +59,7 @@ mlc help
 
 ### 预编译包手动安装
 
-从 [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest) 下载对应架构的 `mlc-linux-<arch>.tar.xz`，与 `install.sh` 放同一目录：
+从 [Releases](https://github.com/recallrw80-afk/MLC/releases/latest) 下载对应架构的 `mlc-linux-<arch>.tar.xz`，与 `install.sh` 放同一目录：
 
 ```bash
 bash install.sh mlc-linux-x86_64.tar.xz
@@ -70,7 +70,7 @@ bash install.sh mlc-linux-x86_64.tar.xz
 适合改代码/自定义构建。**注意**：本地编译的包不内嵌 CF key（CurseForge 自动走 MCIM 镜像，功能可用但非最佳链路），追求完整体验请用上面的官方包。
 
 ```bash
-git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+git clone https://github.com/recallrw80-afk/MLC.git
 cd MLC
 make install        # 编译 Release → 零依赖打包 → 安装到本机
 ```

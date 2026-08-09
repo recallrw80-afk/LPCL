@@ -126,7 +126,7 @@ int handleReport(QStringList &args) {
     }
     if (desc.isEmpty()) desc = "MLC 问题反馈";
 
-    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MinecraftLauncherCLI");
+    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MLC");
     // GitHub URL 长度有限，先给 4000 字符日志，超长再砍到 1200
     QString url = buildIssueUrl(repo, desc, latestLaunchLogTail(40, 4000));
     if (url.size() > 7500)
@@ -326,7 +326,7 @@ int handleUpdate(QStringList &args) {
         return 1;
     }
     // 发布源自动降级：GitHub 优先，失败自动切 Gitee（MLC_GITEE_REPO 可换镜像）
-    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MinecraftLauncherCLI");
+    QString repo = qEnvironmentVariable("MLC_REPO", "recallrw80-afk/MLC");
     QString giteeRepo = qEnvironmentVariable("MLC_GITEE_REPO", "recall80/mlc");
 
     std::cout << _("正在检查更新...\n", "Checking for updates...\n");

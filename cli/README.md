@@ -2,7 +2,7 @@
 
 **English** | [简体中文](README.zh-CN.md)
 
-**MinecraftLauncherCLI (MLC)** is a cross-platform port of [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) — a Minecraft launcher written in C++/Qt. `mlc` is its command-line frontend: no graphical interface needed, just a few MB of memory, with support for modpack import, multi-version management, and game launching.
+**MinecraftLauncherCLI (MLC)** is an independently developed Minecraft launcher written in C++/Qt, built with reference to the public implementation ideas of [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2). `mlc` is its command-line frontend: no graphical interface needed, just a few MB of memory, with support for modpack import, multi-version management, and game launching.
 
 ## Features
 
@@ -28,19 +28,19 @@
 Downloads the official prebuilt package — **the full experience** (CI-built, with an embedded CurseForge key so mod downloads use the official API):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 **In China**: the source falls back automatically — GitHub first, Gitee mirror on failure (rate limit/timeout). No flags needed:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 For **betas** (add `--beta`; same auto-fallback):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.
@@ -48,7 +48,7 @@ curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/downl
 To install the latest **pre-release** (beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.4-rc/install.sh | bash -s -- --beta
 ```
 
 Prebuilt packages for x86_64 (amd64) and macOS (Apple Silicon); Linux aarch64 users build from source (Qt has no official 6.11 Linux ARM64 packages). Then run from anywhere:
@@ -59,7 +59,7 @@ mlc help
 
 ### Manual prebuilt install
 
-Download `mlc-linux-<arch>.tar.xz` from [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest), put it next to `install.sh`, then:
+Download `mlc-linux-<arch>.tar.xz` from [Releases](https://github.com/recallrw80-afk/MLC/releases/latest), put it next to `install.sh`, then:
 
 ```bash
 bash install.sh mlc-linux-x86_64.tar.xz
@@ -70,7 +70,7 @@ bash install.sh mlc-linux-x86_64.tar.xz
 For hacking/custom builds. **Note**: locally built packages do not embed a CF key (CurseForge falls back to the MCIM mirror — works, but not the best path); for the full experience use the official package above.
 
 ```bash
-git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+git clone https://github.com/recallrw80-afk/MLC.git
 cd MLC
 make install        # build Release → zero-dependency package → install
 ```

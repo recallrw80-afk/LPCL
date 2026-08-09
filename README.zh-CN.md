@@ -4,8 +4,6 @@
 
 一个用 C++20 / Qt 6 编写的跨平台 Minecraft 启动器，以轻量命令行前端 `mlc`（RSS ~4MB）为核心，适合桌面、服务器与无显示环境使用。
 
-> 本项目是独立开发的开源项目，与 [Plain Craft Launcher (PCL)](https://github.com/Hex-Dragon/PCL2) 官方无任何隶属或授权关系；开发过程中参考了 PCL 的公开实现思路，但不包含其代码与资源。与 Mojang / Microsoft 同样无任何关联（见文末免责声明）。
-
 ## 特性
 
 - **CLI 优先**：整合包导入、实例管理、版本下载、游戏启动全部可在终端完成；TTY 下有交互式选择器与向导（create-vite 风格）
@@ -25,29 +23,29 @@
 官方预编译包（内嵌 CurseForge key，完整体验），支持 x86_64（即 amd64）与 macOS（Apple Silicon）。Linux aarch64 用户请走下方源码编译（Qt 官方没有 6.11 的 Linux ARM64 安装包，暂无预编译）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download/install.sh | bash
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/latest/download/install.sh | bash
 ```
 
 国内网络：下载源自动降级——GitHub 优先，不可用自动切 Gitee 镜像，无需参数（测试版加 `--beta`）。
 
-> Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub：`git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git`
+> Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub：`git clone https://github.com/recallrw80-afk/MLC.git`
 
 装最新**预发布版**（Beta）：注意 `latest` 地址不含预发布，install.sh 需从 tag 地址下载：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/MLC/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 （把 `v0.1.3-beta` 换成最新预发布 tag；`--beta` 让脚本走列表接口找到预发布包。）
 
-也可到 [Releases](https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest) 手动下载压缩包，与 `install.sh` 放一起后 `bash install.sh mlc-linux-<arch>.tar.xz`。
+也可到 [Releases](https://github.com/recallrw80-afk/MLC/releases/latest) 手动下载压缩包，与 `install.sh` 放一起后 `bash install.sh mlc-linux-<arch>.tar.xz`。
 
 ### 源码编译安装
 
 适合改代码/自定义构建。注意：本地编译的包不内嵌 CF key（CurseForge 自动走 MCIM 镜像），完整体验请用官方包。
 
 ```bash
-git clone https://github.com/recallrw80-afk/MinecraftLauncherCLI.git
+git clone https://github.com/recallrw80-afk/MLC.git
 cd MLC
 make install        # 编译 Release → 零依赖打包 → 安装到本机
 ```
@@ -100,7 +98,7 @@ mlc launch 1.20.1
 ## 免责声明
 
 - 本项目不是 Minecraft 官方产品，与 Mojang Studios / Microsoft 没有任何关联，亦未获得其认可或授权。"Minecraft" 是 Mojang Synergies AB 的商标。
-- 本项目与 Plain Craft Launcher (PCL) 官方无隶属或授权关系；"MLC" 仅表示面向 Linux 平台的同类启动器定位。
+- 本项目与 Plain Craft Launcher (PCL) 官方无隶属或授权关系。
 - 本软件按"原样"提供，作者不对使用本软件造成的任何损失承担责任（详见许可证第 15、16 条）。
 
 ## 致谢

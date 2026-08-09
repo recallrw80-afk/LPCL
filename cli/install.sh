@@ -14,8 +14,8 @@ set -euo pipefail
 
 # ---- 可配置项 ----
 # 发布包下载地址（GitHub Releases 或自建服务器；也可用环境变量覆盖）
-MLC_RELEASE_URL="${MLC_RELEASE_URL:-https://github.com/recallrw80-afk/MinecraftLauncherCLI/releases/latest/download}"
-MLC_REPO="${MLC_REPO:-recallrw80-afk/MinecraftLauncherCLI}"
+MLC_RELEASE_URL="${MLC_RELEASE_URL:-https://github.com/recallrw80-afk/MLC/releases/latest/download}"
+MLC_REPO="${MLC_REPO:-recallrw80-afk/MLC}"
 INSTALL_LIB="${MLC_INSTALL_LIB:-$HOME/.local/lib/mlc}"
 INSTALL_BIN="${MLC_INSTALL_BIN:-$HOME/.local/bin}"
 
