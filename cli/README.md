@@ -34,13 +34,13 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/insta
 **In China**, use the Gitee mirror (`--cn` makes the script download from Gitee; replace the tag with the latest version):
 
 ```bash
-curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
 ```
 
 In China, install the **beta** (Gitee + pre-release, `--cn --beta` combined):
 
 ```bash
-curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
+curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
 ```
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.

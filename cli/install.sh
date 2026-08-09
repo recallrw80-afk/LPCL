@@ -63,7 +63,7 @@ if [ -n "$LOCAL_FILE" ]; then
 elif [ "$CN" = 1 ]; then
     # 国内源（Gitee）：latest 接口/列表接口 → tag，再拼下载地址
     PKG="$PKG_NAME"
-    GITEE_REPO="${LPCL_GITEE_REPO:-Recall_m_wxd/lpcl}"
+    GITEE_REPO="${LPCL_GITEE_REPO:-recall80/lpcl}"
     if [ "$BETA" = 1 ]; then
         API="https://gitee.com/api/v5/repos/${GITEE_REPO}/releases?per_page=1"
     else

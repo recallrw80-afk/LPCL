@@ -321,7 +321,7 @@ int handleUpdate(QStringList &args) {
     }
     // 发布源：GitHub（默认）或 Gitee（-cn，国内网络）
     QString repo = qEnvironmentVariable("LPCL_REPO", "recallrw80-afk/LPCL");
-    QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "Recall_m_wxd/lpcl");
+    QString giteeRepo = qEnvironmentVariable("LPCL_GITEE_REPO", "recall80/lpcl");
     // 默认查正式版（不含预发布）；-beta 走列表接口取最新一条（含预发布）。
     // 注意 Gitee 的 releases/latest 不按创建时间区分是否预发布（实测会返回最新的 rc），
     // 所以 -cn 一律用列表接口：非 -beta 时过滤掉 prerelease 取首个正式版

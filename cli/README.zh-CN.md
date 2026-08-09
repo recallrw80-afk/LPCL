@@ -34,13 +34,13 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/insta
 **国内网络**用 Gitee 镜像源（`--cn` 让脚本从 Gitee 下载；tag 换成最新版本）：
 
 ```bash
-curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
+curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.4/install.sh | bash -s -- --cn
 ```
 
 国内装**测试版**（Gitee + 预发布，`--cn --beta` 组合）：
 
 ```bash
-curl -fsSL https://gitee.com/Recall_m_wxd/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
+curl -fsSL https://gitee.com/recall80/lpcl/releases/download/v0.1.1-beta/install.sh | bash -s -- --cn --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
