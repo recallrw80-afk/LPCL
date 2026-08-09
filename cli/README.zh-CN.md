@@ -40,7 +40,7 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/insta
 国内装**测试版**（加 `--beta`，源同样自动降级）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.1-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/install.sh | bash -s -- --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
