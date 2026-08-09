@@ -40,7 +40,7 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/insta
 国内装**测试版**（加 `--beta`，源同样自动降级）：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > Gitee 镜像只提供预编译二进制（不提供源码包，也不支持从它源码构建）。源码构建请走 GitHub 克隆。
@@ -48,7 +48,7 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/
 装最新**预发布版**（Beta）：`latest` 地址不含预发布，install.sh 需从 tag 地址下载并加 `--beta`：
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 预编译包支持 x86_64（即 amd64）与 macOS（Apple Silicon）；Linux aarch64 请走源码编译（Qt 官方无 6.11 Linux ARM64 安装包）。完成后任意目录直接：

@@ -250,8 +250,72 @@ static QByteArray inflateEntry(QFile &file, const ZipEntryInfo &e)
     return {};  // 不支持的压缩方式
 }
 
+// 大条目（>512MB）流式解压：不全量进内存（zip bomb 防护的 512MB 上限只挡内存路径，
+// 外壳包内嵌的整 GB 整合包是合法场景——嵌套整合包检测/导入都依赖这里）
+static bool inflateEntryToFileStreaming(QFile &file, const ZipEntryInfo &e, const QString &outPath)
+{
+    if (e.compressedSize == 0xFFFFFFFF) return false;
+    qint64 offset = localDataOffset(file, e.localHeaderOffset);
+    if (offset < 0 || !file.seek(offset)) return false;
+
+    QDir().mkpath(QFileInfo(outPath).absolutePath());
+    QFile out(outPath);
+    if (!out.open(QIODevice::WriteOnly)) return false;
+
+    const qint64 CHUNK = 1024 * 1024;
+    if (e.compression == 0) {  // STORED：分块拷贝
+        QByteArray buf(CHUNK, Qt::Uninitialized);
+        quint32 left = e.compressedSize;
+        while (left > 0) {
+            qint64 n = file.read(buf.data(), qMin<qint64>(CHUNK, left));
+            if (n <= 0) return false;
+            if (out.write(buf.data(), n) != n) return false;
+            left -= quint32(n);
+        }
+        out.close();
+        return true;
+    }
+    if (e.compression != 8) return false;  // 不支持其他压缩方式
+
+    z_stream strm;
+    memset(&strm, 0, sizeof(strm));
+    if (inflateInit2(&strm, -MAX_WBITS) != Z_OK) return false;
+
+    QByteArray inBuf(CHUNK, Qt::Uninitialized);
+    QByteArray outBuf(CHUNK, Qt::Uninitialized);
+    int ret = Z_OK;
+    bool ok = false;
+    while (ret != Z_STREAM_END) {
+        if (strm.avail_in == 0) {
+            qint64 n = file.read(inBuf.data(), CHUNK);
+            if (n <= 0) { inflateEnd(&strm); return false; }
+            strm.next_in = reinterpret_cast<Bytef *>(inBuf.data());
+            strm.avail_in = static_cast<uInt>(n);
+        }
+        strm.next_out = reinterpret_cast<Bytef *>(outBuf.data());
+        strm.avail_out = CHUNK;
+        ret = inflate(&strm, Z_NO_FLUSH);
+        if (ret == Z_STREAM_ERROR || ret == Z_DATA_ERROR || ret == Z_MEM_ERROR ||
+            ret == Z_NEED_DICT || ret == Z_BUF_ERROR) {
+            inflateEnd(&strm);
+            return false;
+        }
+        auto produced = CHUNK - strm.avail_out;
+        if (produced > 0 && out.write(outBuf.data(), produced) != qint64(produced)) {
+            inflateEnd(&strm);
+            return false;
+        }
+    }
+    ok = true;
+    inflateEnd(&strm);
+    out.close();
+    return ok;
+}
+
 static bool inflateEntryToFile(QFile &file, const ZipEntryInfo &e, const QString &outPath)
 {
+    if (e.uncompressedSize > 512 * 1024 * 1024)
+        return inflateEntryToFileStreaming(file, e, outPath);
     QByteArray content = inflateEntry(file, e);
     if (content.isEmpty() && e.uncompressedSize > 0) return false;
 

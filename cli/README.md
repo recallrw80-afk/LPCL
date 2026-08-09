@@ -40,7 +40,7 @@ curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/latest/download/insta
 For **betas** (add `--beta`; same auto-fallback):
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
 > The Gitee mirror ships prebuilt binaries only (no source archives, no source builds). To build from source, clone from GitHub.

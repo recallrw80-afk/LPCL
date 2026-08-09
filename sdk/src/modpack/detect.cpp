@@ -82,23 +82,22 @@ PackType detectPackType(const QString &filePath) {
         hasFirst("modpack.zip") || hasFirst("modpack.mrpack"))
         return PackType::LauncherPack;
 
-    // Type 9b: Launcher pack — 有 jar + 单个内层 zip，内层含 .minecraft 或 versions/ 结构
+    // Type 9b: Launcher pack — 含单个内层 zip/mrpack 时先递归探测（内层是整合包结构即外壳包）。
+    // 必须在 Type 5 Mod 判定之前：外壳包也带 jar，先判 Mod 会把套娃包误判成纯 Mod 包
     {
         QString innerZipPath;  // 内层 zip 在压缩包内的完整路径
-        bool hasJars = false;
         int  zipCount = 0;
         for (const auto &e : entries) {
             int slashes = e.count('/');
             if (slashes > 1) continue;
             QString fn = slashes == 0 ? e : e.mid(e.indexOf('/') + 1);
-            if (fn.endsWith(".jar", Qt::CaseInsensitive)) hasJars = true;
             if (fn.endsWith(".zip", Qt::CaseInsensitive) || fn.endsWith(".mrpack", Qt::CaseInsensitive)) {
-                innerZipPath = e;  // 保留完整路径用于 unzip -p
+                innerZipPath = e;  // 保留完整路径用于解出检测
                 zipCount++;
             }
         }
 
-        if (hasJars && zipCount == 1) {
+        if (zipCount == 1) {
             // 把内层 zip 解出到唯一临时文件再检测（避免固定路径并发冲突）
             QString tmpInner = QDir::temp().filePath(
                 QString("_lpcl_detect_%1.zip").arg(QCoreApplication::applicationPid()));

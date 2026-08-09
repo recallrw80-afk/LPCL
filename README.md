@@ -35,10 +35,10 @@ In China, the source falls back automatically — GitHub first, Gitee mirror on 
 To install the latest **pre-release** (Beta): `latest` never points at pre-releases, so fetch install.sh from the tag URL and pass `--beta`:
 
 ```bash
-curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.2-beta/install.sh | bash -s -- --beta
+curl -fsSL https://github.com/recallrw80-afk/LPCL/releases/download/v0.1.3-beta/install.sh | bash -s -- --beta
 ```
 
-(Replace `v0.1.2-beta` with the latest pre-release tag.)
+(Replace `v0.1.3-beta` with the latest pre-release tag.)
 
 Or grab the tarball from [Releases](https://github.com/recallrw80-afk/LPCL/releases/latest), put it next to `install.sh`, and run `bash install.sh lpcl-linux-<arch>.tar.xz`.
 
